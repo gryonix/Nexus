@@ -1,0 +1,66 @@
+[
+  {
+    "bundle" : "none",
+    "case" : "empty"
+  },
+  {
+    "case" : "short",
+    "copyText" : "TXT\tdkim._domainkey.example.com\tv=DKIM1;k=rsa;p=short",
+    "csv" : "type,name,value,ttl,priority\nTXT,dkim._domainkey.example.com,v=DKIM1;k=rsa;p=short,3600,\n",
+    "csvFileName" : "dkim-dns-records.csv",
+    "csvSummary" : "CSV-SUMMARY",
+    "zone" : "; BIND zone file (DKIM) - import this at your DNS provider.\n$TTL 3600\ndkim._domainkey.example.com.    3600    IN TXT    \"v=DKIM1;k=rsa;p=short\"\n",
+    "zoneFileName" : "dkim-dns-zone.txt",
+    "zoneSummary" : "ZONE-SUMMARY"
+  },
+  {
+    "case" : "long-split",
+    "copyText" : "TXT\tdkim._domainkey.example.com\tv=DKIM1;k=rsa;t=s;p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A",
+    "csv" : "type,name,value,ttl,priority\nTXT,dkim._domainkey.example.com,v=DKIM1;k=rsa;t=s;p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A,3600,\n",
+    "csvFileName" : "dkim-dns-records.csv",
+    "csvSummary" : "CSV-SUMMARY",
+    "zone" : "; BIND zone file (DKIM) - import this at your DNS provider.\n$TTL 3600\ndkim._domainkey.example.com.    3600    IN TXT    \"v=DKIM1;k=rsa;t=s;p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgk\" \"qhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A\"\n",
+    "zoneFileName" : "dkim-dns-zone.txt",
+    "zoneSummary" : "ZONE-SUMMARY"
+  },
+  {
+    "case" : "needs-csv-quoting",
+    "copyText" : "TXT\tdkim._domainkey.example.com\tv=DKIM1,k=rsa;p=abc",
+    "csv" : "type,name,value,ttl,priority\nTXT,dkim._domainkey.example.com,\"v=DKIM1,k=rsa;p=abc\",3600,\n",
+    "csvFileName" : "dkim-dns-records.csv",
+    "csvSummary" : "CSV-SUMMARY",
+    "zone" : "; BIND zone file (DKIM) - import this at your DNS provider.\n$TTL 3600\ndkim._domainkey.example.com.    3600    IN TXT    \"v=DKIM1,k=rsa;p=abc\"\n",
+    "zoneFileName" : "dkim-dns-zone.txt",
+    "zoneSummary" : "ZONE-SUMMARY"
+  },
+  {
+    "case" : "embedded-quote",
+    "copyText" : "TXT\tdkim._domainkey.example.com\tv=DKIM1;n=say \"hi\";p=abc",
+    "csv" : "type,name,value,ttl,priority\nTXT,dkim._domainkey.example.com,\"v=DKIM1;n=say \"\"hi\"\";p=abc\",3600,\n",
+    "csvFileName" : "dkim-dns-records.csv",
+    "csvSummary" : "CSV-SUMMARY",
+    "zone" : "; BIND zone file (DKIM) - import this at your DNS provider.\n$TTL 3600\ndkim._domainkey.example.com.    3600    IN TXT    \"v=DKIM1;n=say \\\"hi\\\";p=abc\"\n",
+    "zoneFileName" : "dkim-dns-zone.txt",
+    "zoneSummary" : "ZONE-SUMMARY"
+  },
+  {
+    "case" : "backslash",
+    "copyText" : "TXT\tdkim._domainkey.example.com\tv=DKIM1;n=a\\b;p=abc",
+    "csv" : "type,name,value,ttl,priority\nTXT,dkim._domainkey.example.com,v=DKIM1;n=a\\b;p=abc,3600,\n",
+    "csvFileName" : "dkim-dns-records.csv",
+    "csvSummary" : "CSV-SUMMARY",
+    "zone" : "; BIND zone file (DKIM) - import this at your DNS provider.\n$TTL 3600\ndkim._domainkey.example.com.    3600    IN TXT    \"v=DKIM1;n=a\\\\b;p=abc\"\n",
+    "zoneFileName" : "dkim-dns-zone.txt",
+    "zoneSummary" : "ZONE-SUMMARY"
+  },
+  {
+    "case" : "several-domains",
+    "copyText" : "TXT\tdkim._domainkey.example.com\tv=DKIM1;k=rsa;t=s;p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A\nTXT\tdkim._domainkey.mail.example.org\tv=DKIM1;k=rsa;p=second",
+    "csv" : "type,name,value,ttl,priority\nTXT,dkim._domainkey.example.com,v=DKIM1;k=rsa;t=s;p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A,3600,\nTXT,dkim._domainkey.mail.example.org,v=DKIM1;k=rsa;p=second,3600,\n",
+    "csvFileName" : "dkim-dns-records.csv",
+    "csvSummary" : "CSV-SUMMARY",
+    "zone" : "; BIND zone file (DKIM) - import this at your DNS provider.\n$TTL 3600\ndkim._domainkey.example.com.    3600    IN TXT    \"v=DKIM1;k=rsa;t=s;p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgk\" \"qhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A\"\ndkim._domainkey.mail.example.org.    3600    IN TXT    \"v=DKIM1;k=rsa;p=second\"\n",
+    "zoneFileName" : "dkim-dns-zone.txt",
+    "zoneSummary" : "ZONE-SUMMARY"
+  }
+]

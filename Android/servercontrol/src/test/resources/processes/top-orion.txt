@@ -1,0 +1,449 @@
+top - 23:23:41 up 19 days,  8:43,  2 users,  load average: 0.00, 0.00, 0.00
+Tasks: 217 total,   1 running, 216 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  0.0 us,  0.0 sy,  0.0 ni,100.0 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st 
+MiB Mem :   8059.0 total,   5164.8 free,   1186.0 used,   2134.1 buff/cache     
+MiB Swap:    511.9 total,    256.8 free,    255.1 used.   6873.0 avail Mem 
+
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+      1 root      20   0  169856   9440   5584 S   0.0   0.1   0:51.72 /sbin/init
+      2 root      20   0       0      0      0 S   0.0   0.0   0:00.80 [kthreadd]
+      3 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [pool_workqueue_release]
+      4 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-kvfree_rcu_reclaim]
+      5 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-rcu_gp]
+      6 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-sync_wq]
+      7 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-slub_flushwq]
+      8 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-netns]
+     10 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/0:0H-events_highpri]
+     12 root      20   0       0      0      0 I   0.0   0.0   0:00.18 [kworker/u16:0-ipv6_addrconf]
+     13 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-mm_percpu_wq]
+     14 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [rcu_tasks_kthread]
+     15 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [rcu_tasks_rude_kthread]
+     16 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [rcu_tasks_trace_kthread]
+     17 root      20   0       0      0      0 S   0.0   0.0   0:10.61 [ksoftirqd/0]
+     18 root      20   0       0      0      0 I   0.0   0.0   0:27.48 [rcu_preempt]
+     19 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [rcu_exp_par_gp_kthread_worker/0]
+     20 root      20   0       0      0      0 S   0.0   0.0   0:00.04 [rcu_exp_gp_kthread_worker]
+     21 root      rt   0       0      0      0 S   0.0   0.0   0:00.50 [migration/0]
+     22 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [cpuhp/0]
+     23 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [cpuhp/1]
+     24 root      rt   0       0      0      0 S   0.0   0.0   0:00.38 [migration/1]
+     25 root      20   0       0      0      0 S   0.0   0.0   0:11.52 [ksoftirqd/1]
+     27 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/1:0H-events_highpri]
+     28 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [cpuhp/2]
+     29 root      rt   0       0      0      0 S   0.0   0.0   0:00.38 [migration/2]
+     30 root      20   0       0      0      0 S   0.0   0.0   0:11.46 [ksoftirqd/2]
+     32 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/2:0H-events_highpri]
+     33 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [cpuhp/3]
+     34 root      rt   0       0      0      0 S   0.0   0.0   0:00.40 [migration/3]
+     35 root      20   0       0      0      0 S   0.0   0.0   0:11.57 [ksoftirqd/3]
+     37 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/3:0H-events_highpri]
+     42 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [kdevtmpfs]
+     43 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-inet_frag_wq]
+     44 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [kauditd]
+     45 root      20   0       0      0      0 S   0.0   0.0   0:00.61 [khungtaskd]
+     46 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [oom_reaper]
+     48 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-writeback]
+     49 root      20   0       0      0      0 S   0.0   0.0   0:10.83 [kcompactd0]
+     50 root      20   0       0      0      0 S   0.0   0.0   0:19.05 [kcompactd1]
+     51 root      20   0       0      0      0 S   0.0   0.0   0:16.37 [kcompactd2]
+     52 root      20   0       0      0      0 S   0.0   0.0   0:12.38 [kcompactd3]
+     53 root      20   0       0      0      0 S   0.0   0.0   0:16.74 [kcompactd4]
+     54 root      20   0       0      0      0 S   0.0   0.0   0:15.36 [kcompactd5]
+     55 root      20   0       0      0      0 S   0.0   0.0   0:16.98 [kcompactd6]
+     56 root      20   0       0      0      0 S   0.0   0.0   0:15.70 [kcompactd7]
+     57 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-kintegrityd]
+     58 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-kblockd]
+     59 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-blkcg_punt_bio]
+     61 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [watchdogd]
+     65 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-quota_events_unbound]
+     66 root       0 -20       0      0      0 I   0.0   0.0   0:05.16 [kworker/0:1H-kblockd]
+     67 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-rpciod]
+     68 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-xprtiod]
+     69 root      20   0       0      0      0 S   0.0   0.0   0:00.32 [kswapd0]
+     70 root      20   0       0      0      0 S   0.0   0.0   0:03.73 [kswapd1]
+     71 root      20   0       0      0      0 S   0.0   0.0   0:01.73 [kswapd2]
+     72 root      20   0       0      0      0 S   0.0   0.0   0:01.49 [kswapd3]
+     73 root      20   0       0      0      0 S   0.0   0.0   0:02.13 [kswapd4]
+     74 root      20   0       0      0      0 S   0.0   0.0   0:02.15 [kswapd5]
+     75 root      20   0       0      0      0 S   0.0   0.0   0:02.96 [kswapd6]
+     76 root      20   0       0      0      0 S   0.0   0.0   0:01.66 [kswapd7]
+     77 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-nfsiod]
+     78 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-kthrotld]
+     85 root      20   0       0      0      0 S   0.0   0.0   0:00.25 [hwrng]
+     86 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-iscsi_conn_cleanup]
+     87 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-nvme-wq]
+     88 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-nvme-reset-wq]
+     89 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-nvme-delete-wq]
+     90 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-DWC Notification WorkQ]
+     91 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-uas]
+     92 root       0 -20       0      0      0 I   0.0   0.0   0:05.76 [kworker/1:1H-kblockd]
+     94 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/u22:0]
+     95 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/u23:0]
+     96 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/u24:0]
+     97 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/u25:0]
+    100 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/38-aerdrv]
+    103 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-sdhci]
+    104 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/162-mmc1]
+    108 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-sdhci]
+    109 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/161-mmc0]
+    140 root       0 -20       0      0      0 I   0.0   0.0   0:06.34 [kworker/2:1H-kblockd]
+    159 root       0 -20       0      0      0 I   0.0   0.0   0:06.32 [kworker/3:1H-kblockd]
+    204 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [spi10]
+    225 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [scsi_eh_0]
+    226 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-scsi_tmf_0]
+    252 root      20   0       0      0      0 S   0.0   0.0   0:17.25 [jbd2/sda2-8]
+    253 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-ext4-rsv-conversion]
+    270 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-mld]
+    271 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-ipv6_addrconf]
+    272 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [kworker/u16:1-ipv6_addrconf]
+    318 root      20   0   43056  11712  10768 S   0.0   0.1   0:04.49 /lib/systemd/systemd-journald
+    338 root      20   0   27216   4368   2384 S   0.0   0.1   0:02.11 /lib/systemd/systemd-udevd
+    408 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-v3d_bin]
+    409 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-v3d_render]
+    410 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-v3d_tfu]
+    411 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-v3d_csd]
+    412 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-v3d_cache_clean]
+    413 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-v3d_cpu]
+    456 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-cfg80211]
+    460 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/170-1000800000.codec]
+    462 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-brcmf_wq/mmc1:0001:1]
+    470 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [brcmf_wdog/mmc1:0001:1]
+    524 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/174-vc4 hdmi hpd connected]
+    525 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/175-vc4 hdmi hpd disconnected]
+    526 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [cec-vc4-hdmi-0]
+    527 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/176-vc4 hdmi cec rx]
+    528 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/177-vc4 hdmi cec tx]
+    534 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/178-vc4 hdmi hpd connected]
+    535 root     -51   0       0      0      0 S   0.0   0.0   0:00.02 [irq/179-vc4 hdmi hpd disconnected]
+    536 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [cec-vc4-hdmi-1]
+    537 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/180-vc4 hdmi cec rx]
+    538 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/181-vc4 hdmi cec tx]
+    547 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [card1-crtc0]
+    548 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [card1-crtc1]
+    549 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [card1-crtc2]
+    550 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [card1-crtc3]
+    554 systemd+  20   0   91072   2560   2176 S   0.0   0.0   0:03.64 /lib/systemd/systemd-timesyncd
+    577 avahi     20   0    7952   2720   1760 S   0.0   0.0   5:01.28 avahi-daemon: running [orion.local]
+    578 root      20   0   13824   3360   2464 S   0.0   0.0  57:22.95 /usr/libexec/bluetooth/bluetoothd
+    579 root      20   0    6880   1504   1200 S   0.0   0.0   0:01.19 /usr/sbin/cron -f
+    580 message+  20   0    9184   3136   1776 S   0.0   0.0  74:01.99 /usr/bin/dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only
+    583 polkitd   20   0  235584   3888   2976 S   0.0   0.0   0:01.16 /usr/lib/polkit-1/polkitd --no-debug
+    590 avahi     20   0    7360    288     80 S   0.0   0.0   0:00.00 avahi-daemon: chroot helper
+    598 root      20   0   43008   6128   4528 S   0.0   0.1   0:04.59 /lib/systemd/systemd-logind
+    602 nobody    20   0    5968    480    336 S   0.0   0.0   0:04.16 /usr/sbin/thd --triggers /etc/triggerhappy/triggers.d/ --socket /run/thd.socket --user nobody --deviceglob /dev/input/event*
+    632 root      20   0  264320  11120   6656 S   0.0   0.1  78:02.67 /usr/sbin/NetworkManager --no-daemon
+    647 root      20   0   16704    896    592 S   0.0   0.0   0:02.26 /sbin/wpa_supplicant -u -s -O DIR=/run/wpa_supplicant GROUP=netdev
+    664 root      20   0  324432   5936   4416 S   0.0   0.1   0:00.81 /usr/sbin/ModemManager
+    726 root      20   0    7952    240    160 S   0.0   0.0   0:00.10 /bin/login -p --
+    727 root      20   0    5360   1360   1088 S   0.0   0.0   0:01.64 /sbin/agetty -o -p -- \u --keep-baud 115200,57600,38400,9600 - vt220
+    732 root      20   0   16768   3184   2608 S   0.0   0.0   0:00.47 sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups
+    876 admin     20   0   20064   5792   4544 S   0.0   0.1   0:01.45 /lib/systemd/systemd --user
+    877 admin     20   0  171152    928     64 S   0.0   0.0   0:00.00 (sd-pam)
+   1126 admin     20   0    8176    384    160 S   0.0   0.0   0:00.05 -bash
+   1157 root      20   0    7968    224    160 S   0.0   0.0   0:00.08 /bin/login -p --
+   1158 root      20   0    5744   1360   1088 S   0.0   0.0   0:01.70 /sbin/agetty -o -p -- \u --noclear - linux
+   1163 admin     20   0    8048    368    160 S   0.0   0.0   0:00.02 -bash
+  26366 root      20   0 2555072  46032  20480 S   0.0   0.6   7:49.59 /usr/bin/containerd
+  32511 caddy     20   0 1370928  33472  20288 S   0.0   0.4   0:36.89 /usr/bin/caddy run --environ --config /etc/caddy/Caddyfile
+  35953 root      20   0 2820160  69728  30672 S   0.0   0.8   3:57.31 /usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock
+  36209 root      20   0 1267904   7904   3424 S   0.0   0.1   0:46.69 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 4a10e8da080c6fa901e479a5ce5df3a2b684a556d1214b9849ff49d1503c06a3 -address /run/containerd/containerd.sock
+  36252 1883      20   0    8112   1136    752 S   0.0   0.0   1:27.20 /usr/sbin/mosquitto -c /mosquitto/config/mosquitto.conf
+  36305 root      20   0 1673088    992    512 S   0.0   0.0   0:00.38 /usr/bin/docker-proxy -proto tcp -host-ip 0.0.0.0 -host-port 1883 -container-ip 172.18.0.2 -container-port 1883 -use-listen-fd
+  36312 root      20   0 1820928   1120    512 S   0.0   0.0   0:00.40 /usr/bin/docker-proxy -proto tcp -host-ip :: -host-port 1883 -container-ip 172.18.0.2 -container-port 1883 -use-listen-fd
+ 620817 root      20   0       0      0      0 I   0.0   0.0   0:01.34 [kworker/u20:3-kvfree_rcu_reclaim]
+ 741913 root       0 -20       0      0      0 I   0.0   0.0   0:07.73 [kworker/u21:0-hci0]
+ 829599 root       0 -20       0      0      0 S   0.0   0.0   0:00.00 [spl_system_task]
+ 829600 root       0 -20       0      0      0 S   0.0   0.0   0:00.00 [spl_delay_taskq]
+ 829601 root       0 -20       0      0      0 S   0.0   0.0   0:00.00 [spl_dynamic_tas]
+ 829602 root       0 -20       0      0      0 S   0.0   0.0   0:00.00 [spl_kmem_cache]
+ 829604 root       0 -20       0      0      0 S   0.0   0.0   0:00.00 [zvol_tq-0]
+ 829605 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [arc_prune]
+ 829606 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [arc_flush]
+ 829607 root      20   0       0      0      0 S   0.0   0.0   0:00.18 [arc_evict]
+ 829608 root      39  19       0      0      0 S   0.0   0.0   0:00.18 [arc_reap]
+ 829609 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [dbu_evict]
+ 829610 root      39  19       0      0      0 S   0.0   0.0   0:00.21 [dbuf_evict]
+ 829611 root      39  19       0      0      0 S   0.0   0.0   0:00.00 [z_vdev_file]
+ 829612 root      20   0       0      0      0 S   0.0   0.0   0:00.18 [l2arc_feed]
+ 914465 root      20   0   16624   4640   4000 S   0.0   0.1   0:00.12 /usr/local/bin/gryonixnexusd
+ 914764 root      20   0       0      0      0 I   0.0   0.0   0:00.14 [kworker/u20:4-kvfree_rcu_reclaim]
+ 915256 root      20   0       0      0      0 I   0.0   0.0   0:00.11 [kworker/u19:1-kvfree_rcu_reclaim]
+ 924056 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-xfsalloc]
+ 924057 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-xfs_mru_cache]
+ 969781 root      20   0       0      0      0 I   0.0   0.0   0:06.09 [kworker/u17:2-kvfree_rcu_reclaim]
+ 971967 root      20   0       0      0      0 I   0.0   0.0   0:00.08 [kworker/u20:0-flush-8:0]
+1010318 root       0 -20       0      0      0 I   0.0   0.0   0:04.26 [kworker/u21:1-hci0]
+1031341 root      20   0       0      0      0 I   0.0   0.0   0:00.03 [kworker/u19:0-flush-8:0]
+1050075 root      20   0       0      0      0 I   0.0   0.0   0:00.05 [kworker/u18:0-flush-8:0]
+1095938 root      20   0       0      0      0 I   0.0   0.0   0:00.02 [kworker/u18:1-kvfree_rcu_reclaim]
+1108099 root      20   0       0      0      0 I   0.0   0.0   0:04.22 [kworker/u17:0-events_unbound]
+1140413 root      20   0       0      0      0 I   0.0   0.0   0:04.09 [kworker/u17:1-kvfree_rcu_reclaim]
+1183272 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [kworker/u19:2-kvfree_rcu_reclaim]
+1197459 root      20   0       0      0      0 I   0.0   0.0   0:00.84 [kworker/2:1-events_freezable]
+1197668 root      20   0       0      0      0 I   0.0   0.0   0:00.09 [kworker/1:1-events_freezable]
+1213012 root      20   0       0      0      0 I   0.0   0.0   0:00.05 [kworker/1:0-events_power_efficient]
+1214750 root      20   0       0      0      0 I   0.0   0.0   0:00.06 [kworker/0:1-events]
+1215479 root      20   0       0      0      0 I   0.0   0.0   0:00.08 [kworker/3:2-thermal_events]
+1219249 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [kworker/3:0-events_freezable]
+1220045 root      20   0       0      0      0 I   0.0   0.0   0:00.25 [kworker/2:2-events]
+1221589 root      20   0       0      0      0 I   0.0   0.0   0:00.01 [kworker/0:0-events_freezable]
+1222692 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [kworker/1:2-events_power_efficient]
+1223301 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [kworker/3:1-events_freezable]
+1223547 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [kworker/u19:3-kvfree_rcu_reclaim]
+1224167 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [kworker/2:0-events_freezable]
+1225264 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/u21:2]
+1225530 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [kworker/0:2-events_freezable]
+1225775 root      20   0    5312   1632   1472 S   0.0   0.0   0:00.00 sleep 30
+1225884 root      30  10    5312   1616   1456 S   0.0   0.0   0:00.00 sleep 10
+1225885 root      20   0   20016  11168   8640 S   0.0   0.1   0:00.02 sshd: admin [priv]
+1225891 admin     20   0   20288   7760   4960 S   0.0   0.1   0:00.00 sshd: admin@notty
+1225892 admin     20   0    8928   5008   2528 R   0.0   0.1   0:00.00 top -b -n 2 -d 1 -w 400 -c
+2089409 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-md]
+2089410 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-md_bitmap]
+2098240 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-raid5wq]
+2229573 root      20   0   11312   1904   1504 S   0.0   0.0   0:00.04 /usr/sbin/smartd -n
+2536336 root      20   0 1267904   8064   3504 S   0.0   0.1   0:14.61 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 99468ed516490388961d9623289148451da78d4a29a793e5c34838b8b957abae -address /run/containerd/containerd.sock
+2536362 root      20   0     528     32     16 S   0.0   0.0   0:00.02 /package/admin/s6/command/s6-svscan -d4 -- /run/service
+2536392 root      20   0     320     32     16 S   0.0   0.0   0:00.00 s6-supervise s6-linux-init-shutdownd
+2536394 root      20   0     272     32     16 S   0.0   0.0   0:00.00 /package/admin/s6-linux-init/command/s6-linux-init-shutdownd -d3 -c /run/s6/basedir -g 3000 -C -B
+2536404 root      20   0     320     32     16 S   0.0   0.0   0:00.00 s6-supervise s6rc-oneshot-runner
+2536405 root      20   0     320     32     16 S   0.0   0.0   0:00.00 s6-supervise s6rc-fdholder
+2536413 root      20   0     304     32     16 S   0.0   0.0   0:00.00 /package/admin/s6/command/s6-ipcserverd -1 -- /package/admin/s6/command/s6-ipcserver-access -v0 -E -l0 -i data/rules -- /package/admin/s6/command/s6-sudod -t 30000 -- /package/admin/s6-rc/command/s6-rc-oneshot-run -l ../.. --
+2536444 root      20   0     320     32     16 S   0.0   0.0   0:00.00 s6-supervise home-assistant
+2536446 root      20   0 2530784 216960  17376 S   0.0   2.6  17:26.48 python3 -P -m homeassistant --config /config
+2536699 root      20   0 1244336  12000   7632 S   0.0   0.1   0:08.73 /bin/go2rtc -c /tmp/go2rtc-gbn8c20i/go2rtc__keq2vw8.yaml
+2544858 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-dio/sda2]
+3077637 root      30  10    7744   3968   2752 S   0.0   0.0   5:33.07 bash /opt/gryonixnexus-metrics-collector.sh
+3077793 root      20   0 2415264 150496  57360 S   0.0   1.8   2:12.90 /usr/bin/crowdsec -c /etc/crowdsec/config.yaml
+3077829 root      20   0   33168   9936   8512 S   0.0   0.1   0:00.06 journalctl --follow -n 0 _SYSTEMD_UNIT=ssh.service
+3077830 root      20   0   33168   7968   6544 S   0.0   0.1   0:00.04 journalctl --follow -n 0 _SYSTEMD_UNIT=caddy.service
+3077831 root      20   0   33168   9936   8544 S   0.0   0.1   0:00.06 journalctl --follow -n 0 _SYSTEMD_UNIT=ssh.service _SYSTEMD_UNIT=sshd.service
+3077856 root      20   0 1275184  25536  12784 S   0.0   0.3   0:41.16 /usr/bin/crowdsec-firewall-bouncer -c /etc/crowdsec/bouncers/crowdsec-firewall-bouncer.yaml
+3734568 root      20   0    2416   1488   1280 S   0.0   0.0   0:03.66 /bin/sh /usr/local/lib/gryonixnexus/mdns-aliases.sh
+3734612 root      20   0    9664   2976   2416 S   0.0   0.0   0:00.03 avahi-publish -a -R home.home.local 192.168.178.100
+3764739 root      20   0       0      0      0 I   0.0   0.0   0:01.43 [kworker/u18:2-flush-8:0]
+
+top - 23:23:42 up 19 days,  8:43,  2 users,  load average: 0.00, 0.00, 0.00
+Tasks: 217 total,   1 running, 216 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  0.6 us,  0.4 sy,  0.0 ni, 98.9 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st 
+MiB Mem :   8059.0 total,   5164.8 free,   1186.0 used,   2134.1 buff/cache     
+MiB Swap:    511.9 total,    256.8 free,    255.1 used.   6873.0 avail Mem 
+
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+    580 message+  20   0    9184   3136   1776 S   2.0   0.0  74:02.01 /usr/bin/dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only
+1225892 admin     20   0    8896   5008   2528 R   1.0   0.1   0:00.01 top -b -n 2 -d 1 -w 400 -c
+2536446 root      20   0 2530784 216960  17376 S   1.0   2.6  17:26.49 python3 -P -m homeassistant --config /config
+3077831 root      20   0   33168   9968   8576 S   1.0   0.1   0:00.07 journalctl --follow -n 0 _SYSTEMD_UNIT=ssh.service _SYSTEMD_UNIT=sshd.service
+      1 root      20   0  169856   9440   5584 S   0.0   0.1   0:51.72 /sbin/init
+      2 root      20   0       0      0      0 S   0.0   0.0   0:00.80 [kthreadd]
+      3 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [pool_workqueue_release]
+      4 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-kvfree_rcu_reclaim]
+      5 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-rcu_gp]
+      6 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-sync_wq]
+      7 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-slub_flushwq]
+      8 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-netns]
+     10 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/0:0H-events_highpri]
+     12 root      20   0       0      0      0 I   0.0   0.0   0:00.18 [kworker/u16:0-ipv6_addrconf]
+     13 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-mm_percpu_wq]
+     14 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [rcu_tasks_kthread]
+     15 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [rcu_tasks_rude_kthread]
+     16 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [rcu_tasks_trace_kthread]
+     17 root      20   0       0      0      0 S   0.0   0.0   0:10.61 [ksoftirqd/0]
+     18 root      20   0       0      0      0 I   0.0   0.0   0:27.48 [rcu_preempt]
+     19 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [rcu_exp_par_gp_kthread_worker/0]
+     20 root      20   0       0      0      0 S   0.0   0.0   0:00.04 [rcu_exp_gp_kthread_worker]
+     21 root      rt   0       0      0      0 S   0.0   0.0   0:00.50 [migration/0]
+     22 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [cpuhp/0]
+     23 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [cpuhp/1]
+     24 root      rt   0       0      0      0 S   0.0   0.0   0:00.38 [migration/1]
+     25 root      20   0       0      0      0 S   0.0   0.0   0:11.52 [ksoftirqd/1]
+     27 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/1:0H-events_highpri]
+     28 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [cpuhp/2]
+     29 root      rt   0       0      0      0 S   0.0   0.0   0:00.38 [migration/2]
+     30 root      20   0       0      0      0 S   0.0   0.0   0:11.46 [ksoftirqd/2]
+     32 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/2:0H-events_highpri]
+     33 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [cpuhp/3]
+     34 root      rt   0       0      0      0 S   0.0   0.0   0:00.40 [migration/3]
+     35 root      20   0       0      0      0 S   0.0   0.0   0:11.57 [ksoftirqd/3]
+     37 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/3:0H-events_highpri]
+     42 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [kdevtmpfs]
+     43 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-inet_frag_wq]
+     44 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [kauditd]
+     45 root      20   0       0      0      0 S   0.0   0.0   0:00.61 [khungtaskd]
+     46 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [oom_reaper]
+     48 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-writeback]
+     49 root      20   0       0      0      0 S   0.0   0.0   0:10.83 [kcompactd0]
+     50 root      20   0       0      0      0 S   0.0   0.0   0:19.05 [kcompactd1]
+     51 root      20   0       0      0      0 S   0.0   0.0   0:16.37 [kcompactd2]
+     52 root      20   0       0      0      0 S   0.0   0.0   0:12.38 [kcompactd3]
+     53 root      20   0       0      0      0 S   0.0   0.0   0:16.74 [kcompactd4]
+     54 root      20   0       0      0      0 S   0.0   0.0   0:15.36 [kcompactd5]
+     55 root      20   0       0      0      0 S   0.0   0.0   0:16.98 [kcompactd6]
+     56 root      20   0       0      0      0 S   0.0   0.0   0:15.70 [kcompactd7]
+     57 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-kintegrityd]
+     58 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-kblockd]
+     59 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-blkcg_punt_bio]
+     61 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [watchdogd]
+     65 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-quota_events_unbound]
+     66 root       0 -20       0      0      0 I   0.0   0.0   0:05.16 [kworker/0:1H-kblockd]
+     67 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-rpciod]
+     68 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-xprtiod]
+     69 root      20   0       0      0      0 S   0.0   0.0   0:00.32 [kswapd0]
+     70 root      20   0       0      0      0 S   0.0   0.0   0:03.73 [kswapd1]
+     71 root      20   0       0      0      0 S   0.0   0.0   0:01.73 [kswapd2]
+     72 root      20   0       0      0      0 S   0.0   0.0   0:01.49 [kswapd3]
+     73 root      20   0       0      0      0 S   0.0   0.0   0:02.13 [kswapd4]
+     74 root      20   0       0      0      0 S   0.0   0.0   0:02.15 [kswapd5]
+     75 root      20   0       0      0      0 S   0.0   0.0   0:02.96 [kswapd6]
+     76 root      20   0       0      0      0 S   0.0   0.0   0:01.66 [kswapd7]
+     77 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-nfsiod]
+     78 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-kthrotld]
+     85 root      20   0       0      0      0 S   0.0   0.0   0:00.25 [hwrng]
+     86 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-iscsi_conn_cleanup]
+     87 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-nvme-wq]
+     88 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-nvme-reset-wq]
+     89 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-nvme-delete-wq]
+     90 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-DWC Notification WorkQ]
+     91 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-uas]
+     92 root       0 -20       0      0      0 I   0.0   0.0   0:05.76 [kworker/1:1H-kblockd]
+     94 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/u22:0]
+     95 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/u23:0]
+     96 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/u24:0]
+     97 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/u25:0]
+    100 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/38-aerdrv]
+    103 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-sdhci]
+    104 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/162-mmc1]
+    108 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-sdhci]
+    109 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/161-mmc0]
+    140 root       0 -20       0      0      0 I   0.0   0.0   0:06.34 [kworker/2:1H-kblockd]
+    159 root       0 -20       0      0      0 I   0.0   0.0   0:06.32 [kworker/3:1H-kblockd]
+    204 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [spi10]
+    225 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [scsi_eh_0]
+    226 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-scsi_tmf_0]
+    252 root      20   0       0      0      0 S   0.0   0.0   0:17.25 [jbd2/sda2-8]
+    253 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-ext4-rsv-conversion]
+    270 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-mld]
+    271 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-ipv6_addrconf]
+    272 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [kworker/u16:1-ipv6_addrconf]
+    318 root      20   0   43056  11712  10768 S   0.0   0.1   0:04.49 /lib/systemd/systemd-journald
+    338 root      20   0   27216   4368   2384 S   0.0   0.1   0:02.11 /lib/systemd/systemd-udevd
+    408 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-v3d_bin]
+    409 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-v3d_render]
+    410 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-v3d_tfu]
+    411 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-v3d_csd]
+    412 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-v3d_cache_clean]
+    413 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-v3d_cpu]
+    456 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-cfg80211]
+    460 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/170-1000800000.codec]
+    462 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-brcmf_wq/mmc1:0001:1]
+    470 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [brcmf_wdog/mmc1:0001:1]
+    524 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/174-vc4 hdmi hpd connected]
+    525 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/175-vc4 hdmi hpd disconnected]
+    526 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [cec-vc4-hdmi-0]
+    527 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/176-vc4 hdmi cec rx]
+    528 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/177-vc4 hdmi cec tx]
+    534 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/178-vc4 hdmi hpd connected]
+    535 root     -51   0       0      0      0 S   0.0   0.0   0:00.02 [irq/179-vc4 hdmi hpd disconnected]
+    536 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [cec-vc4-hdmi-1]
+    537 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/180-vc4 hdmi cec rx]
+    538 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [irq/181-vc4 hdmi cec tx]
+    547 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [card1-crtc0]
+    548 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [card1-crtc1]
+    549 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [card1-crtc2]
+    550 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 [card1-crtc3]
+    554 systemd+  20   0   91072   2560   2176 S   0.0   0.0   0:03.64 /lib/systemd/systemd-timesyncd
+    577 avahi     20   0    7952   2720   1760 S   0.0   0.0   5:01.28 avahi-daemon: running [orion.local]
+    578 root      20   0   13824   3360   2464 S   0.0   0.0  57:22.95 /usr/libexec/bluetooth/bluetoothd
+    579 root      20   0    6880   1504   1200 S   0.0   0.0   0:01.19 /usr/sbin/cron -f
+    583 polkitd   20   0  235584   3888   2976 S   0.0   0.0   0:01.16 /usr/lib/polkit-1/polkitd --no-debug
+    590 avahi     20   0    7360    288     80 S   0.0   0.0   0:00.00 avahi-daemon: chroot helper
+    598 root      20   0   43008   6128   4528 S   0.0   0.1   0:04.59 /lib/systemd/systemd-logind
+    602 nobody    20   0    5968    480    336 S   0.0   0.0   0:04.16 /usr/sbin/thd --triggers /etc/triggerhappy/triggers.d/ --socket /run/thd.socket --user nobody --deviceglob /dev/input/event*
+    632 root      20   0  264320  11120   6656 S   0.0   0.1  78:02.67 /usr/sbin/NetworkManager --no-daemon
+    647 root      20   0   16704    896    592 S   0.0   0.0   0:02.26 /sbin/wpa_supplicant -u -s -O DIR=/run/wpa_supplicant GROUP=netdev
+    664 root      20   0  324432   5936   4416 S   0.0   0.1   0:00.81 /usr/sbin/ModemManager
+    726 root      20   0    7952    240    160 S   0.0   0.0   0:00.10 /bin/login -p --
+    727 root      20   0    5360   1360   1088 S   0.0   0.0   0:01.64 /sbin/agetty -o -p -- \u --keep-baud 115200,57600,38400,9600 - vt220
+    732 root      20   0   16768   3184   2608 S   0.0   0.0   0:00.47 sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups
+    876 admin     20   0   20064   5792   4544 S   0.0   0.1   0:01.45 /lib/systemd/systemd --user
+    877 admin     20   0  171152    928     64 S   0.0   0.0   0:00.00 (sd-pam)
+   1126 admin     20   0    8176    384    160 S   0.0   0.0   0:00.05 -bash
+   1157 root      20   0    7968    224    160 S   0.0   0.0   0:00.08 /bin/login -p --
+   1158 root      20   0    5744   1360   1088 S   0.0   0.0   0:01.70 /sbin/agetty -o -p -- \u --noclear - linux
+   1163 admin     20   0    8048    368    160 S   0.0   0.0   0:00.02 -bash
+  26366 root      20   0 2555072  46032  20480 S   0.0   0.6   7:49.59 /usr/bin/containerd
+  32511 caddy     20   0 1370928  33472  20288 S   0.0   0.4   0:36.89 /usr/bin/caddy run --environ --config /etc/caddy/Caddyfile
+  35953 root      20   0 2820160  69728  30672 S   0.0   0.8   3:57.31 /usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock
+  36209 root      20   0 1267904   7904   3424 S   0.0   0.1   0:46.69 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 4a10e8da080c6fa901e479a5ce5df3a2b684a556d1214b9849ff49d1503c06a3 -address /run/containerd/containerd.sock
+  36252 1883      20   0    8112   1136    752 S   0.0   0.0   1:27.20 /usr/sbin/mosquitto -c /mosquitto/config/mosquitto.conf
+  36305 root      20   0 1673088    992    512 S   0.0   0.0   0:00.38 /usr/bin/docker-proxy -proto tcp -host-ip 0.0.0.0 -host-port 1883 -container-ip 172.18.0.2 -container-port 1883 -use-listen-fd
+  36312 root      20   0 1820928   1120    512 S   0.0   0.0   0:00.40 /usr/bin/docker-proxy -proto tcp -host-ip :: -host-port 1883 -container-ip 172.18.0.2 -container-port 1883 -use-listen-fd
+ 620817 root      20   0       0      0      0 I   0.0   0.0   0:01.34 [kworker/u20:3-kvfree_rcu_reclaim]
+ 741913 root       0 -20       0      0      0 I   0.0   0.0   0:07.73 [kworker/u21:0-hci0]
+ 829599 root       0 -20       0      0      0 S   0.0   0.0   0:00.00 [spl_system_task]
+ 829600 root       0 -20       0      0      0 S   0.0   0.0   0:00.00 [spl_delay_taskq]
+ 829601 root       0 -20       0      0      0 S   0.0   0.0   0:00.00 [spl_dynamic_tas]
+ 829602 root       0 -20       0      0      0 S   0.0   0.0   0:00.00 [spl_kmem_cache]
+ 829604 root       0 -20       0      0      0 S   0.0   0.0   0:00.00 [zvol_tq-0]
+ 829605 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [arc_prune]
+ 829606 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [arc_flush]
+ 829607 root      20   0       0      0      0 S   0.0   0.0   0:00.18 [arc_evict]
+ 829608 root      39  19       0      0      0 S   0.0   0.0   0:00.18 [arc_reap]
+ 829609 root      20   0       0      0      0 S   0.0   0.0   0:00.00 [dbu_evict]
+ 829610 root      39  19       0      0      0 S   0.0   0.0   0:00.21 [dbuf_evict]
+ 829611 root      39  19       0      0      0 S   0.0   0.0   0:00.00 [z_vdev_file]
+ 829612 root      20   0       0      0      0 S   0.0   0.0   0:00.18 [l2arc_feed]
+ 914465 root      20   0   16624   4640   4000 S   0.0   0.1   0:00.12 /usr/local/bin/gryonixnexusd
+ 914764 root      20   0       0      0      0 I   0.0   0.0   0:00.14 [kworker/u20:4-kvfree_rcu_reclaim]
+ 915256 root      20   0       0      0      0 I   0.0   0.0   0:00.11 [kworker/u19:1-kvfree_rcu_reclaim]
+ 924056 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-xfsalloc]
+ 924057 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-xfs_mru_cache]
+ 969781 root      20   0       0      0      0 I   0.0   0.0   0:06.09 [kworker/u17:2-kvfree_rcu_reclaim]
+ 971967 root      20   0       0      0      0 I   0.0   0.0   0:00.08 [kworker/u20:0-flush-8:0]
+1010318 root       0 -20       0      0      0 I   0.0   0.0   0:04.26 [kworker/u21:1-hci0]
+1031341 root      20   0       0      0      0 I   0.0   0.0   0:00.03 [kworker/u19:0-flush-8:0]
+1050075 root      20   0       0      0      0 I   0.0   0.0   0:00.05 [kworker/u18:0-flush-8:0]
+1095938 root      20   0       0      0      0 I   0.0   0.0   0:00.02 [kworker/u18:1-kvfree_rcu_reclaim]
+1108099 root      20   0       0      0      0 I   0.0   0.0   0:04.22 [kworker/u17:0-events_unbound]
+1140413 root      20   0       0      0      0 I   0.0   0.0   0:04.09 [kworker/u17:1-kvfree_rcu_reclaim]
+1183272 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [kworker/u19:2-kvfree_rcu_reclaim]
+1197459 root      20   0       0      0      0 I   0.0   0.0   0:00.84 [kworker/2:1-events_freezable]
+1197668 root      20   0       0      0      0 I   0.0   0.0   0:00.09 [kworker/1:1-events_freezable]
+1213012 root      20   0       0      0      0 I   0.0   0.0   0:00.05 [kworker/1:0-events_freezable]
+1214750 root      20   0       0      0      0 I   0.0   0.0   0:00.06 [kworker/0:1-events]
+1215479 root      20   0       0      0      0 I   0.0   0.0   0:00.08 [kworker/3:2-events]
+1219249 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [kworker/3:0-events_freezable]
+1220045 root      20   0       0      0      0 I   0.0   0.0   0:00.25 [kworker/2:2-events_power_efficient]
+1221589 root      20   0       0      0      0 I   0.0   0.0   0:00.01 [kworker/0:0-events_freezable]
+1222692 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [kworker/1:2-events]
+1223301 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [kworker/3:1-events_freezable]
+1223547 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [kworker/u19:3-kvfree_rcu_reclaim]
+1224167 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [kworker/2:0-events_freezable]
+1225264 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/u21:2]
+1225530 root      20   0       0      0      0 I   0.0   0.0   0:00.00 [kworker/0:2-events_freezable]
+1225775 root      20   0    5312   1632   1472 S   0.0   0.0   0:00.00 sleep 30
+1225884 root      30  10    5312   1616   1456 S   0.0   0.0   0:00.00 sleep 10
+1225885 root      20   0   20016  11168   8640 S   0.0   0.1   0:00.02 sshd: admin [priv]
+1225891 admin     20   0   20288   7760   4960 S   0.0   0.1   0:00.00 sshd: admin@notty
+2089409 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-md]
+2089410 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-md_bitmap]
+2098240 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-raid5wq]
+2229573 root      20   0   11312   1904   1504 S   0.0   0.0   0:00.04 /usr/sbin/smartd -n
+2536336 root      20   0 1267904   8064   3504 S   0.0   0.1   0:14.61 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 99468ed516490388961d9623289148451da78d4a29a793e5c34838b8b957abae -address /run/containerd/containerd.sock
+2536362 root      20   0     528     32     16 S   0.0   0.0   0:00.02 /package/admin/s6/command/s6-svscan -d4 -- /run/service
+2536392 root      20   0     320     32     16 S   0.0   0.0   0:00.00 s6-supervise s6-linux-init-shutdownd
+2536394 root      20   0     272     32     16 S   0.0   0.0   0:00.00 /package/admin/s6-linux-init/command/s6-linux-init-shutdownd -d3 -c /run/s6/basedir -g 3000 -C -B
+2536404 root      20   0     320     32     16 S   0.0   0.0   0:00.00 s6-supervise s6rc-oneshot-runner
+2536405 root      20   0     320     32     16 S   0.0   0.0   0:00.00 s6-supervise s6rc-fdholder
+2536413 root      20   0     304     32     16 S   0.0   0.0   0:00.00 /package/admin/s6/command/s6-ipcserverd -1 -- /package/admin/s6/command/s6-ipcserver-access -v0 -E -l0 -i data/rules -- /package/admin/s6/command/s6-sudod -t 30000 -- /package/admin/s6-rc/command/s6-rc-oneshot-run -l ../.. --
+2536444 root      20   0     320     32     16 S   0.0   0.0   0:00.00 s6-supervise home-assistant
+2536699 root      20   0 1244336  12000   7632 S   0.0   0.1   0:08.73 /bin/go2rtc -c /tmp/go2rtc-gbn8c20i/go2rtc__keq2vw8.yaml
+2544858 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 [kworker/R-dio/sda2]
+3077637 root      30  10    7744   3968   2752 S   0.0   0.0   5:33.07 bash /opt/gryonixnexus-metrics-collector.sh
+3077793 root      20   0 2415264 150512  57360 S   0.0   1.8   2:12.90 /usr/bin/crowdsec -c /etc/crowdsec/config.yaml
+3077829 root      20   0   33168   9968   8544 S   0.0   0.1   0:00.06 journalctl --follow -n 0 _SYSTEMD_UNIT=ssh.service
+3077830 root      20   0   33168   7968   6544 S   0.0   0.1   0:00.04 journalctl --follow -n 0 _SYSTEMD_UNIT=caddy.service
+3077856 root      20   0 1275184  25536  12784 S   0.0   0.3   0:41.16 /usr/bin/crowdsec-firewall-bouncer -c /etc/crowdsec/bouncers/crowdsec-firewall-bouncer.yaml
+3734568 root      20   0    2416   1488   1280 S   0.0   0.0   0:03.66 /bin/sh /usr/local/lib/gryonixnexus/mdns-aliases.sh
+3734612 root      20   0    9664   2976   2416 S   0.0   0.0   0:00.03 avahi-publish -a -R home.home.local 192.168.178.100
+3764739 root      20   0       0      0      0 I   0.0   0.0   0:01.43 [kworker/u18:2-flush-8:0]

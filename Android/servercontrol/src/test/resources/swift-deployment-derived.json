@@ -1,0 +1,154 @@
+[
+  {
+    "derivedNodeCapabilities" : [
+      "ingress+worker"
+    ],
+    "derivedNodeEndpoints" : [
+      "server-user@203.0.113.10:2222"
+    ],
+    "derivedNodeIDs" : [
+      "6D3E0000-DE40-4000-8000-000000000000"
+    ],
+    "derivedNodeRoutedThrough" : [
+      ""
+    ],
+    "derivedNodeSlots" : [
+      "vps"
+    ],
+    "hasHomeHost" : false,
+    "hasRelayIngress" : false,
+    "hostRunning" : {
+      "mailcow" : "slot:vps",
+      "nextcloud" : "slot:vps",
+      "vaultwarden" : "slot:vps"
+    },
+    "id" : "6D3E0000-DE40-4000-8000-000000000001",
+    "ingressNodeID" : "6D3E0000-DE40-4000-8000-000000000000",
+    "isMultiHost" : false,
+    "servicesHost" : "slot:vps",
+    "servicesNodeID" : "6D3E0000-DE40-4000-8000-000000000000",
+    "teardownOrder" : [
+      "6D3E0000-DE40-4000-8000-000000000000"
+    ],
+    "workerHosts" : [
+      "slot:vps"
+    ]
+  },
+  {
+    "derivedNodeCapabilities" : [
+      "ingress",
+      "worker+servesOwnTraffic"
+    ],
+    "derivedNodeEndpoints" : [
+      "server-user@203.0.113.10:2222",
+      "server-user@10.8.0.2:2222"
+    ],
+    "derivedNodeIDs" : [
+      "6D3E0000-DE40-4000-8000-000000000003",
+      "6D3E0000-DE40-4000-8000-000000000000"
+    ],
+    "derivedNodeRoutedThrough" : [
+      "",
+      "6D3E0000-DE40-4000-8000-000000000003"
+    ],
+    "derivedNodeSlots" : [
+      "vps",
+      "home"
+    ],
+    "hasHomeHost" : true,
+    "hasRelayIngress" : true,
+    "hostRunning" : {
+      "mailcow" : "slot:home",
+      "nextcloud" : "slot:home",
+      "vaultwarden" : "slot:home"
+    },
+    "id" : "6D3E0000-DE40-4000-8000-000000000002",
+    "ingressNodeID" : "6D3E0000-DE40-4000-8000-000000000010",
+    "isMultiHost" : true,
+    "servicesHost" : "slot:home",
+    "servicesNodeID" : "6D3E0000-DE40-4000-8000-000000000011",
+    "teardownOrder" : [
+      "6D3E0000-DE40-4000-8000-000000000011",
+      "6D3E0000-DE40-4000-8000-000000000010"
+    ],
+    "workerHosts" : [
+      "slot:home"
+    ]
+  },
+  {
+    "derivedNodeCapabilities" : [
+      "ingress+worker"
+    ],
+    "derivedNodeEndpoints" : [
+      "root@192.168.178.5:22"
+    ],
+    "derivedNodeIDs" : [
+      "6D3E0000-DE40-4000-8000-000000000002"
+    ],
+    "derivedNodeRoutedThrough" : [
+      ""
+    ],
+    "derivedNodeSlots" : [
+      "vps"
+    ],
+    "hasHomeHost" : false,
+    "hasRelayIngress" : false,
+    "hostRunning" : {
+      "mailcow" : "slot:vps",
+      "nextcloud" : "slot:vps",
+      "vaultwarden" : "slot:vps"
+    },
+    "id" : "6D3E0000-DE40-4000-8000-000000000003",
+    "ingressNodeID" : "6D3E0000-DE40-4000-8000-000000000002",
+    "isMultiHost" : false,
+    "servicesHost" : "slot:vps",
+    "servicesNodeID" : "6D3E0000-DE40-4000-8000-000000000002",
+    "teardownOrder" : [
+      "6D3E0000-DE40-4000-8000-000000000002"
+    ],
+    "workerHosts" : [
+      "slot:vps"
+    ]
+  },
+  {
+    "derivedNodeCapabilities" : [
+      "ingress",
+      "worker+servesOwnTraffic"
+    ],
+    "derivedNodeEndpoints" : [
+      "server-user@203.0.113.10:2222",
+      "server-user@:2222"
+    ],
+    "derivedNodeIDs" : [
+      "6D3E0000-DE40-4000-8000-000000000005",
+      "6D3E0000-DE40-4000-8000-000000000006"
+    ],
+    "derivedNodeRoutedThrough" : [
+      "",
+      "6D3E0000-DE40-4000-8000-000000000005"
+    ],
+    "derivedNodeSlots" : [
+      "vps",
+      "home"
+    ],
+    "hasHomeHost" : false,
+    "hasRelayIngress" : true,
+    "hostRunning" : {
+      "mailcow" : "slot:home",
+      "nextcloud" : "slot:home",
+      "vaultwarden" : "slot:home"
+    },
+    "id" : "6D3E0000-DE40-4000-8000-000000000004",
+    "ingressNodeID" : "6D3E0000-DE40-4000-8000-000000000005",
+    "isMultiHost" : true,
+    "servicesHost" : "slot:home",
+    "servicesNodeID" : "6D3E0000-DE40-4000-8000-000000000006",
+    "teardownOrder" : [
+      "6D3E0000-DE40-4000-8000-000000000006",
+      "6D3E0000-DE40-4000-8000-000000000005"
+    ],
+    "workerHosts" : [
+      "slot:home"
+    ]
+  }
+]

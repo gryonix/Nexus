@@ -1,0 +1,774 @@
+[
+  {
+    "name" : "ipForwardingCheck",
+    "value" : "sudo sysctl net.ipv4.ip_forward"
+  },
+  {
+    "name" : "pingSelf",
+    "value" : "ping -c 1 -W 2 '203.0.113.10'"
+  },
+  {
+    "name" : "pingSelf.quoting",
+    "value" : "ping -c 1 -W 2 'it'\\''s here'"
+  },
+  {
+    "name" : "generalProbeSeparator",
+    "value" : "___GRYONIXNEXUS_NEXT___"
+  },
+  {
+    "name" : "generalProbe",
+    "value" : "sudo sysctl net.ipv4.ip_forward; echo '___GRYONIXNEXUS_NEXT___'; ping -c 1 -W 2 '203.0.113.10'; echo '___GRYONIXNEXUS_NEXT___'; ping -c 1 -W 2 '10.8.0.2'"
+  },
+  {
+    "name" : "pingTunnel",
+    "value" : "ping -c 1 -W 2 '10.8.0.2'"
+  },
+  {
+    "name" : "restartWireGuard",
+    "value" : "sudo systemctl restart wg-quick@wg0"
+  },
+  {
+    "name" : "restartSSHD",
+    "value" : "sudo systemctl restart sshd"
+  },
+  {
+    "name" : "rebootHost",
+    "value" : "sudo systemctl reboot"
+  },
+  {
+    "name" : "powerOffHost",
+    "value" : "sudo systemctl poweroff"
+  },
+  {
+    "name" : "wgShow",
+    "value" : "sudo wg show"
+  },
+  {
+    "name" : "disk",
+    "value" : "df -B1 --output=target,size,used,pcent -x tmpfs -x devtmpfs -x overlay"
+  },
+  {
+    "name" : "memory",
+    "value" : "free -b"
+  },
+  {
+    "name" : "hostMetrics",
+    "value" : "echo @@STAT@@; cat /proc/stat; echo @@MEM@@; cat /proc/meminfo; echo @@UPTIME@@; cat /proc/uptime; echo @@LOAD@@; cat /proc/loadavg; echo @@NET@@; cat /proc/net/dev; echo @@DISKSTATS@@; cat /proc/diskstats; echo @@DF@@; df -B1 --output=target,size,used,pcent -x tmpfs -x devtmpfs -x overlay 2>/dev/null; echo @@OS@@; cat /etc/os-release 2>/dev/null; echo @@NPROC@@; nproc 2>/dev/null; echo @@TEMP@@; cat /sys/class/thermal/thermal_zone*/temp 2>/dev/null; true"
+  },
+  {
+    "name" : "installReport",
+    "value" : "cat /var/lib/gryonixnexus/install-report.txt 2>/dev/null; true"
+  },
+  {
+    "name" : "adminLockdown.on",
+    "value" : "sudo /opt/gryonixnexus-admin-lockdown.sh on"
+  },
+  {
+    "name" : "adminLockdown.off",
+    "value" : "sudo /opt/gryonixnexus-admin-lockdown.sh off"
+  },
+  {
+    "name" : "adminLockdown.status",
+    "value" : "sudo /opt/gryonixnexus-admin-lockdown.sh status"
+  },
+  {
+    "name" : "adminLockdown.only",
+    "value" : "sudo /opt/gryonixnexus-admin-lockdown.sh only mail.example.com vault.example.com"
+  },
+  {
+    "name" : "adminLockdown.only.empty",
+    "value" : "sudo /opt/gryonixnexus-admin-lockdown.sh only "
+  },
+  {
+    "name" : "adminLockdown.isValidHost[mail.example.com]",
+    "value" : "true"
+  },
+  {
+    "name" : "adminLockdown.isValidHost[]",
+    "value" : "false"
+  },
+  {
+    "name" : "adminLockdown.isValidHost[bad host]",
+    "value" : "false"
+  },
+  {
+    "name" : "adminLockdown.isValidHost[bad_host]",
+    "value" : "false"
+  },
+  {
+    "name" : "adminLockdown.isValidHost[ok-1.example]",
+    "value" : "true"
+  },
+  {
+    "name" : "containers.controlScriptPath",
+    "value" : "/opt/gryonixnexus-container-ctl.sh"
+  },
+  {
+    "name" : "containers.control.start",
+    "value" : "sudo /opt/gryonixnexus-container-ctl.sh start 'vaultwarden'"
+  },
+  {
+    "name" : "containers.control.stop",
+    "value" : "sudo /opt/gryonixnexus-container-ctl.sh stop 'vaultwarden'"
+  },
+  {
+    "name" : "containers.control.restart",
+    "value" : "sudo /opt/gryonixnexus-container-ctl.sh restart 'vaultwarden'"
+  },
+  {
+    "name" : "containers.control.quoting",
+    "value" : "sudo /opt/gryonixnexus-container-ctl.sh restart 'it'\\''s here'"
+  },
+  {
+    "name" : "restore.scriptPath",
+    "value" : "/opt/gryonixnexus-restore.sh"
+  },
+  {
+    "name" : "restore.doneMarker",
+    "value" : "GRYONIXNEXUS_RESTORE_DONE"
+  },
+  {
+    "name" : "restore.run",
+    "value" : "sudo /opt/gryonixnexus-restore.sh vaultwarden '/opt/back ups/o'\\''brien'"
+  },
+  {
+    "name" : "restore.stagingDirectoryName",
+    "value" : "incoming"
+  },
+  {
+    "name" : "restore.stagingDirectory",
+    "value" : "/opt/backups/incoming"
+  },
+  {
+    "name" : "restore.isValidTarget[vaultwarden]",
+    "value" : "true"
+  },
+  {
+    "name" : "restore.isValidTarget[]",
+    "value" : "false"
+  },
+  {
+    "name" : "restore.isValidTarget[Vaultwarden]",
+    "value" : "false"
+  },
+  {
+    "name" : "restore.isValidTarget[docker-mailserver]",
+    "value" : "true"
+  },
+  {
+    "name" : "restore.isValidTarget[vault_warden]",
+    "value" : "false"
+  },
+  {
+    "name" : "restore.isValidArchivePath[/opt/backups/a.tar.gz]",
+    "value" : "true"
+  },
+  {
+    "name" : "restore.isValidArchivePath[/opt/backupsX/a.tar.gz]",
+    "value" : "false"
+  },
+  {
+    "name" : "restore.isValidArchivePath[/opt/backups/../etc/passwd]",
+    "value" : "false"
+  },
+  {
+    "name" : "uninstall.scriptPath",
+    "value" : "/opt/gryonixnexus-uninstall.sh"
+  },
+  {
+    "name" : "uninstall.doneMarker",
+    "value" : "GRYONIXNEXUS_UNINSTALL_DONE"
+  },
+  {
+    "name" : "uninstall.vpnTarget",
+    "value" : "vpn"
+  },
+  {
+    "name" : "uninstall.purgeDataFlag",
+    "value" : "--purge-data"
+  },
+  {
+    "name" : "uninstall.purgeBackupsFlag",
+    "value" : "--purge-backups"
+  },
+  {
+    "name" : "uninstall.run[false-false]",
+    "value" : "sudo /opt/gryonixnexus-uninstall.sh vaultwarden"
+  },
+  {
+    "name" : "uninstall.fullCleanup[false-false]",
+    "value" : "sudo /opt/gryonixnexus-uninstall.sh --all"
+  },
+  {
+    "name" : "uninstall.run[true-false]",
+    "value" : "sudo /opt/gryonixnexus-uninstall.sh vaultwarden --purge-data"
+  },
+  {
+    "name" : "uninstall.fullCleanup[true-false]",
+    "value" : "sudo /opt/gryonixnexus-uninstall.sh --all --purge-data"
+  },
+  {
+    "name" : "uninstall.run[false-true]",
+    "value" : "sudo /opt/gryonixnexus-uninstall.sh vaultwarden --purge-backups"
+  },
+  {
+    "name" : "uninstall.fullCleanup[false-true]",
+    "value" : "sudo /opt/gryonixnexus-uninstall.sh --all --purge-backups"
+  },
+  {
+    "name" : "uninstall.run[true-true]",
+    "value" : "sudo /opt/gryonixnexus-uninstall.sh vaultwarden --purge-data --purge-backups"
+  },
+  {
+    "name" : "uninstall.fullCleanup[true-true]",
+    "value" : "sudo /opt/gryonixnexus-uninstall.sh --all --purge-data --purge-backups"
+  },
+  {
+    "name" : "metricsHistory.10s",
+    "value" : "cat /var/lib/gryonixnexus/metrics/10s.csv 2>/dev/null; echo @@POWER@@; cat /var/lib/gryonixnexus/metrics/power-10s.csv 2>/dev/null; true"
+  },
+  {
+    "name" : "diskHistory.10s",
+    "value" : "cat /var/lib/gryonixnexus/metrics/disks-10s.csv 2>/dev/null; true"
+  },
+  {
+    "name" : "metricsHistory.1m",
+    "value" : "cat /var/lib/gryonixnexus/metrics/1m.csv 2>/dev/null; echo @@POWER@@; cat /var/lib/gryonixnexus/metrics/power-1m.csv 2>/dev/null; true"
+  },
+  {
+    "name" : "diskHistory.1m",
+    "value" : "cat /var/lib/gryonixnexus/metrics/disks-1m.csv 2>/dev/null; true"
+  },
+  {
+    "name" : "metricsHistory.10m",
+    "value" : "cat /var/lib/gryonixnexus/metrics/10m.csv 2>/dev/null; echo @@POWER@@; cat /var/lib/gryonixnexus/metrics/power-10m.csv 2>/dev/null; true"
+  },
+  {
+    "name" : "diskHistory.10m",
+    "value" : "cat /var/lib/gryonixnexus/metrics/disks-10m.csv 2>/dev/null; true"
+  },
+  {
+    "name" : "metricsHistory.1h",
+    "value" : "cat /var/lib/gryonixnexus/metrics/1h.csv 2>/dev/null; echo @@POWER@@; cat /var/lib/gryonixnexus/metrics/power-1h.csv 2>/dev/null; true"
+  },
+  {
+    "name" : "diskHistory.1h",
+    "value" : "cat /var/lib/gryonixnexus/metrics/disks-1h.csv 2>/dev/null; true"
+  },
+  {
+    "name" : "metricsHistory.1d",
+    "value" : "cat /var/lib/gryonixnexus/metrics/1d.csv 2>/dev/null; echo @@POWER@@; cat /var/lib/gryonixnexus/metrics/power-1d.csv 2>/dev/null; true"
+  },
+  {
+    "name" : "diskHistory.1d",
+    "value" : "cat /var/lib/gryonixnexus/metrics/disks-1d.csv 2>/dev/null; true"
+  },
+  {
+    "name" : "metricsHistory.1w",
+    "value" : "cat /var/lib/gryonixnexus/metrics/1w.csv 2>/dev/null; echo @@POWER@@; cat /var/lib/gryonixnexus/metrics/power-1w.csv 2>/dev/null; true"
+  },
+  {
+    "name" : "diskHistory.1w",
+    "value" : "cat /var/lib/gryonixnexus/metrics/disks-1w.csv 2>/dev/null; true"
+  },
+  {
+    "name" : "mailcow.status",
+    "value" : "sudo docker compose -p mailcowdockerized ps"
+  },
+  {
+    "name" : "mailcow.restart",
+    "value" : "sudo docker compose -p mailcowdockerized restart"
+  },
+  {
+    "name" : "mailcow.update",
+    "value" : "cd /opt/mailcow-dockerized && sudo /bin/bash /opt/mailcow-dockerized/update.sh --force"
+  },
+  {
+    "name" : "mailcow.backup",
+    "value" : "mkdir -p '/opt/back ups/o'\\''brien' && sudo /opt/mailcow-dockerized/bot-backup.sh"
+  },
+  {
+    "name" : "mailcow.latestBackupSize",
+    "value" : "du -sh \"$(ls -1dt /opt/backups/* | head -n 1)\" | tail -n 1"
+  },
+  {
+    "name" : "mailcow.dkimScriptPath",
+    "value" : "/opt/gryonixnexus-dkim.sh"
+  },
+  {
+    "name" : "mailcow.dkimDoneMarker",
+    "value" : "GRYONIXNEXUS_DKIM_DONE"
+  },
+  {
+    "name" : "mailcow.dkimDump",
+    "value" : "sudo /opt/gryonixnexus-dkim.sh"
+  },
+  {
+    "name" : "dms.mailboxScriptPath",
+    "value" : "/opt/gryonixnexus-dms-mailbox.sh"
+  },
+  {
+    "name" : "dms.mailboxDoneMarker",
+    "value" : "GRYONIXNEXUS_MAILBOX_DONE"
+  },
+  {
+    "name" : "dms.listMailboxes",
+    "value" : "sudo /opt/gryonixnexus-dms-mailbox.sh list"
+  },
+  {
+    "name" : "dms.addMailbox",
+    "value" : "sudo /opt/gryonixnexus-dms-mailbox.sh add 'user@example.com'"
+  },
+  {
+    "name" : "dms.deleteMailbox",
+    "value" : "sudo /opt/gryonixnexus-dms-mailbox.sh del 'user@example.com'"
+  },
+  {
+    "name" : "dms.setMailboxPassword",
+    "value" : "sudo /opt/gryonixnexus-dms-mailbox.sh password 'user@example.com'"
+  },
+  {
+    "name" : "dms.isValidAddress[user@example.com]",
+    "value" : "true"
+  },
+  {
+    "name" : "dms.isValidAddress[]",
+    "value" : "false"
+  },
+  {
+    "name" : "dms.isValidAddress[-user@example.com]",
+    "value" : "false"
+  },
+  {
+    "name" : "dms.isValidAddress[user@]",
+    "value" : "false"
+  },
+  {
+    "name" : "dms.isValidAddress[@example.com]",
+    "value" : "false"
+  },
+  {
+    "name" : "dms.isValidAddress[a@b@c]",
+    "value" : "false"
+  },
+  {
+    "name" : "dms.isValidAddress[user+tag@example.com]",
+    "value" : "true"
+  },
+  {
+    "name" : "dms.isValidAddress[usér@example.com]",
+    "value" : "false"
+  },
+  {
+    "name" : "dms.isValidAddress[user example@x.com]",
+    "value" : "false"
+  },
+  {
+    "name" : "vaultwarden.status",
+    "value" : "sudo docker ps -a"
+  },
+  {
+    "name" : "vaultwarden.restart",
+    "value" : "sudo docker restart vaultwarden"
+  },
+  {
+    "name" : "vaultwarden.update",
+    "value" : "sudo /opt/vaultwarden-update.sh"
+  },
+  {
+    "name" : "vaultwarden.stop",
+    "value" : "sudo docker stop vaultwarden"
+  },
+  {
+    "name" : "vaultwarden.start",
+    "value" : "sudo docker start vaultwarden"
+  },
+  {
+    "name" : "vaultwarden.stagingArchivePath",
+    "value" : "/opt/backups/vaultwarden-backup.tar.gz"
+  },
+  {
+    "name" : "vaultwarden.archive",
+    "value" : "sudo tar czf '/opt/back ups/o'\\''brien' -C / 'opt/vaultwarden/data'"
+  },
+  {
+    "name" : "vaultwarden.chownArchive",
+    "value" : "sudo chown 'server-user' '/opt/backups/a.tar.gz'"
+  },
+  {
+    "name" : "vaultwarden.encrypt",
+    "value" : "gpg --symmetric --cipher-algo AES256 --batch --pinentry-mode loopback --passphrase-fd 0 --output '/opt/backups/a.gpg' '/opt/back ups/o'\\''brien'"
+  },
+  {
+    "name" : "vaultwarden.removePlainArchive",
+    "value" : "rm -f '/opt/back ups/o'\\''brien'"
+  },
+  {
+    "name" : "vaultwarden.backupSize",
+    "value" : "du -sh '/opt/back ups/o'\\''brien' | cut -f1"
+  },
+  {
+    "name" : "vaultwarden.rotate",
+    "value" : "ls -1t '/opt/backups' 2>/dev/null | grep '\\.gpg$' | tail -n +8 | while IFS= read -r f; do rm -f -- '/opt/backups'/\"$f\"; done"
+  },
+  {
+    "name" : "backups.listMailcow",
+    "value" : "ls -lht '/opt/back ups/o'\\''brien'"
+  },
+  {
+    "name" : "backups.listVaultwarden",
+    "value" : "ls -lht /opt/backups/*.gpg"
+  },
+  {
+    "name" : "backups.makeDir",
+    "value" : "mkdir -p '/opt/back ups/o'\\''brien'"
+  },
+  {
+    "name" : "backups.latestEntrySize",
+    "value" : "du -sh \"$(ls -1dt /opt/backups/* | head -n 1)\" | tail -n 1"
+  },
+  {
+    "name" : "backups.latestShareableFile",
+    "value" : "f=\"$(ls -1dt /opt/backups/* 2>/dev/null | head -n 1)\"; { [ -f \"$f\" ] && [ -r \"$f\" ] && printf '%s\\n' \"$f\"; } || true"
+  },
+  {
+    "name" : "backups.controlScriptPath",
+    "value" : "/opt/gryonixnexus-backup-ctl.sh"
+  },
+  {
+    "name" : "backups.controlDoneMarker",
+    "value" : "GRYONIXNEXUS_BACKUP_CTL_DONE"
+  },
+  {
+    "name" : "backups.backupDoneMarker",
+    "value" : "GRYONIXNEXUS_BACKUP_DONE"
+  },
+  {
+    "name" : "backups.estimateMarker",
+    "value" : "GRYONIXNEXUS_BACKUP_ESTIMATE"
+  },
+  {
+    "name" : "backups.encryptFlag",
+    "value" : "--encrypt"
+  },
+  {
+    "name" : "backups.noEncryptFlag",
+    "value" : "--no-encrypt"
+  },
+  {
+    "name" : "backups.run.encrypted",
+    "value" : "sudo /opt/gryonixnexus-backup-ctl.sh backup vaultwarden --encrypt"
+  },
+  {
+    "name" : "backups.run.plain",
+    "value" : "sudo /opt/gryonixnexus-backup-ctl.sh backup vaultwarden --no-encrypt"
+  },
+  {
+    "name" : "backups.estimate",
+    "value" : "sudo /opt/gryonixnexus-backup-ctl.sh estimate vaultwarden"
+  },
+  {
+    "name" : "backups.delete",
+    "value" : "sudo /opt/gryonixnexus-backup-ctl.sh delete '/opt/back ups/o'\\''brien'"
+  },
+  {
+    "name" : "backups.readSchedule",
+    "value" : "cat /etc/gryonixnexus/autobackup.conf 2>/dev/null || true"
+  },
+  {
+    "name" : "backups.setPassphrase",
+    "value" : "sudo /opt/gryonixnexus-backup-ctl.sh set-passphrase"
+  },
+  {
+    "name" : "schedule.wrapperArgument[off]",
+    "value" : "off"
+  },
+  {
+    "name" : "schedule.isOn[off]",
+    "value" : "false"
+  },
+  {
+    "name" : "backups.setSchedule[off]",
+    "value" : "sudo /opt/gryonixnexus-backup-ctl.sh set-schedule off 7 vaultwarden nextcloud"
+  },
+  {
+    "name" : "backups.setSchedule.noServices[off]",
+    "value" : "sudo /opt/gryonixnexus-backup-ctl.sh set-schedule off 3"
+  },
+  {
+    "name" : "updates.setSchedule[off]",
+    "value" : "sudo /opt/gryonixnexus-update-ctl.sh set-schedule off vaultwarden"
+  },
+  {
+    "name" : "updates.setSchedule.noServices[off]",
+    "value" : "sudo /opt/gryonixnexus-update-ctl.sh set-schedule off"
+  },
+  {
+    "name" : "schedule.wrapperArgument[hours-6-30]",
+    "value" : "every:6h@00:30"
+  },
+  {
+    "name" : "schedule.isOn[hours-6-30]",
+    "value" : "true"
+  },
+  {
+    "name" : "backups.setSchedule[hours-6-30]",
+    "value" : "sudo /opt/gryonixnexus-backup-ctl.sh set-schedule every:6h@00:30 7 vaultwarden nextcloud"
+  },
+  {
+    "name" : "backups.setSchedule.noServices[hours-6-30]",
+    "value" : "sudo /opt/gryonixnexus-backup-ctl.sh set-schedule every:6h@00:30 3"
+  },
+  {
+    "name" : "updates.setSchedule[hours-6-30]",
+    "value" : "sudo /opt/gryonixnexus-update-ctl.sh set-schedule every:6h@00:30 vaultwarden"
+  },
+  {
+    "name" : "updates.setSchedule.noServices[hours-6-30]",
+    "value" : "sudo /opt/gryonixnexus-update-ctl.sh set-schedule every:6h@00:30"
+  },
+  {
+    "name" : "schedule.wrapperArgument[hours-0-99]",
+    "value" : "every:1h@00:59"
+  },
+  {
+    "name" : "schedule.isOn[hours-0-99]",
+    "value" : "true"
+  },
+  {
+    "name" : "backups.setSchedule[hours-0-99]",
+    "value" : "sudo /opt/gryonixnexus-backup-ctl.sh set-schedule every:1h@00:59 7 vaultwarden nextcloud"
+  },
+  {
+    "name" : "backups.setSchedule.noServices[hours-0-99]",
+    "value" : "sudo /opt/gryonixnexus-backup-ctl.sh set-schedule every:1h@00:59 3"
+  },
+  {
+    "name" : "updates.setSchedule[hours-0-99]",
+    "value" : "sudo /opt/gryonixnexus-update-ctl.sh set-schedule every:1h@00:59 vaultwarden"
+  },
+  {
+    "name" : "updates.setSchedule.noServices[hours-0-99]",
+    "value" : "sudo /opt/gryonixnexus-update-ctl.sh set-schedule every:1h@00:59"
+  },
+  {
+    "name" : "schedule.wrapperArgument[hours-99--5]",
+    "value" : "every:23h@00:00"
+  },
+  {
+    "name" : "schedule.isOn[hours-99--5]",
+    "value" : "true"
+  },
+  {
+    "name" : "backups.setSchedule[hours-99--5]",
+    "value" : "sudo /opt/gryonixnexus-backup-ctl.sh set-schedule every:23h@00:00 7 vaultwarden nextcloud"
+  },
+  {
+    "name" : "backups.setSchedule.noServices[hours-99--5]",
+    "value" : "sudo /opt/gryonixnexus-backup-ctl.sh set-schedule every:23h@00:00 3"
+  },
+  {
+    "name" : "updates.setSchedule[hours-99--5]",
+    "value" : "sudo /opt/gryonixnexus-update-ctl.sh set-schedule every:23h@00:00 vaultwarden"
+  },
+  {
+    "name" : "updates.setSchedule.noServices[hours-99--5]",
+    "value" : "sudo /opt/gryonixnexus-update-ctl.sh set-schedule every:23h@00:00"
+  },
+  {
+    "name" : "schedule.wrapperArgument[days-1-4-5]",
+    "value" : "every:1d@04:05"
+  },
+  {
+    "name" : "schedule.isOn[days-1-4-5]",
+    "value" : "true"
+  },
+  {
+    "name" : "backups.setSchedule[days-1-4-5]",
+    "value" : "sudo /opt/gryonixnexus-backup-ctl.sh set-schedule every:1d@04:05 7 vaultwarden nextcloud"
+  },
+  {
+    "name" : "backups.setSchedule.noServices[days-1-4-5]",
+    "value" : "sudo /opt/gryonixnexus-backup-ctl.sh set-schedule every:1d@04:05 3"
+  },
+  {
+    "name" : "updates.setSchedule[days-1-4-5]",
+    "value" : "sudo /opt/gryonixnexus-update-ctl.sh set-schedule every:1d@04:05 vaultwarden"
+  },
+  {
+    "name" : "updates.setSchedule.noServices[days-1-4-5]",
+    "value" : "sudo /opt/gryonixnexus-update-ctl.sh set-schedule every:1d@04:05"
+  },
+  {
+    "name" : "schedule.wrapperArgument[days-99-99-99]",
+    "value" : "every:28d@23:59"
+  },
+  {
+    "name" : "schedule.isOn[days-99-99-99]",
+    "value" : "true"
+  },
+  {
+    "name" : "backups.setSchedule[days-99-99-99]",
+    "value" : "sudo /opt/gryonixnexus-backup-ctl.sh set-schedule every:28d@23:59 7 vaultwarden nextcloud"
+  },
+  {
+    "name" : "backups.setSchedule.noServices[days-99-99-99]",
+    "value" : "sudo /opt/gryonixnexus-backup-ctl.sh set-schedule every:28d@23:59 3"
+  },
+  {
+    "name" : "updates.setSchedule[days-99-99-99]",
+    "value" : "sudo /opt/gryonixnexus-update-ctl.sh set-schedule every:28d@23:59 vaultwarden"
+  },
+  {
+    "name" : "updates.setSchedule.noServices[days-99-99-99]",
+    "value" : "sudo /opt/gryonixnexus-update-ctl.sh set-schedule every:28d@23:59"
+  },
+  {
+    "name" : "schedule.wrapperArgument[days-0--1--1]",
+    "value" : "every:1d@00:00"
+  },
+  {
+    "name" : "schedule.isOn[days-0--1--1]",
+    "value" : "true"
+  },
+  {
+    "name" : "backups.setSchedule[days-0--1--1]",
+    "value" : "sudo /opt/gryonixnexus-backup-ctl.sh set-schedule every:1d@00:00 7 vaultwarden nextcloud"
+  },
+  {
+    "name" : "backups.setSchedule.noServices[days-0--1--1]",
+    "value" : "sudo /opt/gryonixnexus-backup-ctl.sh set-schedule every:1d@00:00 3"
+  },
+  {
+    "name" : "updates.setSchedule[days-0--1--1]",
+    "value" : "sudo /opt/gryonixnexus-update-ctl.sh set-schedule every:1d@00:00 vaultwarden"
+  },
+  {
+    "name" : "updates.setSchedule.noServices[days-0--1--1]",
+    "value" : "sudo /opt/gryonixnexus-update-ctl.sh set-schedule every:1d@00:00"
+  },
+  {
+    "name" : "schedule.parse[off]",
+    "value" : "off"
+  },
+  {
+    "name" : "schedule.parse[every:6h@00:30]",
+    "value" : "every:6h@00:30"
+  },
+  {
+    "name" : "schedule.parse[every:1d@04:05]",
+    "value" : "every:1d@04:05"
+  },
+  {
+    "name" : "schedule.parse[garbage]",
+    "value" : "off"
+  },
+  {
+    "name" : "schedule.parse[every:6x@00:30]",
+    "value" : "off"
+  },
+  {
+    "name" : "schedule.parse[every:6h]",
+    "value" : "off"
+  },
+  {
+    "name" : "schedule.parse[every:6h@ab:cd]",
+    "value" : "off"
+  },
+  {
+    "name" : "updates.controlScriptPath",
+    "value" : "/opt/gryonixnexus-update-ctl.sh"
+  },
+  {
+    "name" : "updates.doneMarker",
+    "value" : "GRYONIXNEXUS_UPDATE_CTL_DONE"
+  },
+  {
+    "name" : "updates.availableMarker",
+    "value" : "GRYONIXNEXUS_UPDATE_AVAILABLE"
+  },
+  {
+    "name" : "updates.currentMarker",
+    "value" : "GRYONIXNEXUS_UPDATE_CURRENT"
+  },
+  {
+    "name" : "updates.unknownMarker",
+    "value" : "GRYONIXNEXUS_UPDATE_UNKNOWN"
+  },
+  {
+    "name" : "updates.updatedMarker",
+    "value" : "GRYONIXNEXUS_UPDATE_DONE"
+  },
+  {
+    "name" : "updates.rolledBackMarker",
+    "value" : "GRYONIXNEXUS_UPDATE_ROLLED_BACK"
+  },
+  {
+    "name" : "updates.failedMarker",
+    "value" : "GRYONIXNEXUS_UPDATE_FAILED"
+  },
+  {
+    "name" : "updates.check.all",
+    "value" : "sudo /opt/gryonixnexus-update-ctl.sh check --all"
+  },
+  {
+    "name" : "updates.check.one",
+    "value" : "sudo /opt/gryonixnexus-update-ctl.sh check vaultwarden"
+  },
+  {
+    "name" : "updates.run",
+    "value" : "sudo /opt/gryonixnexus-update-ctl.sh run 'vaultwarden'"
+  },
+  {
+    "name" : "updates.readSchedule",
+    "value" : "cat /etc/gryonixnexus/autoupdate.conf 2>/dev/null || true"
+  },
+  {
+    "name" : "updates.readStatus",
+    "value" : "sudo /opt/gryonixnexus-update-ctl.sh status"
+  },
+  {
+    "name" : "accessGrant.marker",
+    "value" : "GRYONIXNEXUS_GRANT_OK"
+  },
+  {
+    "name" : "accessGrant.command",
+    "value" : "sh -c 'set -e; k='\\''ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB4Gr/xample+Key/Only gryonixnexus-app'\\''; u=${SUDO_USER:-$(id -un)}; h=$(getent passwd \"$u\" | cut -d: -f6); [ -n \"$h\" ] || { echo \"no home directory for $u\" >&2; exit 1; }; mkdir -p \"$h/.ssh\"; chmod 700 \"$h/.ssh\"; touch \"$h/.ssh/authorized_keys\"; chmod 600 \"$h/.ssh/authorized_keys\"; grep -qxF \"$k\" \"$h/.ssh/authorized_keys\" || printf \"%s\\n\" \"$k\" >> \"$h/.ssh/authorized_keys\"; if [ \"$(id -u)\" = 0 ]; then chown -R \"$u:\" \"$h/.ssh\"; fi; echo \"GRYONIXNEXUS_GRANT_OK $u\"'"
+  },
+  {
+    "name" : "accessGrant.quoting",
+    "value" : "sh -c 'set -e; k='\\''ssh-ed25519 AAA'\\''\\'\\'''\\''B comment'\\''; u=${SUDO_USER:-$(id -un)}; h=$(getent passwd \"$u\" | cut -d: -f6); [ -n \"$h\" ] || { echo \"no home directory for $u\" >&2; exit 1; }; mkdir -p \"$h/.ssh\"; chmod 700 \"$h/.ssh\"; touch \"$h/.ssh/authorized_keys\"; chmod 600 \"$h/.ssh/authorized_keys\"; grep -qxF \"$k\" \"$h/.ssh/authorized_keys\" || printf \"%s\\n\" \"$k\" >> \"$h/.ssh/authorized_keys\"; if [ \"$(id -u)\" = 0 ]; then chown -R \"$u:\" \"$h/.ssh\"; fi; echo \"GRYONIXNEXUS_GRANT_OK $u\"'"
+  },
+  {
+    "name" : "shellUser.marker",
+    "value" : "GRYONIXNEXUS_USER_OK"
+  },
+  {
+    "name" : "shellUser.command",
+    "value" : "sh -c 'set -e; u=dana; k='\\''ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB4Gr/xample+Key/Only gryonixnexus-app'\\''; id \"$u\" >/dev/null 2>&1 || useradd -m -s /bin/bash \"$u\"; h=$(getent passwd \"$u\" | cut -d: -f6); [ -n \"$h\" ] || { echo \"no home directory for $u\" >&2; exit 1; }; mkdir -p \"$h/.ssh\"; chmod 700 \"$h/.ssh\"; touch \"$h/.ssh/authorized_keys\"; chmod 600 \"$h/.ssh/authorized_keys\"; grep -qxF \"$k\" \"$h/.ssh/authorized_keys\" || printf \"%s\\n\" \"$k\" >> \"$h/.ssh/authorized_keys\"; chown -R \"$u:\" \"$h/.ssh\"; echo \"GRYONIXNEXUS_USER_OK $u\"'"
+  },
+  {
+    "name" : "shellUser.command.sudo",
+    "value" : "sh -c 'set -e; u=dana; k='\\''ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB4Gr/xample+Key/Only gryonixnexus-app'\\''; id \"$u\" >/dev/null 2>&1 || useradd -m -s /bin/bash \"$u\"; h=$(getent passwd \"$u\" | cut -d: -f6); [ -n \"$h\" ] || { echo \"no home directory for $u\" >&2; exit 1; }; mkdir -p \"$h/.ssh\"; chmod 700 \"$h/.ssh\"; touch \"$h/.ssh/authorized_keys\"; chmod 600 \"$h/.ssh/authorized_keys\"; grep -qxF \"$k\" \"$h/.ssh/authorized_keys\" || printf \"%s\\n\" \"$k\" >> \"$h/.ssh/authorized_keys\"; chown -R \"$u:\" \"$h/.ssh\"; t=/etc/sudoers.d/.gryonixnexus-$u.tmp; printf \"%s\\n\" \"$u ALL=(ALL) NOPASSWD:ALL\" > \"$t\"; chmod 440 \"$t\"; visudo -cf \"$t\" >/dev/null; mv \"$t\" /etc/sudoers.d/gryonixnexus-$u; echo \"GRYONIXNEXUS_USER_OK $u\"'"
+  },
+  {
+    "name" : "shellUser.command.reserved",
+    "value" : "<nil>"
+  },
+  {
+    "name" : "shellUser.command.invalid",
+    "value" : "<nil>"
+  },
+  {
+    "name" : "openSSHPublicKey.defaultComment",
+    "value" : "gryonixnexus-app"
+  },
+  {
+    "name" : "openSSHPublicKey.encode",
+    "value" : "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAAHDhUcIyoxOD9GTVRbYmlwd36FjJOaoaivtr3Ey9LZ gryonixnexus-app"
+  },
+  {
+    "name" : "openSSHPublicKey.encode.comment",
+    "value" : "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAAHDhUcIyoxOD9GTVRbYmlwd36FjJOaoaivtr3Ey9LZ someone@host"
+  }
+]
