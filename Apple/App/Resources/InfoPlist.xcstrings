@@ -1,0 +1,352 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "CFBundleDisplayName" : {
+      "comment" : "Bundle display name",
+      "extractionState" : "extracted_with_value",
+      "shouldTranslate" : false
+    },
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "shouldTranslate" : false
+    },
+    "NSFaceIDUsageDescription" : {
+      "comment" : "Privacy - Face ID Usage Description",
+      "extractionState" : "manual",
+      "localizations" : {
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus използва Face ID, за да защити запазените пароли и експортите на сървъри."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus používá Face ID k ochraně uložených hesel a exportů serverů."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus bruger Face ID til at beskytte dine gemte adgangskoder og servereksporter."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus nutzt Face ID, um deine gespeicherten Passwörter und Server-Exporte zu schützen."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το gryonixNexus χρησιμοποιεί το Face ID για να προστατεύει τους αποθηκευμένους κωδικούς και τις εξαγωγές διακομιστών."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus usa Face ID para proteger tus contraseñas guardadas y las exportaciones de servidores."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus kasutab Face ID-d, et kaitsta salvestatud paroole ja serverite eksporte."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus käyttää Face ID:tä tallennettujen salasanojen ja palvelinvientien suojaamiseen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus utilise Face ID pour protéger vos mots de passe enregistrés et vos exports de serveurs."
+          }
+        },
+        "ga" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Úsáideann gryonixNexus Face ID chun do phasfhocail shábháilte agus easpórtálacha freastalaí a chosaint."
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus koristi Face ID za zaštitu spremljenih lozinki i izvoza poslužitelja."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A gryonixNexus a Face ID-t használja a mentett jelszavak és szerverexportok védelmére."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus usa Face ID per proteggere le password salvate e le esportazioni dei server."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus は保存したパスワードとサーバーのエクスポートを保護するために Face ID を使用します。"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus naudoja Face ID išsaugotiems slaptažodžiams ir serverių eksportams apsaugoti."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus izmanto Face ID, lai aizsargātu saglabātās paroles un serveru eksportus."
+          }
+        },
+        "mt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus juża Face ID biex jipproteġi l-passwords salvati u l-esportazzjonijiet tas-servers."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus gebruikt Face ID om je bewaarde wachtwoorden en serverexports te beschermen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus używa Face ID do ochrony zapisanych haseł i eksportów serwerów."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A gryonixNexus usa o Face ID para proteger as palavras-passe guardadas e as exportações de servidores."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus folosește Face ID pentru a proteja parolele salvate și exporturile de servere."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus использует Face ID, чтобы защищать сохранённые пароли и экспорт серверов."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus používa Face ID na ochranu uložených hesiel a exportov serverov."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus uporablja Face ID za zaščito shranjenih gesel in izvozov strežnikov."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus använder Face ID för att skydda dina sparade lösenord och serverexporter."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus використовує Face ID, щоб захищати збережені паролі та експорт серверів."
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus 使用面容 ID 保护你保存的密码和服务器导出文件。"
+          }
+        }
+      }
+    },
+    "NSLocalNetworkUsageDescription" : {
+      "comment" : "Privacy - Local Network Usage Description",
+      "extractionState" : "manual",
+      "localizations" : {
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus се свързва чрез SSH със сървъри в локалната ви мрежа, за да ги инсталира и управлява."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus se připojuje přes SSH k serverům ve vaší místní síti, aby je nainstaloval a spravoval."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus forbinder via SSH til servere på dit lokale netværk for at installere og administrere dem."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus verbindet sich per SSH mit Servern in deinem lokalen Netzwerk, um sie zu installieren und zu verwalten."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το gryonixNexus συνδέεται μέσω SSH σε διακομιστές του τοπικού σας δικτύου για να τους εγκαταστήσει και να τους διαχειριστεί."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus se conecta por SSH a servidores de tu red local para instalarlos y gestionarlos."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus ühendub SSH kaudu kohtvõrgu serveritega, et neid paigaldada ja hallata."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus yhdistää SSH:lla lähiverkon palvelimiin asentaakseen ja hallitakseen niitä."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus se connecte en SSH aux serveurs de votre réseau local pour les installer et les gérer."
+          }
+        },
+        "ga" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ceanglaíonn gryonixNexus trí SSH le freastalaithe ar do líonra áitiúil chun iad a shuiteáil agus a bhainistiú."
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus se povezuje putem SSH-a s poslužiteljima u lokalnoj mreži kako bi ih instalirao i upravljao njima."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A gryonixNexus SSH-n keresztül csatlakozik a helyi hálózat szervereihez, hogy telepítse és kezelje őket."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus si collega via SSH ai server della rete locale per installarli e gestirli."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus はローカルネットワーク上のサーバーに SSH で接続し、インストールと管理を行います。"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus jungiasi per SSH prie vietinio tinklo serverių, kad juos įdiegtų ir valdytų."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus ar SSH savienojas ar lokālā tīkla serveriem, lai tos instalētu un pārvaldītu."
+          }
+        },
+        "mt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus jikkonnettja permezz ta' SSH mas-servers fin-netwerk lokali tiegħek biex jinstallahom u jimmaniġġjahom."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus maakt via SSH verbinding met servers in je lokale netwerk om ze te installeren en te beheren."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus łączy się przez SSH z serwerami w sieci lokalnej, aby je instalować i nimi zarządzać."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A gryonixNexus liga-se por SSH a servidores na sua rede local para os instalar e gerir."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus se conectează prin SSH la serverele din rețeaua locală pentru a le instala și administra."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus подключается по SSH к серверам в вашей локальной сети, чтобы устанавливать их и управлять ими."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus sa pripája cez SSH k serverom vo vašej lokálnej sieti, aby ich nainštaloval a spravoval."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus se prek SSH poveže s strežniki v lokalnem omrežju, da jih namesti in upravlja."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus ansluter via SSH till servrar i ditt lokala nätverk för att installera och hantera dem."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus підключається через SSH до серверів у вашій локальній мережі, щоб встановлювати їх і керувати ними."
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus 通过 SSH 连接本地网络中的服务器，以安装和管理它们。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}
