@@ -7,6 +7,19 @@ self-hosted services on servers you control: mail, VPN, file storage,
 photos, passwords, smart home and more. There is no backend and no account
 system. The app talks to your servers over SSH and to nothing else.
 
+<p align="center">
+  <img src="Apple/Screenshots/mac-servers.png" alt="Servers on Mac" width="49%">
+  <img src="Apple/Screenshots/mac-dashboard.png" alt="Server dashboard on Mac" width="49%">
+  <img src="Apple/Screenshots/mac-apps.png" alt="Apps on Mac" width="49%">
+  <img src="Apple/Screenshots/mac-vpn.png" alt="VPN on Mac" width="49%">
+</p>
+
+<p align="center">
+  <img src="Apple/Screenshots/iphone-servers.png" alt="Servers on iPhone" width="30%">
+  <img src="Apple/Screenshots/iphone-dashboard.png" alt="Server dashboard on iPhone" width="30%">
+  <img src="Apple/Screenshots/iphone-vpn.png" alt="VPN on iPhone" width="30%">
+</p>
+
 ## What it can run
 
 Each service is installed and managed on the server from the app. The catalog

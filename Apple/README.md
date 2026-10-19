@@ -8,5 +8,6 @@ The gryonixNexus app for iPhone, iPad and Mac: one project, one set of sources.
 - `TunnelExtension/`: the VPN tunnel that runs on the device.
 - `Widgets/`: widgets, the Control Centre toggle and Live Activities.
 - `Shared/`: assets used by the app and its extensions.
+- `Screenshots/`: the pictures shown in the main README.
 - `AppTests/`, `TunnelExtensionTests/`: unit tests.
 - `project.yml`: the project definition for all targets.

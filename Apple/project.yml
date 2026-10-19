@@ -418,6 +418,7 @@ targets:
         # same reason the app's is not.
         PRODUCT_BUNDLE_IDENTIFIER: com.skaymer.gryonixnexus.widgets
         CODE_SIGN_ENTITLEMENTS[sdk=macosx*]: Widgets/Extension/gryonixNexusWidgets-macOS.entitlements
+        ENABLE_HARDENED_RUNTIME[sdk=macosx*]: YES
         MARKETING_VERSION: "26.10"
         CURRENT_PROJECT_VERSION: "261020"
         SWIFT_VERSION: "5.9"
@@ -538,6 +539,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.skaymer.gryonixnexus.tunnel
         # macOS loads an extension only inside a sandbox
         CODE_SIGN_ENTITLEMENTS[sdk=macosx*]: TunnelExtension/gryonixNexusTunnel-macOS.entitlements
+        ENABLE_HARDENED_RUNTIME[sdk=macosx*]: YES
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: Z4PMRLY8L2
         CODE_SIGN_IDENTITY: "Apple Development"
@@ -634,6 +636,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.skaymer.gryonixnexus.proxytunnel
         CODE_SIGN_ENTITLEMENTS[sdk=macosx*]: TunnelExtension/gryonixNexusTunnel-macOS.entitlements
+        ENABLE_HARDENED_RUNTIME[sdk=macosx*]: YES
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: Z4PMRLY8L2
         CODE_SIGN_IDENTITY: "Apple Development"
