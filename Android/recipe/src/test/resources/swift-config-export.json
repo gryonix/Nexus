@@ -1,0 +1,11 @@
+{
+  "portsCsv" : "port,protocol,purpose\n22,TCP,SSH\n25,TCP,Mailcow (SMTP)\n443,TCP,\"Caddy (HTTPS), Nextcloud\"\n51820,UDP,WireGuard\n8443,TCP,\"Panel \"\"admin\"\"\"\n",
+  "portsCsvFileName" : "gryonixnexus-ports.csv",
+  "portsCsvSummary" : "CSV-SUMMARY",
+  "portsText" : "22/TCP\tSSH\n25/TCP\tMailcow (SMTP)\n443/TCP\tCaddy (HTTPS), Nextcloud\n51820/UDP\tWireGuard\n8443/TCP\tPanel \"admin\"",
+  "portsTxt" : "# Inbound ports to allow on the server (hoster firewall / security group).\n# Port/Proto    Purpose\n22/TCP    SSH\n25/TCP    Mailcow (SMTP)\n443/TCP    Caddy (HTTPS), Nextcloud\n51820/UDP    WireGuard\n8443/TCP    Panel \"admin\"\n",
+  "portsTxtFileName" : "gryonixnexus-ports.txt",
+  "portsTxtSummary" : "TXT-SUMMARY",
+  "recordsText" : "A\t@\t203.0.113.10\nA\tmail\t203.0.113.10\nMX\t@\tmail.example.com. 10\nTXT\t@\tv=spf1 mx -all\nA\telsewhere.test\t198.51.100.7\nA\tnotexample.com\t198.51.100.8",
+  "recordsTextNoZone" : "A\texample.com\t203.0.113.10\nA\tmail.example.com\t203.0.113.10\nMX\texample.com\tmail.example.com. 10\nTXT\texample.com\tv=spf1 mx -all\nA\telsewhere.test\t198.51.100.7\nA\tnotexample.com\t198.51.100.8"
+}
