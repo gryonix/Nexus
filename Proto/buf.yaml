@@ -1,0 +1,13 @@
+version: v2
+modules:
+  # The schema lives beside this file (Proto/gryonixnexusd/v1). It said `proto`
+  # until the repository was laid out by side, and a module path that matches
+  # nothing is not an error buf shouts about — `buf generate` simply reported
+  # "had no .proto files" and every client kept its last generated copy.
+  - path: .
+lint:
+  use:
+    - STANDARD
+breaking:
+  use:
+    - FILE
