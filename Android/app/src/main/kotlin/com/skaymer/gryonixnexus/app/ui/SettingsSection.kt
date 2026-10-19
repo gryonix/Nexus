@@ -225,6 +225,7 @@ fun SettingsSection(
                 )
             }
         }
+        item { SupportChatRow() }
         item { AppUpdateRows(appUpdates, revision) }
         item {
             GroupedSection {
@@ -308,6 +309,25 @@ private const val PAGE_RANGES = "ranges"
 private const val PAGE_METRICS = "metrics"
 private const val PAGE_LICENSES = "licenses"
 private const val PAGE_LICENSE = "license"
+
+private const val SUPPORT_CHAT = "https://discord.gg/RsMMRPgzhK"
+
+@Composable
+private fun SupportChatRow() {
+    val context = LocalContext.current
+    GroupedSection {
+        ActionRow(
+            text = "Discord",
+            showDivider = false,
+            onClick = {
+                context.startActivity(
+                    Intent(Intent.ACTION_VIEW, Uri.parse(SUPPORT_CHAT))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+            },
+        )
+    }
+}
 
 @Composable
 private fun LicenseSettingsRow(onOpen: () -> Unit) {

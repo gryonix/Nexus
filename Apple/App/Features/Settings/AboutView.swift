@@ -19,6 +19,13 @@ struct AboutView: View {
                         .textSelection(.enabled)
                         .foregroundStyle(.secondary)
                 }
+                Link(destination: AppRelease.supportChat) {
+                    Label {
+                        Text(verbatim: "Discord")
+                    } icon: {
+                        Image(systemName: "bubble.left.and.bubble.right")
+                    }
+                }
             } header: {
                 HStack {
                     Text(verbatim: "gryonixNexus")
@@ -69,6 +76,7 @@ enum AppRelease {
     }
 
     static let sourceRepository = URL(string: "https://github.com/gryonix/Nexus")!
+    static let supportChat = URL(string: "https://discord.gg/RsMMRPgzhK")!
     static let securityPolicy = URL(string: "https://github.com/gryonix/Nexus/blob/main/SECURITY.md")!
 }
 

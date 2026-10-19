@@ -54,6 +54,12 @@ and handles updates, repair and uninstall, all over SSH.
 - **iPhone and iPad**: the App Store.
 - **Android**: the code is in this repository, but no Android build is released yet.
 
+## Support
+
+- **Community and help**: [Discord](https://discord.gg/RsMMRPgzhK).
+- **E-mail**: [support@gryonix.com](mailto:support@gryonix.com).
+- **Security reports**: see [SECURITY.md](SECURITY.md).
+
 ## License
 
 gryonixNexus is **source-available, not open source**. You can read the code,
