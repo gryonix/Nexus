@@ -1,0 +1,35 @@
+{
+  "cases": [
+    {
+      "name": "wireguard-first-client",
+      "protocol": "wireguard",
+      "text": "[Interface]\nPrivateKey = qYZtvqq1Y+yrS6oRJVgah3DZlRxvqSuQJQvMGYFI+jI=\nAddress = 10.9.0.2/32\nDNS = 1.1.1.1\nMTU = 1280\n\n[Peer]\nPublicKey = R1XTXmuiEo976mXG7BVbjc5DnzkGsKqJsrIV8WEnih4=\nEndpoint = vpn.example.com:51820\nAllowedIPs = 0.0.0.0/0\nPersistentKeepalive = 25\n"
+    },
+    {
+      "name": "wireguard-second-client",
+      "protocol": "wireguard",
+      "text": "[Interface]\nPrivateKey = JvaoEJi0gLjs9lljdCU0v7UYJ/c/Zhc2Yw+ojvGx+CM=\nAddress = 10.9.0.3/32\nDNS = 1.1.1.1\nMTU = 1280\n\n[Peer]\nPublicKey = R1XTXmuiEo976mXG7BVbjc5DnzkGsKqJsrIV8WEnih4=\nEndpoint = vpn.example.com:51820\nAllowedIPs = 0.0.0.0/0\nPersistentKeepalive = 25\n"
+    },
+    {
+      "name": "amneziawg-first-client",
+      "protocol": "amneziawg",
+      "text": "[Interface]\nPrivateKey = wbfdFoY4FbEQAp0ESA6U23kmPLbzrnLx0MecZGEwQCE=\nAddress = 10.10.0.2/24\nDNS = 1.1.1.1\nMTU = 1280\nJc = 4\nJmin = 40\nJmax = 70\nS1 = 50\nS2 = 100\nH1 = 1234567891\nH2 = 1234567892\nH3 = 1234567893\nH4 = 1234567894\n\n[Peer]\nPublicKey = UW3FCVEeuHghrDZWC9ED1m8wkxfrbm84hs+hdy1Kirg=\nPresharedKey = O/Z6T/P57QdNc50H5OdQ0b9gcV509iXmdZiVIF6De8k=\nEndpoint = vpn.example.com:51830\nAllowedIPs = 0.0.0.0/0\nPersistentKeepalive = 25\n"
+    },
+    {
+      "name": "shadowsocks-first-client",
+      "protocol": "shadowsocks",
+      "text": "ss://2022-blake3-aes-256-gcm:c2VydmVyLXByZXNoYXJlZC1rZXktMzItYnl0ZXMhISE%3D:6gGJvLZHQtKKwJKxJnMQCJ5hr7bnmKQGBRBLQKXiZ4g%3D@vpn.example.com:8388#iPhone"
+    },
+    {
+      "name": "shadowsocks-name-with-a-space",
+      "protocol": "shadowsocks",
+      "text": "ss://2022-blake3-aes-256-gcm:c2VydmVyLXByZXNoYXJlZC1rZXktMzItYnl0ZXMhISE%3D:7vCGPamkdlVk3FXTSP1UYEa00eu4tDZ3C%2FDD8BvV7Gc%3D@vpn.example.com:8388#work%20laptop"
+    },
+    {
+      "name": "xray-first-client",
+      "protocol": "xray",
+      "text": "vless://2a9df7f3-1217-4758-a146-9c314a775e0d@vpn.example.com:8443?encryption=none&flow=xtls-rprx-vision&security=reality&sni=www.microsoft.com&fp=chrome&pbk=xrK4Y_1n7QkbWZ8mQ2vN9pLd&sid=9a3f&type=tcp#iPhone"
+    }
+  ],
+  "note": "Written by Tools/dump-vpn-config-golden.py \u2014 the panel's own output."
+}
