@@ -1,0 +1,90 @@
+adguard_hostname	
+adguard_path	/opt/adguardhome
+amnezia_wg_path	/opt/awgvpn
+amnezia_wg_port	51822
+anythingllm_hostname	
+anythingllm_path	/opt/anythingllm
+authelia_hostname	
+authelia_path	/opt/authelia
+authelia_protected_services	adguard-home,pihole,homepage,crafty-controller
+cloudflared_path	/opt/cloudflared
+crafty_hostname	
+crafty_path	/opt/crafty
+crowdsec_enabled	true
+docker_mailserver_path	/opt/docker-mailserver
+forgejo_hostname	
+forgejo_path	/opt/forgejo
+forgejo_ssh_port	2222
+gitlab_hostname	
+gitlab_path	/opt/gitlab-ce
+gitlab_ssh_port	2223
+headscale_base_domain	
+headscale_hostname	
+headscale_path	/opt/headscale
+home_assistant_hostname	
+home_assistant_path	/opt/home-assistant
+homepage_hostname	
+homepage_path	/opt/homepage
+immich_hostname	
+immich_path	/opt/immich
+jellyfin_hostname	
+jellyfin_media_path	/srv/media
+jellyfin_path	/opt/jellyfin
+litellm_hostname	
+litellm_path	/opt/litellm
+machine_at_home	false
+mailcow_path	/opt/mailcow-dockerized
+mailu_path	/opt/mailu
+mailu_subnet	10.254.29.0/24
+minecraft_bedrock_accepts_eula	false
+minecraft_bedrock_path	/opt/minecraft-bedrock
+minecraft_bedrock_port	19132
+minecraft_bedrock_version	
+minecraft_java_accepts_eula	false
+minecraft_java_flavour	PAPER
+minecraft_java_memory_mb	2048
+minecraft_java_mods	
+minecraft_java_operators	
+minecraft_java_path	/opt/minecraft-java
+minecraft_java_port	25565
+minecraft_java_version	
+minecraft_java_whitelist	
+nextcloud_hostname	
+nextcloud_path	/opt/nextcloud
+ollama_path	/opt/ollama
+open_webui_allow_signups	false
+open_webui_hostname	
+open_webui_path	/opt/open-webui
+openclaw_hostname	
+openclaw_path	/opt/openclaw
+openvpn_path	/opt/openvpn
+openvpn_port	1194
+passbolt_hostname	
+passbolt_path	/opt/passbolt
+photoprism_hostname	
+photoprism_path	/opt/photoprism
+pihole_hostname	
+pihole_path	/opt/pihole
+pihole_serves_network	false
+pihole_upstreams	1.1.1.1;1.0.0.1
+psono_hostname	
+psono_path	/opt/psono
+qdrant_path	/opt/qdrant
+seafile_hostname	
+seafile_path	/opt/seafile
+searxng_path	/opt/searxng
+shadowsocks_path	/opt/shadowsocks
+shadowsocks_port	8388
+tailscale_login_server	
+tailscale_node_name	
+tailscale_node_path	/opt/tailscale
+vaultwarden_allow_signups	false
+vaultwarden_container	vaultwarden
+vaultwarden_data_path	/opt/vaultwarden/data
+vaultwarden_hostname	
+vpn_client_access	both
+vpn_hostname	
+wireguard_vpn_port	51820
+xray_reality_path	/opt/xray
+xray_reality_port	8443
+xray_reality_sni	www.apple.com
