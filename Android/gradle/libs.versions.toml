@@ -1,0 +1,71 @@
+[versions]
+agp = "9.3.2"
+kotlin = "2.4.10"
+coroutines = "1.10.2"
+# Push through gryonixPush; the app starts Firebase from the relay's settings.
+firebaseBom = "34.19.0"
+composeBom = "2026.08.00"
+activityCompose = "1.10.1"
+lifecycle = "2.9.4"
+navigation = "2.9.5"
+datastore = "1.1.7"
+security = "1.1.0"
+sshj = "0.40.0"
+# sshj already pulls BouncyCastle in, but transitively: declared here because
+# the app's own SSH key is derived from a stored seed, which needs the provider
+# at COMPILE time, and a transitive that sshj could drop is not a dependency.
+bouncycastle = "1.80.2"
+# A REAL SSH server, in-process, for the command runner's tests. Network code
+# checked against a stub is checked against nothing.
+minaSshd = "2.12.1"
+# MINA needs this to speak ed25519 — the algorithm the app's own key uses, so
+# without it the test server cannot check the key the product really presents.
+eddsa = "0.3.0"
+wire = "6.4.6"
+junit = "5.11.4"
+serialization = "1.11.0"
+# **What a local `.aar` needs and cannot declare.** The two VPN datapaths are
+# artefacts built by `Tools/build-runtimes.sh`, and a file dependency carries
+# no POM — so what they link against is named here instead. The versions are
+# what the AmneziaWG fork was built against.
+androidxAnnotation = "1.7.1"
+androidxCollection = "1.4.0"
+
+[libraries]
+kotlin-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidxAnnotation" }
+androidx-collection = { module = "androidx.collection:collection", version.ref = "androidxCollection" }
+kotlin-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlin-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+kotlin-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlin-coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "coroutines" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
+compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+compose-material3 = { module = "androidx.compose.material3:material3" }
+compose-material-icons = { module = "androidx.compose.material:material-icons-extended" }
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigation" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "security" }
+sshj = { module = "com.hierynomus:sshj", version.ref = "sshj" }
+bouncycastle = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
+mina-sshd-core = { module = "org.apache.sshd:sshd-core", version.ref = "minaSshd" }
+mina-sshd-common = { module = "org.apache.sshd:sshd-common", version.ref = "minaSshd" }
+eddsa = { module = "net.i2p.crypto:eddsa", version.ref = "eddsa" }
+wire-runtime = { module = "com.squareup.wire:wire-runtime", version.ref = "wire" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+wire = { id = "com.squareup.wire", version.ref = "wire" }
