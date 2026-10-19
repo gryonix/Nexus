@@ -1,0 +1,23 @@
+# Code generation for the client SDKs from proto/. The schema is the single
+# source of truth: message types are generated per platform, never hand-copied.
+# Run with `buf generate` (from Proto/).
+#
+# Swift is the only client that exists today. It generates MESSAGE TYPES ONLY
+# (SwiftProtobuf), not Connect service stubs: the app reaches the agent over an
+# SSH-forwarded Unix socket (Citadel), not URLSession, so an off-the-shelf
+# Connect runtime's transport is unusable here. The thin Connect-over-SSH
+# transport is hand-written in Sources/AgentClient (it is app-specific by
+# nature); the wire is still Connect-RPC, so the generated messages ARE the
+# contract and nothing about it is duplicated by hand.
+#
+# Kotlin (Android) needs no plugin here: Wire reads these .proto files directly
+# from the Gradle build, so the schema is the input rather than a generated
+# copy. The Rust agent generates via prost in its build.rs (see
+# Server/gryonixnexusd/Cargo.toml), so no Rust plugin is listed here either.
+# A C# (Windows) plugin is added when that app exists.
+version: v2
+plugins:
+  - local: protoc-gen-swift
+    out: ../Apple/Packages/gryonixNexus/Sources/AgentClient/Generated
+    opt:
+      - Visibility=Public
