@@ -1,0 +1,22 @@
+shadowsocks	ss://YWVzLTI1Ni1nY206c2VjcmV0@vpn.example.com:8388#iPhone\n	ok	vpn.example.com:8388	iPhone	shadowsocks	aes-256-gcm	secret
+vless	vless://3f1c-uuid@vpn.example.com:443?encryption=none&security=reality&sni=www.microsoft.com&fp=chrome&pbk=xrK4Y_1n7Qk&sid=9a3f&flow=xtls-rprx-vision#iPhone	ok	vpn.example.com:443	iPhone	vless	3f1c-uuid	reality	www.microsoft.com	chrome	xrK4Y_1n7Qk	9a3f	xtls-rprx-vision	tcp			
+shadowsocks	ss://YWVzLTI1Ni1nY206c2VjcmV0QHZwbi5leGFtcGxlLmNvbTo4Mzg4#iPhone	ok	vpn.example.com:8388	iPhone	shadowsocks	aes-256-gcm	secret
+shadowsocks	ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTphOmI6Y0BoLmV4YW1wbGUuY29tOjQ0Mw==	ok	h.example.com:443		shadowsocks	chacha20-ietf-poly1305	a:b:c
+shadowsocks	ss://YWVzLTI1Ni1nY206c2Vjcg@h.example.com:8388#p	ok	h.example.com:8388	p	shadowsocks	aes-256-gcm	secr
+shadowsocks	ss://aes-256-gcm:secret@h.example.com:8388#p	ok	h.example.com:8388	p	shadowsocks	aes-256-gcm	secret
+shadowsocks	ss://YWVzLTI1Ni1nY206c2VjcmV0@h.example.com:8388#iPhone Марины	ok	h.example.com:8388	iPhone Марины	shadowsocks	aes-256-gcm	secret
+vless	vless://u@h.example.com:443#Мой телефон	ok	h.example.com:443	Мой телефон	vless	u	none						tcp			
+shadowsocks	# gryonixVPN\n\nss://YWVzLTI1Ni1nY206c2VjcmV0@h.example.com:8388#p\n	ok	h.example.com:8388	p	shadowsocks	aes-256-gcm	secret
+vless	vless://u@h.example.com:8080?encryption=none&security=none	ok	h.example.com:8080		vless	u	none						tcp			
+vless	vless://u@h.example.com:443?security=tls&peer=example.org	ok	h.example.com:443		vless	u	tls	example.org					tcp			
+vless	vless://u@h.example.com#p	fail	noEndpoint
+vless	vless://u@h.example.com:70000#p	fail	noEndpoint
+shadowsocks	ss://h.example.com:8388	fail	noCredential
+shadowsocks	this is not a link	fail	noLink
+vless	ss://YWVzOnB3@h.example.com:8388#p	fail	noLink
+vless	vless://u@h.example.com:443?security=tls&type=ws&path=/vl&host=cdn.example.org	ok	h.example.com:443		vless	u	tls						ws	/vl	cdn.example.org	
+vless	vless://u@h.example.com:443?security=tls&type=grpc&serviceName=gun	ok	h.example.com:443		vless	u	tls						grpc			gun
+vless	vless://u@h.example.com:443?security=tls&type=quic	fail	unsupportedTransport	quic
+vless	vless://u@h.example.com:443?security=xtls	fail	unsupportedTransport	xtls
+vless	vless://u@h.example.com:443?security=none&flow=xtls-rprx-vision	ok	h.example.com:443		vless	u	none						tcp			
+shadowsocks	ss://YWVzLTI1Ni1nY206c2VjcmV0@h.example.com:8388?plugin=v2ray-plugin%3Btls#p	fail	unsupportedTransport	plugin

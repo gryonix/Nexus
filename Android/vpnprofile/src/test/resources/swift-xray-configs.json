@@ -1,0 +1,988 @@
+[
+  {
+    "config" : {
+      "dns" : {
+        "queryStrategy" : "UseIP",
+        "servers" : [
+          "1.1.1.1",
+          "8.8.8.8"
+        ],
+        "tag" : "dns-query"
+      },
+      "inbounds" : [
+        {
+          "listen" : "127.0.0.1",
+          "port" : 40123,
+          "protocol" : "socks",
+          "settings" : {
+            "accounts" : [
+              {
+                "pass" : "session-pass",
+                "user" : "session-user"
+              }
+            ],
+            "auth" : "password",
+            "udp" : true
+          },
+          "sniffing" : {
+            "destOverride" : [
+              "http",
+              "tls",
+              "quic"
+            ],
+            "enabled" : true
+          },
+          "tag" : "socks-in"
+        }
+      ],
+      "log" : {
+        "loglevel" : "warning"
+      },
+      "outbounds" : [
+        {
+          "protocol" : "shadowsocks",
+          "settings" : {
+            "servers" : [
+              {
+                "address" : "vpn.example.com",
+                "method" : "aes-256-gcm",
+                "password" : "secret",
+                "port" : 8388,
+                "uot" : true
+              }
+            ]
+          },
+          "tag" : "proxy"
+        },
+        {
+          "protocol" : "dns",
+          "settings" : {
+            "rules" : [
+              {
+                "action" : "hijack",
+                "qType" : "1,28"
+              },
+              {
+                "action" : "return",
+                "rCode" : 0
+              }
+            ]
+          },
+          "tag" : "dns-out"
+        },
+        {
+          "protocol" : "blackhole",
+          "tag" : "block"
+        }
+      ],
+      "policy" : {
+        "levels" : {
+          "0" : {
+            "bufferSize" : 4,
+            "connIdle" : 30
+          }
+        }
+      },
+      "routing" : {
+        "domainStrategy" : "AsIs",
+        "rules" : [
+          {
+            "inboundTag" : [
+              "socks-in"
+            ],
+            "outboundTag" : "dns-out",
+            "port" : "53",
+            "type" : "field"
+          },
+          {
+            "inboundTag" : [
+              "dns-query"
+            ],
+            "outboundTag" : "proxy",
+            "type" : "field"
+          },
+          {
+            "network" : "udp",
+            "outboundTag" : "block",
+            "port" : "443",
+            "type" : "field"
+          },
+          {
+            "ip" : [
+              "0.0.0.0\/8",
+              "10.0.0.0\/8",
+              "100.64.0.0\/10",
+              "127.0.0.0\/8",
+              "169.254.0.0\/16",
+              "172.16.0.0\/12",
+              "192.168.0.0\/16",
+              "198.18.0.0\/15",
+              "224.0.0.0\/3",
+              "::1\/128",
+              "fc00::\/7",
+              "fe80::\/10",
+              "ff00::\/8"
+            ],
+            "outboundTag" : "block",
+            "type" : "field"
+          }
+        ]
+      }
+    },
+    "link" : "ss:\/\/YWVzLTI1Ni1nY206c2VjcmV0@vpn.example.com:8388#iPhone"
+  },
+  {
+    "config" : {
+      "dns" : {
+        "queryStrategy" : "UseIP",
+        "servers" : [
+          "1.1.1.1",
+          "8.8.8.8"
+        ],
+        "tag" : "dns-query"
+      },
+      "inbounds" : [
+        {
+          "listen" : "127.0.0.1",
+          "port" : 40123,
+          "protocol" : "socks",
+          "settings" : {
+            "accounts" : [
+              {
+                "pass" : "session-pass",
+                "user" : "session-user"
+              }
+            ],
+            "auth" : "password",
+            "udp" : true
+          },
+          "sniffing" : {
+            "destOverride" : [
+              "http",
+              "tls",
+              "quic"
+            ],
+            "enabled" : true
+          },
+          "tag" : "socks-in"
+        }
+      ],
+      "log" : {
+        "loglevel" : "warning"
+      },
+      "outbounds" : [
+        {
+          "protocol" : "shadowsocks",
+          "settings" : {
+            "servers" : [
+              {
+                "address" : "vpn.example.com",
+                "method" : "2022-blake3-aes-256-gcm",
+                "password" : "uNFhgfrixCZZOfkYvKmSLQ==",
+                "port" : 8388,
+                "uot" : true
+              }
+            ]
+          },
+          "tag" : "proxy"
+        },
+        {
+          "protocol" : "dns",
+          "settings" : {
+            "rules" : [
+              {
+                "action" : "hijack",
+                "qType" : "1,28"
+              },
+              {
+                "action" : "return",
+                "rCode" : 0
+              }
+            ]
+          },
+          "tag" : "dns-out"
+        },
+        {
+          "protocol" : "blackhole",
+          "tag" : "block"
+        }
+      ],
+      "policy" : {
+        "levels" : {
+          "0" : {
+            "bufferSize" : 4,
+            "connIdle" : 30
+          }
+        }
+      },
+      "routing" : {
+        "domainStrategy" : "AsIs",
+        "rules" : [
+          {
+            "inboundTag" : [
+              "socks-in"
+            ],
+            "outboundTag" : "dns-out",
+            "port" : "53",
+            "type" : "field"
+          },
+          {
+            "inboundTag" : [
+              "dns-query"
+            ],
+            "outboundTag" : "proxy",
+            "type" : "field"
+          },
+          {
+            "network" : "udp",
+            "outboundTag" : "block",
+            "port" : "443",
+            "type" : "field"
+          },
+          {
+            "ip" : [
+              "0.0.0.0\/8",
+              "10.0.0.0\/8",
+              "100.64.0.0\/10",
+              "127.0.0.0\/8",
+              "169.254.0.0\/16",
+              "172.16.0.0\/12",
+              "192.168.0.0\/16",
+              "198.18.0.0\/15",
+              "224.0.0.0\/3",
+              "::1\/128",
+              "fc00::\/7",
+              "fe80::\/10",
+              "ff00::\/8"
+            ],
+            "outboundTag" : "block",
+            "type" : "field"
+          }
+        ]
+      }
+    },
+    "link" : "ss:\/\/2022-blake3-aes-256-gcm:uNFhgfrixCZZOfkYvKmSLQ==@vpn.example.com:8388#capture"
+  },
+  {
+    "config" : {
+      "dns" : {
+        "queryStrategy" : "UseIP",
+        "servers" : [
+          "1.1.1.1",
+          "8.8.8.8"
+        ],
+        "tag" : "dns-query"
+      },
+      "inbounds" : [
+        {
+          "listen" : "127.0.0.1",
+          "port" : 40123,
+          "protocol" : "socks",
+          "settings" : {
+            "accounts" : [
+              {
+                "pass" : "session-pass",
+                "user" : "session-user"
+              }
+            ],
+            "auth" : "password",
+            "udp" : true
+          },
+          "sniffing" : {
+            "destOverride" : [
+              "http",
+              "tls",
+              "quic"
+            ],
+            "enabled" : true
+          },
+          "tag" : "socks-in"
+        }
+      ],
+      "log" : {
+        "loglevel" : "warning"
+      },
+      "outbounds" : [
+        {
+          "protocol" : "vless",
+          "settings" : {
+            "vnext" : [
+              {
+                "address" : "vpn.example.com",
+                "port" : 443,
+                "users" : [
+                  {
+                    "encryption" : "none",
+                    "flow" : "xtls-rprx-vision",
+                    "id" : "3f1c0e2a-6a5b-4c7d-8e9f-0a1b2c3d4e5f"
+                  }
+                ]
+              }
+            ]
+          },
+          "streamSettings" : {
+            "network" : "tcp",
+            "realitySettings" : {
+              "fingerprint" : "chrome",
+              "publicKey" : "xrK4Y_1n7Qk",
+              "serverName" : "www.microsoft.com",
+              "shortId" : "9a3f"
+            },
+            "security" : "reality"
+          },
+          "tag" : "proxy"
+        },
+        {
+          "protocol" : "dns",
+          "settings" : {
+            "rules" : [
+              {
+                "action" : "hijack",
+                "qType" : "1,28"
+              },
+              {
+                "action" : "return",
+                "rCode" : 0
+              }
+            ]
+          },
+          "tag" : "dns-out"
+        },
+        {
+          "protocol" : "blackhole",
+          "tag" : "block"
+        }
+      ],
+      "policy" : {
+        "levels" : {
+          "0" : {
+            "bufferSize" : 4,
+            "connIdle" : 30
+          }
+        }
+      },
+      "routing" : {
+        "domainStrategy" : "AsIs",
+        "rules" : [
+          {
+            "inboundTag" : [
+              "socks-in"
+            ],
+            "outboundTag" : "dns-out",
+            "port" : "53",
+            "type" : "field"
+          },
+          {
+            "inboundTag" : [
+              "dns-query"
+            ],
+            "outboundTag" : "proxy",
+            "type" : "field"
+          },
+          {
+            "network" : "udp",
+            "outboundTag" : "block",
+            "port" : "443",
+            "type" : "field"
+          },
+          {
+            "ip" : [
+              "0.0.0.0\/8",
+              "10.0.0.0\/8",
+              "100.64.0.0\/10",
+              "127.0.0.0\/8",
+              "169.254.0.0\/16",
+              "172.16.0.0\/12",
+              "192.168.0.0\/16",
+              "198.18.0.0\/15",
+              "224.0.0.0\/3",
+              "::1\/128",
+              "fc00::\/7",
+              "fe80::\/10",
+              "ff00::\/8"
+            ],
+            "outboundTag" : "block",
+            "type" : "field"
+          }
+        ]
+      }
+    },
+    "link" : "vless:\/\/3f1c0e2a-6a5b-4c7d-8e9f-0a1b2c3d4e5f@vpn.example.com:443?encryption=none&security=reality&sni=www.microsoft.com&fp=chrome&pbk=xrK4Y_1n7Qk&sid=9a3f&type=tcp&flow=xtls-rprx-vision#iPhone"
+  },
+  {
+    "config" : {
+      "dns" : {
+        "queryStrategy" : "UseIP",
+        "servers" : [
+          "1.1.1.1",
+          "8.8.8.8"
+        ],
+        "tag" : "dns-query"
+      },
+      "inbounds" : [
+        {
+          "listen" : "127.0.0.1",
+          "port" : 40123,
+          "protocol" : "socks",
+          "settings" : {
+            "accounts" : [
+              {
+                "pass" : "session-pass",
+                "user" : "session-user"
+              }
+            ],
+            "auth" : "password",
+            "udp" : true
+          },
+          "sniffing" : {
+            "destOverride" : [
+              "http",
+              "tls",
+              "quic"
+            ],
+            "enabled" : true
+          },
+          "tag" : "socks-in"
+        }
+      ],
+      "log" : {
+        "loglevel" : "warning"
+      },
+      "outbounds" : [
+        {
+          "protocol" : "vless",
+          "settings" : {
+            "vnext" : [
+              {
+                "address" : "h.example.com",
+                "port" : 443,
+                "users" : [
+                  {
+                    "encryption" : "none",
+                    "id" : "u"
+                  }
+                ]
+              }
+            ]
+          },
+          "streamSettings" : {
+            "network" : "tcp",
+            "realitySettings" : {
+              "fingerprint" : "chrome",
+              "publicKey" : "k",
+              "shortId" : "1"
+            },
+            "security" : "reality"
+          },
+          "tag" : "proxy"
+        },
+        {
+          "protocol" : "dns",
+          "settings" : {
+            "rules" : [
+              {
+                "action" : "hijack",
+                "qType" : "1,28"
+              },
+              {
+                "action" : "return",
+                "rCode" : 0
+              }
+            ]
+          },
+          "tag" : "dns-out"
+        },
+        {
+          "protocol" : "blackhole",
+          "tag" : "block"
+        }
+      ],
+      "policy" : {
+        "levels" : {
+          "0" : {
+            "bufferSize" : 4,
+            "connIdle" : 30
+          }
+        }
+      },
+      "routing" : {
+        "domainStrategy" : "AsIs",
+        "rules" : [
+          {
+            "inboundTag" : [
+              "socks-in"
+            ],
+            "outboundTag" : "dns-out",
+            "port" : "53",
+            "type" : "field"
+          },
+          {
+            "inboundTag" : [
+              "dns-query"
+            ],
+            "outboundTag" : "proxy",
+            "type" : "field"
+          },
+          {
+            "network" : "udp",
+            "outboundTag" : "block",
+            "port" : "443",
+            "type" : "field"
+          },
+          {
+            "ip" : [
+              "0.0.0.0\/8",
+              "10.0.0.0\/8",
+              "100.64.0.0\/10",
+              "127.0.0.0\/8",
+              "169.254.0.0\/16",
+              "172.16.0.0\/12",
+              "192.168.0.0\/16",
+              "198.18.0.0\/15",
+              "224.0.0.0\/3",
+              "::1\/128",
+              "fc00::\/7",
+              "fe80::\/10",
+              "ff00::\/8"
+            ],
+            "outboundTag" : "block",
+            "type" : "field"
+          }
+        ]
+      }
+    },
+    "link" : "vless:\/\/u@h.example.com:443?security=reality&pbk=k&sid=1"
+  },
+  {
+    "config" : {
+      "dns" : {
+        "queryStrategy" : "UseIP",
+        "servers" : [
+          "1.1.1.1",
+          "8.8.8.8"
+        ],
+        "tag" : "dns-query"
+      },
+      "inbounds" : [
+        {
+          "listen" : "127.0.0.1",
+          "port" : 40123,
+          "protocol" : "socks",
+          "settings" : {
+            "accounts" : [
+              {
+                "pass" : "session-pass",
+                "user" : "session-user"
+              }
+            ],
+            "auth" : "password",
+            "udp" : true
+          },
+          "sniffing" : {
+            "destOverride" : [
+              "http",
+              "tls",
+              "quic"
+            ],
+            "enabled" : true
+          },
+          "tag" : "socks-in"
+        }
+      ],
+      "log" : {
+        "loglevel" : "warning"
+      },
+      "outbounds" : [
+        {
+          "protocol" : "vless",
+          "settings" : {
+            "vnext" : [
+              {
+                "address" : "h.example.com",
+                "port" : 443,
+                "users" : [
+                  {
+                    "encryption" : "none",
+                    "id" : "u"
+                  }
+                ]
+              }
+            ]
+          },
+          "streamSettings" : {
+            "network" : "ws",
+            "security" : "tls",
+            "tlsSettings" : {
+              "allowInsecure" : false,
+              "serverName" : "a.b"
+            },
+            "wsSettings" : {
+              "headers" : {
+                "Host" : "cdn.example.org"
+              },
+              "path" : "\/vl"
+            }
+          },
+          "tag" : "proxy"
+        },
+        {
+          "protocol" : "dns",
+          "settings" : {
+            "rules" : [
+              {
+                "action" : "hijack",
+                "qType" : "1,28"
+              },
+              {
+                "action" : "return",
+                "rCode" : 0
+              }
+            ]
+          },
+          "tag" : "dns-out"
+        },
+        {
+          "protocol" : "blackhole",
+          "tag" : "block"
+        }
+      ],
+      "policy" : {
+        "levels" : {
+          "0" : {
+            "bufferSize" : 4,
+            "connIdle" : 30
+          }
+        }
+      },
+      "routing" : {
+        "domainStrategy" : "AsIs",
+        "rules" : [
+          {
+            "inboundTag" : [
+              "socks-in"
+            ],
+            "outboundTag" : "dns-out",
+            "port" : "53",
+            "type" : "field"
+          },
+          {
+            "inboundTag" : [
+              "dns-query"
+            ],
+            "outboundTag" : "proxy",
+            "type" : "field"
+          },
+          {
+            "network" : "udp",
+            "outboundTag" : "block",
+            "port" : "443",
+            "type" : "field"
+          },
+          {
+            "ip" : [
+              "0.0.0.0\/8",
+              "10.0.0.0\/8",
+              "100.64.0.0\/10",
+              "127.0.0.0\/8",
+              "169.254.0.0\/16",
+              "172.16.0.0\/12",
+              "192.168.0.0\/16",
+              "198.18.0.0\/15",
+              "224.0.0.0\/3",
+              "::1\/128",
+              "fc00::\/7",
+              "fe80::\/10",
+              "ff00::\/8"
+            ],
+            "outboundTag" : "block",
+            "type" : "field"
+          }
+        ]
+      }
+    },
+    "link" : "vless:\/\/u@h.example.com:443?security=tls&type=ws&path=\/vl&host=cdn.example.org&sni=a.b"
+  },
+  {
+    "config" : {
+      "dns" : {
+        "queryStrategy" : "UseIP",
+        "servers" : [
+          "1.1.1.1",
+          "8.8.8.8"
+        ],
+        "tag" : "dns-query"
+      },
+      "inbounds" : [
+        {
+          "listen" : "127.0.0.1",
+          "port" : 40123,
+          "protocol" : "socks",
+          "settings" : {
+            "accounts" : [
+              {
+                "pass" : "session-pass",
+                "user" : "session-user"
+              }
+            ],
+            "auth" : "password",
+            "udp" : true
+          },
+          "sniffing" : {
+            "destOverride" : [
+              "http",
+              "tls",
+              "quic"
+            ],
+            "enabled" : true
+          },
+          "tag" : "socks-in"
+        }
+      ],
+      "log" : {
+        "loglevel" : "warning"
+      },
+      "outbounds" : [
+        {
+          "protocol" : "vless",
+          "settings" : {
+            "vnext" : [
+              {
+                "address" : "h.example.com",
+                "port" : 443,
+                "users" : [
+                  {
+                    "encryption" : "none",
+                    "id" : "u"
+                  }
+                ]
+              }
+            ]
+          },
+          "streamSettings" : {
+            "grpcSettings" : {
+              "serviceName" : "gun"
+            },
+            "network" : "grpc",
+            "security" : "tls",
+            "tlsSettings" : {
+              "allowInsecure" : false
+            }
+          },
+          "tag" : "proxy"
+        },
+        {
+          "protocol" : "dns",
+          "settings" : {
+            "rules" : [
+              {
+                "action" : "hijack",
+                "qType" : "1,28"
+              },
+              {
+                "action" : "return",
+                "rCode" : 0
+              }
+            ]
+          },
+          "tag" : "dns-out"
+        },
+        {
+          "protocol" : "blackhole",
+          "tag" : "block"
+        }
+      ],
+      "policy" : {
+        "levels" : {
+          "0" : {
+            "bufferSize" : 4,
+            "connIdle" : 30
+          }
+        }
+      },
+      "routing" : {
+        "domainStrategy" : "AsIs",
+        "rules" : [
+          {
+            "inboundTag" : [
+              "socks-in"
+            ],
+            "outboundTag" : "dns-out",
+            "port" : "53",
+            "type" : "field"
+          },
+          {
+            "inboundTag" : [
+              "dns-query"
+            ],
+            "outboundTag" : "proxy",
+            "type" : "field"
+          },
+          {
+            "network" : "udp",
+            "outboundTag" : "block",
+            "port" : "443",
+            "type" : "field"
+          },
+          {
+            "ip" : [
+              "0.0.0.0\/8",
+              "10.0.0.0\/8",
+              "100.64.0.0\/10",
+              "127.0.0.0\/8",
+              "169.254.0.0\/16",
+              "172.16.0.0\/12",
+              "192.168.0.0\/16",
+              "198.18.0.0\/15",
+              "224.0.0.0\/3",
+              "::1\/128",
+              "fc00::\/7",
+              "fe80::\/10",
+              "ff00::\/8"
+            ],
+            "outboundTag" : "block",
+            "type" : "field"
+          }
+        ]
+      }
+    },
+    "link" : "vless:\/\/u@h.example.com:443?security=tls&type=grpc&serviceName=gun"
+  },
+  {
+    "config" : {
+      "dns" : {
+        "queryStrategy" : "UseIP",
+        "servers" : [
+          "1.1.1.1",
+          "8.8.8.8"
+        ],
+        "tag" : "dns-query"
+      },
+      "inbounds" : [
+        {
+          "listen" : "127.0.0.1",
+          "port" : 40123,
+          "protocol" : "socks",
+          "settings" : {
+            "accounts" : [
+              {
+                "pass" : "session-pass",
+                "user" : "session-user"
+              }
+            ],
+            "auth" : "password",
+            "udp" : true
+          },
+          "sniffing" : {
+            "destOverride" : [
+              "http",
+              "tls",
+              "quic"
+            ],
+            "enabled" : true
+          },
+          "tag" : "socks-in"
+        }
+      ],
+      "log" : {
+        "loglevel" : "warning"
+      },
+      "outbounds" : [
+        {
+          "protocol" : "vless",
+          "settings" : {
+            "vnext" : [
+              {
+                "address" : "h.example.com",
+                "port" : 8080,
+                "users" : [
+                  {
+                    "encryption" : "none",
+                    "id" : "u"
+                  }
+                ]
+              }
+            ]
+          },
+          "streamSettings" : {
+            "network" : "tcp"
+          },
+          "tag" : "proxy"
+        },
+        {
+          "protocol" : "dns",
+          "settings" : {
+            "rules" : [
+              {
+                "action" : "hijack",
+                "qType" : "1,28"
+              },
+              {
+                "action" : "return",
+                "rCode" : 0
+              }
+            ]
+          },
+          "tag" : "dns-out"
+        },
+        {
+          "protocol" : "blackhole",
+          "tag" : "block"
+        }
+      ],
+      "policy" : {
+        "levels" : {
+          "0" : {
+            "bufferSize" : 4,
+            "connIdle" : 30
+          }
+        }
+      },
+      "routing" : {
+        "domainStrategy" : "AsIs",
+        "rules" : [
+          {
+            "inboundTag" : [
+              "socks-in"
+            ],
+            "outboundTag" : "dns-out",
+            "port" : "53",
+            "type" : "field"
+          },
+          {
+            "inboundTag" : [
+              "dns-query"
+            ],
+            "outboundTag" : "proxy",
+            "type" : "field"
+          },
+          {
+            "network" : "udp",
+            "outboundTag" : "block",
+            "port" : "443",
+            "type" : "field"
+          },
+          {
+            "ip" : [
+              "0.0.0.0\/8",
+              "10.0.0.0\/8",
+              "100.64.0.0\/10",
+              "127.0.0.0\/8",
+              "169.254.0.0\/16",
+              "172.16.0.0\/12",
+              "192.168.0.0\/16",
+              "198.18.0.0\/15",
+              "224.0.0.0\/3",
+              "::1\/128",
+              "fc00::\/7",
+              "fe80::\/10",
+              "ff00::\/8"
+            ],
+            "outboundTag" : "block",
+            "type" : "field"
+          }
+        ]
+      }
+    },
+    "link" : "vless:\/\/u@h.example.com:8080?encryption=none&security=none&flow=xtls-rprx-vision"
+  }
+]

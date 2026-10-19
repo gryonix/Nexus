@@ -1,0 +1,19 @@
+shadowsocks	ss://YWVzLTI1Ni1nY206c2VjcmV0@vpn.example.com:8388#phone\n	openIn	ss://YWVzLTI1Ni1nY206c2VjcmV0@vpn.example.com:8388#phone
+xray-reality	vless://5f1c-uuid@vpn.example.com:8443?encryption=none&security=reality#phone\n	openIn	vless://5f1c-uuid@vpn.example.com:8443?encryption=none&security=reality#phone
+shadowsocks	ss://YWVzLTI1Ni1nY206c2VjcmV0@vpn.example.com:8388#phone\n	openIn	ss://YWVzLTI1Ni1nY206c2VjcmV0@vpn.example.com:8388#phone
+shadowsocks	ss://YWVzOnB3@vpn.example.com:8388#iPhone Марины	openIn	ss://YWVzOnB3@vpn.example.com:8388#iPhone%20%D0%9C%D0%B0%D1%80%D0%B8%D0%BD%D1%8B
+xray-reality	vless://u@h:443#Мой телефон	openIn	vless://u@h:443#%D0%9C%D0%BE%D0%B9%20%D1%82%D0%B5%D0%BB%D0%B5%D1%84%D0%BE%D0%BD
+shadowsocks	ss://YWVzOnB3@vpn.example.com:8388#a+b&c=d	openIn	ss://YWVzOnB3@vpn.example.com:8388#a+b&c=d
+shadowsocks	this is not a link	fileOnly
+shadowsocks		fileOnly
+xray-reality	   	fileOnly
+xray-reality	ss://YWVzOnB3@vpn.example.com:8388#p	fileOnly
+shadowsocks	vless://u@h:443#p	fileOnly
+shadowsocks	# exported by the panel\n\nss://YWVzOnB3@h:8388#p\n	openIn	ss://YWVzOnB3@h:8388#p
+shadowsocks	note\n   ss://YWVzOnB3@h:8388#p\nmore\n	openIn	ss://YWVzOnB3@h:8388#p
+shadowsocks	ss://one@h:1#a\nss://two@h:2#b\n	openIn	ss://one@h:1#a
+shadowsocks	sss://YWVzOnB3@h:8388#p	fileOnly
+shadowsocks	ss:/YWVzOnB3@h:8388#p	fileOnly
+shadowsocks	ss://YWVzOnB3@h:8388	openIn	ss://YWVzOnB3@h:8388
+shadowsocks	ss://YWVzOnB3@h:8388#	openIn	ss://YWVzOnB3@h:8388#
+shadowsocks	ss://YWVzOnB3@h:8388# !"$%&'()*+,-./0:;<=>?@AZ[\\]^_`az{|}~	openIn	ss://YWVzOnB3@h:8388#%20!%22$%25&'()*+,-./0:;%3C=%3E?@AZ%5B%5C%5D%5E_%60az%7B%7C%7D~
