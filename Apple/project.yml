@@ -1,0 +1,759 @@
+# XcodeGen manifest: gryonixNexus.xcodeproj is generated with `xcodegen generate`.
+name: gryonixNexus
+options:
+  bundleIdPrefix: com.skaymer
+  deploymentTarget:
+    iOS: "17.0"
+    macOS: "14.0"
+  createIntermediateGroups: true
+packages:
+  gryonixNexusPackage:
+    path: Packages/gryonixNexus
+  # The WireGuard-family datapath, by LOCAL PATH and not by URL.
+  #
+  # **AmneziaWG's fork rather than WireGuard's own package, and one dependency
+  # for two protocols.** It publishes the same product name (`WireGuardKit`)
+  # and the same API, so `import WireGuardKit` in the extension is unchanged;
+  # its kernel reads a plain configuration when the obfuscation values are
+  # absent, which is exactly the grouping `TunnelDatapath.wireGuardKit` already
+  # has. WireGuard's own 1.0.16-27 cannot be resolved at all: it declares
+  # `swift-tools-version:5.3` and then uses platforms that need 5.5.
+  #
+  # **The same archive also exports a whole LibXray**, which is what carries
+  # Shadowsocks and Xray Reality — see `XrayDatapath`.
+  #
+  # By path because the manifest carries `.unsafeFlags` (it links the
+  # `libwg-go.a` its Makefile produces), and SPM refuses those in a package
+  # depended on by version. The tree is fetched at a pinned tag and built by
+  # `Tools/build-runtimes.sh`; it is gitignored, so a checkout that has not run
+  # that script has no `Apple/Runtimes/` and the tunnel target does not build —
+  # which is the honest failure, and the reason the APP does not depend on it.
+  AmneziaWGKit:
+    path: Runtimes/amneziawg-apple
+  # **`OpenVPNAdapterKit` used to be declared here and deliberately is not**.
+  # OpenVPN 3 is AGPL-3.0, so linking it makes this whole product AGPL — and
+  # AGPL cannot be distributed through the App Store, whose per-device terms
+  # are exactly the "further restrictions" the license forbids (the VLC
+  # precedent, 2011). The App Store is a requirement here, so the package is
+  # gone, `Tools/build-runtimes.sh apple` no longer fetches it, and the
+  # protocol is handed to a client app instead — which is what the Android
+  # side already does. See LICENSE and THIRD-PARTY.md, and the extension's
+  # dependency list for what putting it back costs.
+  # The terminal emulator, and the app's only external dependency.
+  #
+  # Declared here rather than in Packages/gryonixNexus on purpose: that package
+  # is platform-independent and dependency-free by rule, and a terminal
+  # renderer is neither. Pinned to a minor range for the reason a renderer
+  # always is — a break here draws garbage rather than failing to compile.
+  #
+  # Two things it costs, both one-time and both on the DEVELOPER's machine:
+  # it ships a Metal shader, so `xcodebuild -downloadComponent MetalToolchain`
+  # is required (Xcode 26 no longer installs the Metal compiler by default,
+  # and without it the build stops at "cannot execute tool 'metal'"), and it
+  # carries an SPM build-tool plugin, which Xcode asks to trust once.
+  SwiftTerm:
+    url: https://github.com/migueldeicaza/SwiftTerm.git
+    minorVersion: 1.20.0
+  # macOS auto-update. iOS gets its updates from the App Store; the Mac build
+  # arrives outside it and had no way to say it was out of date. Sparkle is
+  # macOS-only — the dependency below is filtered to macOS, and
+  # `AppUpdates.swift` is `#if os(macOS)`, so the iOS build only ever resolves
+  # the package. Pinned to a major range: the pin is a floor, not a freeze, and
+  # an updater is the one dependency where staying on the fixed version matters
+  # — a break here refuses to update rather than showing it.
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle.git
+    majorVersion: 2.6.0
+targets:
+  gryonixNexus:
+    type: application
+    supportedDestinations: [iOS, macOS]
+    sources:
+      - App
+      # The widget views, intents and wording. Compiled into the APP as well as
+      # (once the entitlement exists) the widget extension, because both draw
+      # the same tunnel and must say the same words about it — see the header
+      # of TunnelPresentation.swift. Widgets/Extension is deliberately absent:
+      # it declares WidgetKit/ActivityKit entry points that only an extension
+      # target may carry.
+      - Widgets/Shared
+      # The brand's own marks — the shield around the globe and the bare globe
+      # — in a catalog of their OWN rather than in the app's, because the
+      # widget extension draws them too (the Control Centre toggle, the
+      # lock-screen widgets, the tunnel's status glyph) and an extension is its
+      # own bundle. One catalog compiled into both, so the two processes cannot
+      # end up with two versions of one drawing.
+      - Shared/BrandMarks.xcassets
+    # Repacked on every build so the archive is always the tree being built —
+    # a committed blob would drift from the sources it claims to be, and the
+    # server would then be handed an agent nobody can point at. Pre-build, so
+    # it is in place before resources are copied and long before signing.
+    preBuildScripts:
+      - name: Pack the agent sources
+        script: "\"$SRCROOT/../Tools/pack-agent-sources.sh\" \"$SRCROOT/App/Resources/agent-src.tar.gz\""
+        # NO outputFiles, and that is the fix rather than an omission: a script
+        # that declares outputs and no inputs is "up to date" the moment the
+        # output exists, so Xcode skipped it on every build after the first —
+        # the app then carried a stale agent while its own constant said
+        # otherwise, and the server answered "already installed".
+        basedOnDependencyAnalysis: false
+    dependencies:
+      - package: SwiftTerm
+        product: SwiftTerm
+      # macOS only, and `destinationFilters` is the key that actually does it
+      # (XcodeGen's `platformFilter`/`platformFilters` are the Catalyst pair —
+      # they write nothing for a two-destination target). Without the filter the
+      # iOS build tries to link a package that has no iOS slice at all, and
+      # fails in SwiftPM resolution long before any `#if os(macOS)` matters.
+      - package: Sparkle
+        product: Sparkle
+        destinationFilters: [macOS]
+      - package: gryonixNexusPackage
+        product: ServiceCatalog
+      - package: gryonixNexusPackage
+        product: gryonixNexusCore
+      - package: gryonixNexusPackage
+        product: MailRecipe
+      - package: gryonixNexusPackage
+        product: ServerControl
+      - package: gryonixNexusPackage
+        product: ServerControlSSH
+      - package: gryonixNexusPackage
+        product: AgentClient
+      - package: gryonixNexusPackage
+        product: AgentClientSSH
+      - package: gryonixNexusPackage
+        product: AgentControl
+      - package: gryonixNexusPackage
+        product: VPNProfile
+      - package: gryonixNexusPackage
+        product: VPNTunnel
+      # Embedded, which is what makes the widgets, the Control Centre toggle and
+      # the Live Activity exist at all. It is a real target rather than a note
+      # for later — without an App Group it reads an empty container and SAYS
+      # so, and the day the entitlement arrives that is the only thing that
+      # changes (`SharedContainer.appGroupIdentifier`).
+      - target: gryonixNexusWidgets
+      # Packet tunnel, signed with Network Extension
+      - target: gryonixNexusTunnel
+      # Shadowsocks and VLESS in a process of their own
+      - target: gryonixNexusProxyTunnel
+      # The same tunnels as system extensions, for Mac release builds
+      - target: gryonixNexusTunnelSystem
+        destinationFilters: [macOS]
+      - target: gryonixNexusProxyTunnelSystem
+        destinationFilters: [macOS]
+    entitlements:
+      path: gryonixNexus.entitlements
+      properties:
+        com.apple.developer.networking.networkextension: [packet-tunnel-provider]
+        com.apple.security.application-groups: [group.com.skaymer.gryonixnexus]
+        aps-environment: development
+    info:
+      path: App/Info.plist
+      properties:
+        # Installed name is "Nexus"; the store listing says gryonixNexus.
+        #
+        # PRODUCT_BUNDLE_IDENTIFIER below is deliberately NOT derived from the
+        # target name. It is the identity the Keychain items are filed under,
+        # so renaming the target must not move it — that would orphan every
+        # stored SSH key and lock the app out of its own servers.
+        CFBundleDisplayName: Nexus
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleName: Nexus
+        ITSAppUsesNonExemptEncryption: false
+        LSApplicationCategoryType: public.app-category.utilities
+        GXMacTunnel: $(GX_MAC_TUNNEL)
+        # Sparkle's appcast and its trust anchor. Read ONLY by AppUpdates on
+        # macOS; harmless on iOS, where nothing reads them. The feed is a
+        # placeholder and the key is the sentinel AppUpdates.isConfigured checks
+        # for — until the owner mints an EdDSA keypair (`generate_keys` from
+        # Sparkle), signs the appcast with the PRIVATE half, and puts the PUBLIC
+        # half here, the Check-for-Updates button disables itself and says so
+        # rather than pointing Sparkle at nothing. The private key never enters
+        # this repository.
+        # The site the owner already owns and where the Android feed and the
+        # download page live too. It was `updates.example.com` while there was
+        # no domain to name; the host is real now, and the file it points at
+        # is written by `generate_appcast` at release time.
+        SUFeedURL: https://gryonix.com/nexus/appcast.xml
+        SUPublicEDKey: /eM73ySYYZP0GU8cljAjvB6DPVcyezNjwgMUBex6q1w=
+        # Sparkle needs to reach its appcast host, which is an outbound HTTPS
+        # connection the app otherwise never makes. Nothing else changes.
+        SUEnableAutomaticChecks: true
+        # Without this key LocalAuthentication silently denies Face ID on a
+        # real device — the biometric gates never prompted.
+        NSFaceIDUsageDescription: gryonixNexus uses Face ID to protect your saved passwords and server exports.
+        # Local Network privacy (iOS 14+, macOS 15+). EVERY connection this app
+        # makes to a machine on the same LAN goes through it: a home server at
+        # 192.168.x.x, a `.local` name resolved over mDNS, an LXD lab VM — the
+        # whole local-only scope, and the scenario B home half during install
+        # (that one is reached over the LAN precisely because the tunnel does
+        # not exist yet). Without this key the system does not merely skip the
+        # prompt: it denies the connection outright and never lists the app
+        # under Settings › Privacy › Local Network, so there is nothing the
+        # user can switch on. From the app's side the failure is
+        # indistinguishable from a server that is down — which is exactly how
+        # it was reported ("SSH just doesn't work"), while the same address
+        # answered `ssh` from a Mac on the same network.
+        NSLocalNetworkUsageDescription: gryonixNexus connects over SSH to servers on your local network to install and manage them.
+        # The first-launch probe that triggers the local network prompt.
+        NSBonjourServices:
+          - _gryonixnexus._tcp
+        # `gryonixnexus://` — how a widget, the Control Center button and the
+        # Mac's menu-bar panel ask the app to open something (`AppLink`, in
+        # VPNTunnel). Without this key the system does not merely ignore the
+        # link: nothing owns the scheme, so opening it fails, and a widget tap
+        # or a menu-bar row is a control that does nothing. The name is the
+        # scheme `AppLink.scheme` builds and parses, and the two must not
+        # drift — `DeepLinkSchemeTests` holds them together.
+        CFBundleURLTypes:
+          - CFBundleURLName: com.skaymer.gryonixnexus.applink
+            CFBundleTypeRole: Editor
+            CFBundleURLSchemes:
+              - gryonixnexus
+        # Live Activities. Without this key `Activity.request` throws
+        # `attributesNotFound` at runtime and nothing appears — which reads as
+        # broken code rather than as a missing declaration, because the widget,
+        # the attributes and the call site are all present and correct.
+        # `OperationLiveActivity` is why this is here: a long run belongs to the
+        # host and survives the app being closed, and the lock screen is the
+        # only surface that can say so while the phone is locked.
+        NSSupportsLiveActivities: true
+        NSSupportsLiveActivitiesFrequentUpdates: true
+        # The launch screen — `App/AppLaunch.storyboard`, showing the app
+        # icon on the `LaunchBackground` colour set (so it follows light and
+        # dark). The artwork is composited from the ICON's own three layers by
+        # `Tools/compose-launch-image.swift`, because the thing somebody
+        # just tapped is the only picture a launch screen should show.
+        #
+        # **It used to be BACKGROUND ONLY, and that was wrong for a measured
+        # reason.** The argument was that iOS reads this before any of the
+        # app's code runs, so it cannot know which icon colour was chosen and a
+        # static blue icon would flash in front of somebody whose phone shows
+        # green. True — but the cost of showing nothing is worse and was
+        # reported from the outside: 1.3 s passes between the launch request
+        # and `App.init` (Release, iPhone 17 Pro simulator) against 79 ms to
+        # build the shell, so the whole of that second was flat colour, read as
+        # "a second, and then it starts". A wrong-coloured icon for that second
+        # is a colour that changes; no icon at all is a stall. `SplashGate`
+        # starts from the launch screen's blue and animates into the chosen
+        # colour, so the difference lands inside the movement.
+        #
+        # A STORYBOARD rather than the `UILaunchScreen` dictionary, because
+        # that dictionary's `UIImageName` gives no control over the image's
+        # size or placement, and the whole point is that the icon sits where
+        # `SplashView` settles it. The two keys are mutually exclusive: iOS
+        # prefers `UILaunchScreen` when both are present, which would silently
+        # bring the blank screen back.
+        #
+        # These lived only in the checked-in Info.plist, so `xcodegen
+        # generate` rewrote the plist without them — the phone app silently
+        # lost its portrait lock. Everything the bundle needs belongs HERE;
+        # the plist is generated output.
+        UILaunchStoryboardName: AppLaunch
+        # Phone stays portrait-only on purpose. iPad must NOT: the unsuffixed
+        # key applies to every device, so a portrait-only iPad app is letterboxed
+        # by iPadOS — the app draws a phone-shaped column in the middle of the
+        # screen with black bars either side, and the whole layout ignores the
+        # display it was given. The `~ipad` variant is what iOS reads on iPad,
+        # and it has to name all four orientations: an iPad has no "natural" way
+        # up, and the keyboard and Stage Manager both put it in landscape.
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.skaymer.gryonixnexus
+        # macOS names the push entitlement differently
+        CODE_SIGN_ENTITLEMENTS[sdk=macosx*]: gryonixNexus-macOS.entitlements
+        ENABLE_HARDENED_RUNTIME[sdk=macosx*]: YES
+        # Which Mac tunnel bundle the app starts
+        GX_MAC_TUNNEL: app-extension
+        # **Where an embedded framework is looked for, on BOTH layouts.**
+        # XcodeGen writes only `@executable_path/Frameworks` for an application
+        # target, which is the iOS bundle: the binary sits at the bundle root
+        # and `Frameworks/` beside it. A Mac app puts the binary in
+        # `Contents/MacOS/` and its frameworks in `Contents/Frameworks/`, one
+        # level UP. This target is built for both with `SDKROOT = auto`, so the
+        # iOS path alone was written into the Mac build as well.
+        #
+        # Latent until something was actually embedded, and Sparkle is the
+        # first thing that ever was: the mac app then BUILT and refused to
+        # LAUNCH — `dyld: Library not loaded: @rpath/Sparkle.framework`, with
+        # the framework sitting in `Contents/Frameworks` all along and dyld
+        # looking for it in `Contents/MacOS/Frameworks`. "The macOS build is
+        # green" was true and said nothing. Both paths are named because one
+        # target produces both bundles; each is simply absent on the other.
+        LD_RUNPATH_SEARCH_PATHS:
+          - $(inherited)
+          - "@executable_path/Frameworks"
+          - "@executable_path/../Frameworks"
+        # The launch screen is an iOS storyboard and this is ONE target built
+        # for both platforms, so the mac build handed it to ibtool and failed
+        # outright: "iOS storyboards do not support target device type mac".
+        # macOS has no launch screen at all, so there is nothing to build for
+        # it. XcodeGen has no per-platform source filter for a multiplatform
+        # target (`platformFilters` is a dependency key and is silently
+        # ignored on a source — checked in the generated pbxproj), so the
+        # exclusion is an SDK-scoped build setting, which Xcode applies to
+        # resources as well as to sources.
+        EXCLUDED_SOURCE_FILE_NAMES[sdk=macosx*]: AppLaunch.storyboard
+        MARKETING_VERSION: "26.10"
+        CURRENT_PROJECT_VERSION: "261020"
+        SWIFT_VERSION: "5.9"
+        ENABLE_PREVIEWS: YES
+        # Without this the app follows the user's macOS system accent, so a
+        # Mac set to Graphite drew every tinted control grey while iOS stayed
+        # blue. The asset pins one brand colour on both platforms.
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        # The icon is `App/gryonixNexus.icon` (an Icon Composer bundle), NOT an
+        # `AppIcon.appiconset` inside Assets.xcassets — that set was removed when
+        # the icon moved. The setting defaults to "AppIcon", so leaving it alone
+        # asks actool for a name nothing declares and the asset catalog step
+        # fails the whole build. It has to match the `.icon` file's base name.
+        ASSETCATALOG_COMPILER_APPICON_NAME: gryonixNexus
+        # The colours offered in Appearance. Every one of them is its own Icon
+        # Composer bundle (`App/gryonixNexus<Colour>.icon`, written by
+        # `Tools/compose-icon-assets.swift`), NOT a flat appiconset — that
+        # is the difference between a colour of this icon and a sticker of it.
+        # A 1024 PNG is drawn literally: no glass, no specular edge, no layered
+        # shadow, no dark or tinted appearance. So a home screen with the red
+        # icon showed a flat square next to the blue one's glass, and the
+        # picker's own default looked like a different product. The bundles are
+        # generated from the DEFAULT icon's `icon.json` verbatim with only the
+        # layer artwork refilled, so the material is the same by construction.
+        # INCLUDE_ALL_APPICON_ASSETS ships them.
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: gryonixNexusRed gryonixNexusOrange gryonixNexusYellow gryonixNexusGreen gryonixNexusTeal gryonixNexusPurple gryonixNexusPink gryonixNexusGraphite gryonixNexusBlack gryonixNexusIndigo gryonixNexusBrown
+        ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
+        # Automatic since the owner signed in to an Xcode account: that is what
+        # issues the iOS DEVICE profile, and there is no other way to put the
+        # app on a real phone. It was Manual before for a reason that no longer
+        # holds — with no account, automatic mode asked for a "Mac Development"
+        # certificate this machine does not have and failed the build outright,
+        # so the identity was named by hand instead. Pinned HERE and not left to
+        # Xcode: `xcodegen generate` rewrites the project, and the owner's
+        # device build is what a silent revert to Manual would break.
+        CODE_SIGN_STYLE: Automatic
+        # The TEAM of the certificate actually installed here, taken from its
+        # OU (`security find-certificate -c "Apple Development" -p | openssl
+        # x509 -noout -subject`) — NOT the id in the certificate's common name,
+        # which is the individual, and which is what used to stand here. A
+        # mismatch fails the build with "No signing certificate «Mac
+        # Development» found … matching team ID", i.e. it blames a missing
+        # certificate while the real certificate sits in the keychain.
+        DEVELOPMENT_TEAM: Z4PMRLY8L2
+        # The REAL "Apple Development" certificate on both platforms, and the
+        # point is a STABLE code identity, not distribution. Ad-hoc "-" gives a
+        # different identity on every rebuild, so the Keychain treats each build
+        # as a new application: it re-asks for the password, "Always Allow"
+        # never sticks, and a synchronous SecItemCopyMatching hangs in mach_msg
+        # for as long as that dialog is open — invisibly, when it opens behind
+        # the window.
+        # Unconditional, not `[sdk=macosx*]`: the unified certificate signs iOS
+        # and macOS alike, and the default the conditional left behind on the
+        # iOS side ("iPhone Developer") is a name no certificate here carries.
+        CODE_SIGN_IDENTITY: "Apple Development"
+      configs:
+        Release:
+          GX_MAC_TUNNEL: system-extension
+  # The widgets, the Control Centre toggle and the Live Activity.
+  #
+  # ONE extension for both platforms: WidgetKit builds from the same sources on
+  # iOS and macOS, and the two things that are not shared (the lock-screen
+  # families, the Live Activity) are `#if os(iOS)` inside the files rather than
+  # a second target that would drift.
+  gryonixNexusWidgets:
+    type: app-extension
+    supportedDestinations: [iOS, macOS]
+    sources:
+      - Widgets/Shared
+      - Widgets/Extension
+      # `UIL10n`, which `Widgets/Shared` calls and which lives in the app.
+      # Compiled into BOTH targets rather than copied: it is one rule — "look
+      # the English source string up in this process's own bundle" — and a
+      # second copy is how the app and its widgets start saying different words
+      # for the same state. It resolves against `Bundle.main`, which is the
+      # app in one process and the extension in the other, and both carry the
+      # catalog, so the same source gives each the right answer.
+      - path: App/Services/AppLanguageSetting.swift
+      # The same string catalog as the app. An extension is its own bundle with
+      # its own localization tables, so without this every sentence the widgets
+      # draw would fall back to English on a translated system.
+      - path: App/Resources/Localizable.xcstrings
+        buildPhase: resources
+      # The same brand marks the app draws — see the app target above. The
+      # tunnel's own glyph is one of them, and every widget here that says
+      # whether the VPN is up draws it.
+      - Shared/BrandMarks.xcassets
+    entitlements:
+      path: Widgets/Extension/gryonixNexusWidgets.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.skaymer.gryonixnexus]
+    dependencies:
+      # VPNTunnel and NOTHING else, which is the point: the extension can read
+      # the snapshot and cannot open an SSH session, because the targets that
+      # know how are not linked into it. A widget that tried would render an
+      # empty rectangle — it has seconds and tens of megabytes.
+      - package: gryonixNexusPackage
+        product: VPNTunnel
+    info:
+      path: Widgets/Extension/Info.plist
+      properties:
+        CFBundleDisplayName: Nexus
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleName: Nexus
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        # A child of the app's identifier, which is what the system requires of
+        # an embedded extension — and NOT derived from the target name, for the
+        # same reason the app's is not.
+        PRODUCT_BUNDLE_IDENTIFIER: com.skaymer.gryonixnexus.widgets
+        CODE_SIGN_ENTITLEMENTS[sdk=macosx*]: Widgets/Extension/gryonixNexusWidgets-macOS.entitlements
+        MARKETING_VERSION: "26.10"
+        CURRENT_PROJECT_VERSION: "261020"
+        SWIFT_VERSION: "5.9"
+        # Must match the app's, or the two are built against different SDK
+        # floors and the extension silently fails to load on the older one.
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        # **Empty, and only since this target grew a catalog.** The accent
+        # colour is declared in the APP's catalog, which this target does not
+        # compile — it compiles `Shared/BrandMarks.xcassets` and nothing else.
+        # Named here it is a colour actool cannot find, which is a warning, and
+        # a warning is a failed build (`Tools/build-quietly.sh`). Nothing is
+        # lost: the widgets tint themselves from the values they draw, and this
+        # setting had no catalog to resolve against before either.
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: ""
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: Z4PMRLY8L2
+        CODE_SIGN_IDENTITY: "Apple Development"
+        # An extension has no icon set of its own and must not be asked for
+        # one: the default value is "AppIcon", which names an asset nothing
+        # here declares, and actool fails the whole build over it.
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+
+  # The app's own tests — the ones that need the app itself (view models,
+  # stores, the demo fleet) rather than the platform-independent package,
+  # which is covered by `swift test`.
+  gryonixNexusAppTests:
+    type: bundle.unit-test
+    supportedDestinations: [iOS]
+    sources:
+      - AppTests
+    # The string catalog, copied into the test bundle VERBATIM.
+    #
+    # Not listed as a resource: Xcode COMPILES an `.xcstrings` wherever it
+    # finds one, so declaring it produced nine `.lproj` tables in the test
+    # bundle and no catalog at all. And the compiled tables cannot answer the
+    # question: for a source-language catalog `en.lproj` carries only the
+    # hundred keys whose English text differs from the key itself, so a key
+    # with no translations anywhere is absent from every table and invisible.
+    # `shouldTranslate: false` lives in the catalog too, and a key deliberately
+    # left in English ("VPN", product names) must not read as a gap.
+    #
+    # Renamed on the way in so nothing downstream tries to compile it either.
+    postBuildScripts:
+      - name: Copy the string catalog for the completeness test
+        # `TARGET_BUILD_DIR`, and `mkdir -p` first: an embedded test bundle is
+        # assembled under the host app, so the folder this writes into does not
+        # exist relative to `BUILT_PRODUCTS_DIR` when the phase runs.
+        script: "set -euo pipefail\nDEST=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\"\nmkdir -p \"$DEST\"\ncp \"$SRCROOT/App/Resources/Localizable.xcstrings\" \"$DEST/Localizable-catalog.json\""
+        inputFiles:
+          - $(SRCROOT)/App/Resources/Localizable.xcstrings
+    dependencies:
+      - target: gryonixNexus
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.skaymer.gryonixnexus.apptests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/gryonixNexus.app/gryonixNexus"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+  # The packet-tunnel extension: on-device datapath for all protocols
+  gryonixNexusTunnel:
+    type: app-extension
+    supportedDestinations: [iOS, macOS]
+    sources:
+      - path: TunnelExtension
+        excludes: [SystemExtension, ProxyInfo.plist]
+    entitlements:
+      path: TunnelExtension/gryonixNexusTunnel.entitlements
+      properties:
+        com.apple.developer.networking.networkextension: [packet-tunnel-provider]
+        com.apple.security.application-groups: [group.com.skaymer.gryonixnexus]
+    dependencies:
+      # VPNProfile and nothing else FROM THIS PROJECT: an extension that could
+      # open an SSH session is an extension that will, eventually, be asked to.
+      - package: gryonixNexusPackage
+        product: VPNProfile
+      # The datapath. `#if canImport(WireGuardKit)` turns itself on the moment
+      # this resolves — nothing in the sources changes.
+      - package: AmneziaWGKit
+        product: WireGuardKit
+      # **What is deliberately NOT linked here, and why it is a license and
+      # not a limitation.**
+      #
+      # `OpenVPNAdapter` — OpenVPN 3 — is AGPL-3.0. Linking it makes this whole
+      # product AGPL, and AGPL cannot be distributed through the App Store:
+      # Apple's per-device terms are exactly the "further restrictions" the
+      # license forbids, which is what removed VLC from the store in 2011. The
+      # App Store is a requirement here, so the package is gone and the
+      # protocol is handed to a client app instead — which is what the Android
+      # side already does.
+      #
+      # **The code stays and costs nothing.** `#if canImport(OpenVPNAdapter)`
+      # compiles the branch out, and it reports `datapathNotIntegrated` by
+      # name rather than black-holing traffic. Putting it back is this package
+      # plus one dependency line, on the day a commercial license for the
+      # OpenVPN 3 core is bought — which is what OpenVPN Inc. sells one for —
+      # or on the day a build is made for somewhere other than the App Store.
+      #
+      # sing-box is not here either, for a reason that is not about licenses:
+      # one binary holds one Go runtime, `libwg-go.a` already carries one, and
+      # the linker says `duplicate symbol '__cgo_topofstack'`. The protocols it
+      # would have carried come from the LibXray inside that same archive.
+    info:
+      path: TunnelExtension/Info.plist
+      # **Declared here because XcodeGen GENERATES this file rather than
+      # reading it.** Pointing `path:` at a hand-written plist overwrites it and
+      # silently drops `NSExtension` — the principal class and the extension
+      # point, without which the system has nothing to launch.
+      properties:
+        CFBundleDisplayName: Nexus Tunnel
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.networkextension.packet-tunnel
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PacketTunnelProvider
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.skaymer.gryonixnexus.tunnel
+        # macOS loads an extension only inside a sandbox
+        CODE_SIGN_ENTITLEMENTS[sdk=macosx*]: TunnelExtension/gryonixNexusTunnel-macOS.entitlements
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: Z4PMRLY8L2
+        CODE_SIGN_IDENTITY: "Apple Development"
+        MARKETING_VERSION: "26.10"
+        CURRENT_PROJECT_VERSION: "261020"
+        SWIFT_VERSION: "5.9"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+        # Two search paths, one per runtime, both per platform. The package's
+        # own manifest points its `-L` at `Sources/WireGuardKitGo/out`, which
+        # can only ever hold one platform's library; the build script keeps all
+        # three beside it and this picks the right one. Without it a Mac build
+        # links an iOS archive and fails on a missing-symbol list that names
+        # nothing useful.
+        LIBRARY_SEARCH_PATHS:
+          - "$(SRCROOT)/Runtimes/amneziawg-apple/Sources/WireGuardKitGo/out-$(PLATFORM_NAME)"
+        HEADER_SEARCH_PATHS: "$(SRCROOT)/Runtimes/hev-socks5-tunnel/src"
+        # **The bridging header is how LibXray is reached at all.** Its
+        # prototypes live in the AmneziaWG package's `WireGuardKitGo` TARGET,
+        # which is not a product, so no module can import it — while the
+        # symbols are in `libwg-go.a`, which this target already links.
+        SWIFT_OBJC_BRIDGING_HEADER: "$(SRCROOT)/TunnelExtension/TunnelDatapaths.h"
+
+  # The packet tunnel as a macOS system extension
+  gryonixNexusTunnelSystem:
+    type: system-extension
+    platform: macOS
+    sources:
+      - path: TunnelExtension
+        excludes: ["Info.plist", "ProxyInfo.plist", "*.entitlements", "SystemExtension/*.entitlements", "SystemExtension/Info.plist", "SystemExtension/ProxyInfo.plist"]
+    dependencies:
+      - package: gryonixNexusPackage
+        product: VPNProfile
+      - package: AmneziaWGKit
+        product: WireGuardKit
+    info:
+      path: TunnelExtension/SystemExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Nexus Tunnel
+        CFBundlePackageType: $(PRODUCT_BUNDLE_PACKAGE_TYPE)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSSystemExtensionUsageDescription: Carries this Mac's VPN tunnel.
+        NetworkExtension:
+          NEMachServiceName: Z4PMRLY8L2.group.com.skaymer.gryonixnexus.tunnel
+          NEProviderClasses:
+            com.apple.networkextension.packet-tunnel: $(PRODUCT_MODULE_NAME).PacketTunnelProvider
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.skaymer.gryonixnexus.tunnel.system
+        PRODUCT_NAME: $(PRODUCT_BUNDLE_IDENTIFIER)
+        PRODUCT_MODULE_NAME: gryonixNexusTunnelSystem
+        CODE_SIGN_ENTITLEMENTS: TunnelExtension/SystemExtension/gryonixNexusTunnelSystem.entitlements
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: Z4PMRLY8L2
+        CODE_SIGN_IDENTITY: "Apple Development"
+        ENABLE_HARDENED_RUNTIME: YES
+        SKIP_INSTALL: YES
+        MARKETING_VERSION: "26.10"
+        CURRENT_PROJECT_VERSION: "261020"
+        SWIFT_VERSION: "5.9"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        LIBRARY_SEARCH_PATHS:
+          - "$(SRCROOT)/Runtimes/amneziawg-apple/Sources/WireGuardKitGo/out-$(PLATFORM_NAME)"
+        HEADER_SEARCH_PATHS: "$(SRCROOT)/Runtimes/hev-socks5-tunnel/src"
+        SWIFT_OBJC_BRIDGING_HEADER: "$(SRCROOT)/TunnelExtension/TunnelDatapaths.h"
+
+  # Shadowsocks and VLESS: Xray, the Shadowsocks client and tun2socks, no WireGuard
+  gryonixNexusProxyTunnel:
+    type: app-extension
+    supportedDestinations: [iOS, macOS]
+    sources:
+      - path: TunnelExtension
+        excludes: [SystemExtension, Info.plist]
+    entitlements:
+      path: TunnelExtension/gryonixNexusTunnel.entitlements
+      properties:
+        com.apple.developer.networking.networkextension: [packet-tunnel-provider]
+        com.apple.security.application-groups: [group.com.skaymer.gryonixnexus]
+    dependencies:
+      - package: gryonixNexusPackage
+        product: VPNProfile
+    info:
+      path: TunnelExtension/ProxyInfo.plist
+      properties:
+        CFBundleDisplayName: Nexus Proxy Tunnel
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.networkextension.packet-tunnel
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PacketTunnelProvider
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.skaymer.gryonixnexus.proxytunnel
+        CODE_SIGN_ENTITLEMENTS[sdk=macosx*]: TunnelExtension/gryonixNexusTunnel-macOS.entitlements
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: Z4PMRLY8L2
+        CODE_SIGN_IDENTITY: "Apple Development"
+        MARKETING_VERSION: "26.10"
+        CURRENT_PROJECT_VERSION: "261020"
+        SWIFT_VERSION: "5.9"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) GRYONIX_PROXY_TUNNEL"
+        LIBRARY_SEARCH_PATHS:
+          - "$(SRCROOT)/Runtimes/proxy-go/out-$(PLATFORM_NAME)"
+          - "$(SRCROOT)/Runtimes/hev-socks5-tunnel/out-$(PLATFORM_NAME)"
+        OTHER_LDFLAGS: "-lgryonix-proxy -lhev-socks5-tunnel -lresolv"
+        HEADER_SEARCH_PATHS: "$(SRCROOT)/Runtimes/hev-socks5-tunnel/src"
+        SWIFT_OBJC_BRIDGING_HEADER: "$(SRCROOT)/TunnelExtension/TunnelDatapaths.h"
+
+  # The proxy tunnel as a macOS system extension
+  gryonixNexusProxyTunnelSystem:
+    type: system-extension
+    platform: macOS
+    sources:
+      - path: TunnelExtension
+        excludes: ["Info.plist", "ProxyInfo.plist", "*.entitlements", "SystemExtension/*.entitlements", "SystemExtension/Info.plist", "SystemExtension/ProxyInfo.plist"]
+    dependencies:
+      - package: gryonixNexusPackage
+        product: VPNProfile
+    info:
+      path: TunnelExtension/SystemExtension/ProxyInfo.plist
+      properties:
+        CFBundleDisplayName: Nexus Proxy Tunnel
+        CFBundlePackageType: $(PRODUCT_BUNDLE_PACKAGE_TYPE)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSSystemExtensionUsageDescription: Carries this Mac's Shadowsocks and VLESS tunnel.
+        NetworkExtension:
+          NEMachServiceName: Z4PMRLY8L2.group.com.skaymer.gryonixnexus.proxytunnel
+          NEProviderClasses:
+            com.apple.networkextension.packet-tunnel: $(PRODUCT_MODULE_NAME).PacketTunnelProvider
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.skaymer.gryonixnexus.proxytunnel.system
+        PRODUCT_NAME: $(PRODUCT_BUNDLE_IDENTIFIER)
+        PRODUCT_MODULE_NAME: gryonixNexusProxyTunnelSystem
+        CODE_SIGN_ENTITLEMENTS: TunnelExtension/SystemExtension/gryonixNexusTunnelSystem.entitlements
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: Z4PMRLY8L2
+        CODE_SIGN_IDENTITY: "Apple Development"
+        ENABLE_HARDENED_RUNTIME: YES
+        SKIP_INSTALL: YES
+        MARKETING_VERSION: "26.10"
+        CURRENT_PROJECT_VERSION: "261020"
+        SWIFT_VERSION: "5.9"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) GRYONIX_PROXY_TUNNEL"
+        LIBRARY_SEARCH_PATHS:
+          - "$(SRCROOT)/Runtimes/proxy-go/out-$(PLATFORM_NAME)"
+          - "$(SRCROOT)/Runtimes/hev-socks5-tunnel/out-$(PLATFORM_NAME)"
+        OTHER_LDFLAGS: "-lgryonix-proxy -lhev-socks5-tunnel -lresolv"
+        HEADER_SEARCH_PATHS: "$(SRCROOT)/Runtimes/hev-socks5-tunnel/src"
+        SWIFT_OBJC_BRIDGING_HEADER: "$(SRCROOT)/TunnelExtension/TunnelDatapaths.h"
+
+  # The extension's own tests.
+  #
+  # **One table is why this target exists.** `TunnelConfigurationBuilder` maps
+  # AmneziaWG's nine wg-quick values onto WireGuardKit's fields; the names on
+  # the two sides look nothing alike, four of them differ only by which packet
+  # they describe, and a swapped pair gives a tunnel that comes up and never
+  # completes a handshake — with no error at either end, because both are doing
+  # what they were told.
+  gryonixNexusTunnelTests:
+    type: bundle.unit-test
+    supportedDestinations: [macOS]
+    sources:
+      - TunnelExtensionTests
+      # **The file under test is COMPILED INTO this bundle, not linked from
+      # the extension.** An `.appex` is not a library: a test bundle cannot
+      # link it, and `@testable import` gives the module's interface with none
+      # of its symbols. Only the mapping is here and not the provider: the
+      # mapping is a pure function of a parsed configuration, while the
+      # provider is a live `NEPacketTunnelProvider` with no business being
+      # instantiated by a unit test.
+      - path: TunnelExtension/TunnelConfiguration+QuickConfig.swift
+    dependencies:
+      - target: gryonixNexusTunnel
+      - package: AmneziaWGKit
+        product: WireGuardKit
+      - package: gryonixNexusPackage
+        product: VPNProfile
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.skaymer.gryonixnexus.tunnel.tests
+        SWIFT_VERSION: "5.9"
+        LIBRARY_SEARCH_PATHS: "$(SRCROOT)/Runtimes/amneziawg-apple/Sources/WireGuardKitGo/out-$(PLATFORM_NAME)"
+
+# A shared scheme pinned here — Xcode's auto-created scheme does not survive
+# `xcodegen generate`, which breaks `xcodebuild -scheme gryonixNexus`.
+schemes:
+  # The tunnel extension alone, with its own tests
+  gryonixNexusTunnel:
+    build:
+      targets:
+        gryonixNexusTunnel: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - gryonixNexusTunnelTests
+    archive:
+      config: Release
+  gryonixNexus:
+    build:
+      targets:
+        gryonixNexus: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - gryonixNexusAppTests
+    archive:
+      config: Release
