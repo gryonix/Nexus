@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Cleartext is refused outright. Everything this app dials over IP is either
+    TLS (the DNS provider's API) or SSH, which carries its own transport
+    security and its own host-key pin — nothing here has a plain-HTTP fallback
+    to keep working, so a cleartext connection is a downgrade, never a feature.
+
+    targetSdk already defaults this to false; it is written down because the
+    default is a property of the target level, and a later bump of that level
+    (or a library merging in its own permissive config) should not be able to
+    turn it back on quietly.
+
+    User-added CAs are NOT trusted, on debug builds included: the traffic this
+    app carries is server credentials, and an interception proxy that can read
+    them is exactly the thing being defended against.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

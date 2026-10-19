@@ -1,0 +1,31 @@
+bytes	0	0 B
+bytes	1	1 B
+bytes	999	999 B
+bytes	1023	1023 B
+bytes	1024	1 K
+bytes	1536	1.5 K
+bytes	1048576	1 M
+bytes	261818880	249.7 M
+bytes	45000000000	41.9 G
+bytes	5368709120	5 G
+bytes	1099511627776	1 T
+bytes	-5	0 B
+percent	0.0	0.0 %
+percent	0.04	0.0 %
+percent	12.34	12.3 %
+percent	99.99	100.0 %
+percent	100.0	100.0 %
+load	0.0	0.0
+load	0.42	0.4
+load	1.25	1.2
+temperature	38.4	38°C
+temperature	42.5	42°C
+temperature	42.4	42°C
+uptime	0.0	0m
+uptime	90.0	1m
+uptime	2040.0	34m
+uptime	18720.0	5h 12m
+uptime	86400.0	1d 0h
+uptime	818400.0	9d 11h
+uptime	7776000.0	90d
+uptime	2592000.0	30d

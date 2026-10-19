@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The same mark WITHOUT its shield: the bare globe the VPN section shows while
+  this device's own tunnel is down. The shield closes around it when a session
+  comes up (`SectionPresentation.icon`), which is how both apps of this family
+  say "connected" — the Apple side draws the same two glyphs in its tab bar and
+  gryonixVPN in the Mac menu bar.
+
+  **The state is WHICH GLYPH, never a colour.** A tab bar tints its icon for
+  selection, so a green "connected" mark would be repainted to nothing.
+
+  Byte for byte the paths of `tab_icon_logo.xml` minus the first one, which is
+  the shield — not a redrawing. `BrandMarkParityTest` holds that relationship on
+  both platforms, so a globe that stops being the mark's own globe goes red.
+
+  **The canvas is NOT the mark's, and that is the point (2026-09-08).** The
+  shield fills the mark's square; the globe inside it fills half of it, so the
+  globe on the mark's own canvas drew a picture visibly smaller than every
+  symbol standing beside it in the bar — and the section appeared to shrink
+  when a session dropped. The canvas is cropped to the globe instead (5668
+  rather than 8553, offset 1266), which is the same drawing enlarged by
+  8553/5668, and the stroke is divided by exactly that factor — 225, so the
+  line comes to the same 0.95 points on screen as the mark's 340 does. Both
+  numbers move together or the mark thins when it opens; `TabIconGlobe.svg`
+  carries the same pair, and `BrandMarkParityTest` holds them to each other.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="5668"
+    android:viewportHeight="5668">
+    <group
+        android:translateX="-1266"
+        android:translateY="-1266">
+        <path
+            android:pathData="M 6302 4100 C 6302 2883.869141 5316.130859 1898 4100 1898 C 2883.868896 1898 1898 2883.869141 1898 4100 C 1898 5316.130859 2883.868896 6302 4100 6302 C 5316.130859 6302 6302 5316.130859 6302 4100 Z"
+            android:strokeColor="#FF000000"
+            android:strokeWidth="225"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M 1983 4101 L 6208 4101 L 6208 4099 L 1983 4099 Z"
+            android:strokeColor="#FF000000"
+            android:strokeWidth="225"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M 4101 6215 L 4101 1990 L 4099 1990 L 4099 6215 Z"
+            android:strokeColor="#FF000000"
+            android:strokeWidth="225"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M 5221 4096.5 C 5221 2915.438965 4717.320313 1958 4096 1958 C 3474.679688 1958 2971 2915.438965 2971 4096.5 C 2971 5277.561035 3474.679688 6235 4096 6235 C 4717.320313 6235 5221 5277.561035 5221 4096.5 Z"
+            android:strokeColor="#FF000000"
+            android:strokeWidth="225"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M 5380 4121 C 5380 4038.157227 5312.842773 3971 5230 3971 C 5147.157227 3971 5080 4038.157227 5080 4121 C 5080 4203.842773 5147.157227 4271 5230 4271 C 5312.842773 4271 5380 4203.842773 5380 4121 Z M 4246 3371 C 4246 3288.157227 4178.842773 3221 4096 3221 C 4013.157227 3221 3946 3288.157227 3946 3371 C 3946 3453.842773 4013.157227 3521 4096 3521 C 4178.842773 3521 4246 3453.842773 4246 3371 Z M 3280 5221 C 3280 5138.157227 3212.842773 5071 3130 5071 C 3047.157227 5071 2980 5138.157227 2980 5221 C 2980 5303.842773 3047.157227 5371 3130 5371 C 3212.842773 5371 3280 5303.842773 3280 5221 Z M 3280 2971 C 3280 2888.157227 3212.842773 2821 3130 2821 C 3047.157227 2821 2980 2888.157227 2980 2971 C 2980 3053.842773 3047.157227 3121 3130 3121 C 3212.842773 3121 3280 3053.842773 3280 2971 Z"
+            android:strokeColor="#FF000000"
+            android:strokeWidth="225"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>

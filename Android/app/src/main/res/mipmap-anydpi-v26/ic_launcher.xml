@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The launcher icon, as two layers the system masks itself.
+
+  The background is a flat white, and that is the SHIPPED decision rather than
+  a new one: the Apple icon's plate is white too, which is why a rack of any
+  colour reads the same on a home screen. Android only has to say it out loud,
+  because an adaptive icon has no plate of its own.
+
+  The foreground is generated — `Tools/compose-android-icon.swift` — from the
+  same three layers the Apple icon is drawn from, sized so that every painted
+  pixel falls inside the 66dp circle every mask is guaranteed to show.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+    <monochrome android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>

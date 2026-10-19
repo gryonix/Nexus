@@ -1,0 +1,30 @@
+Домен:          example.com
+PTR у провайдера: 203.0.113.10 -> relay.example.com (критично для доставляемости).
+Пароль бэкапов (сохраните — без него не восстановить шифрованный бэкап): pass-phrase-from-the-host
+
+Статус сервисов:
+  nftables       active
+  docker         active
+  caddy          active
+
+Не забудьте DNS-записи из dns-records.txt — без них Caddy не выпустит сертификаты.
+
+=== ДОСТУПЫ СЕРВИСОВ (сохраните) ===
+Vaultwarden:  https://vault.example.com
+  Админ-панель: https://vault.example.com/admin
+  Токен админа (сгенерирован на сервере): tok-4f2a91c7
+  Вход: откройте URL и создайте СВОЙ аккаунт (ваш email + мастер-пароль на ваш выбор). Токен админа выше — только для панели /admin.
+  Регистрация: открыта
+Nextcloud:    https://cloud.example.com
+  Администратор: admin
+  Пароль (сгенерирован на сервере): nc-Pw-92kd
+AdGuard Home: https://dns.example.com
+  Администратор: admin
+  Пароль (сгенерирован на сервере): ag-Pw-71mx
+  DNS-over-HTTPS для ваших устройств: https://dns.example.com/dns-query
+  Обычный DNS на порту 53 отвечает только на этом сервере: открытый в интернет резолвер за считанные дни используют для атак усиления.
+VPN Panel: https://vpn.example.com
+  Админ-панель: https://vpn.example.com
+  Администратор: gryonix
+  Пароль (сгенерирован на сервере): vp-Pw-33qs
+  Клиентские устройства добавляются в панели: она генерирует их конфиги и QR-коды.

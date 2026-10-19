@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- The app talks to servers the owner runs, on the public internet and on
+         the house network alike. The local-network half is the one that bites:
+         on iOS a missing NSLocalNetworkUsageDescription stopped local traffic
+         dead, and the Android counterpart of that mistake is a cleartext or
+         multicast permission remembered only after a host stops answering. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- The device's own lock in front of the passwords this app holds. Without
+         it `BiometricPrompt.authenticate` throws a SecurityException the moment
+         it is called — which nothing but running the app can show. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
+
+    <!-- `taskAffinity=""` gives every activity here its own unnamed task.
+         The default affinity is the package name, and any app that declares
+         the SAME affinity has its activity placed into this app's task: it
+         then draws on top of what the owner opened, which for this app is a
+         screen asking for a server password (StrandHogg / task hijacking).
+         An empty affinity is a name nothing else can claim. -->
+    <application
+        android:name=".app.GryonixApplication"
+        android:taskAffinity=""
+        android:allowBackup="false"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.GryonixNexus">
+        <activity
+            android:name=".app.MainActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode"
+            android:theme="@style/Theme.GryonixNexus">
+        </activity>
+        <!-- The home-screen entry. One alias per icon colour; exactly one is
+             enabled at a time, see AppIcons. -->
+        <activity-alias
+            android:name=".app.LauncherBlue"
+            android:targetActivity=".app.MainActivity"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".app.LauncherRed"
+            android:targetActivity=".app.MainActivity"
+            android:icon="@mipmap/ic_launcher_red"
+            android:roundIcon="@mipmap/ic_launcher_red"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".app.LauncherOrange"
+            android:targetActivity=".app.MainActivity"
+            android:icon="@mipmap/ic_launcher_orange"
+            android:roundIcon="@mipmap/ic_launcher_orange"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".app.LauncherYellow"
+            android:targetActivity=".app.MainActivity"
+            android:icon="@mipmap/ic_launcher_yellow"
+            android:roundIcon="@mipmap/ic_launcher_yellow"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".app.LauncherGreen"
+            android:targetActivity=".app.MainActivity"
+            android:icon="@mipmap/ic_launcher_green"
+            android:roundIcon="@mipmap/ic_launcher_green"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".app.LauncherTeal"
+            android:targetActivity=".app.MainActivity"
+            android:icon="@mipmap/ic_launcher_teal"
+            android:roundIcon="@mipmap/ic_launcher_teal"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".app.LauncherPurple"
+            android:targetActivity=".app.MainActivity"
+            android:icon="@mipmap/ic_launcher_purple"
+            android:roundIcon="@mipmap/ic_launcher_purple"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".app.LauncherPink"
+            android:targetActivity=".app.MainActivity"
+            android:icon="@mipmap/ic_launcher_pink"
+            android:roundIcon="@mipmap/ic_launcher_pink"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".app.LauncherGraphite"
+            android:targetActivity=".app.MainActivity"
+            android:icon="@mipmap/ic_launcher_graphite"
+            android:roundIcon="@mipmap/ic_launcher_graphite"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".app.LauncherBlack"
+            android:targetActivity=".app.MainActivity"
+            android:icon="@mipmap/ic_launcher_black"
+            android:roundIcon="@mipmap/ic_launcher_black"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".app.LauncherIndigo"
+            android:targetActivity=".app.MainActivity"
+            android:icon="@mipmap/ic_launcher_indigo"
+            android:roundIcon="@mipmap/ic_launcher_indigo"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".app.LauncherBrown"
+            android:targetActivity=".app.MainActivity"
+            android:icon="@mipmap/ic_launcher_brown"
+            android:roundIcon="@mipmap/ic_launcher_brown"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <!-- Shadowsocks and Xray Reality: the Xray core plus an lwIP stack.
+             A second VpnService beside the WireGuard backend's, which comes
+             from its AAR — Android runs one VPN at a time, so only one of them
+             is ever up, and keeping them apart means a bug in the new one
+             cannot take the protocol that already works down with it. -->
+        <receiver
+            android:name=".app.notify.OperationRetryReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".app.notify.OperationStopReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".app.push.AlertActionReceiver"
+            android:exported="false" />
+        <service
+            android:name=".vpn.XrayVpnService"
+            android:exported="false"
+            android:permission="android.permission.BIND_VPN_SERVICE">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".push.GryonixMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+    </application>
+</manifest>

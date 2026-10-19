@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The icon's plate. White because the Apple icon's plate is white, not
+         because white is a safe default: the artwork is a blue rack with a
+         white gap inside it, and that gap only reads as a gap against a ground
+         it matches. Its own file rather than a line in `themes.xml`, because
+         it is a property of the ICON and the theme has nothing to do with what
+         a launcher draws. -->
+    <color name="ic_launcher_background">#FFFFFFFF</color>
+</resources>

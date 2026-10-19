@@ -1,0 +1,30 @@
+Domain:         example.com
+PTR at your provider: 203.0.113.10 -> relay.example.com (critical for deliverability).
+Backup passphrase (keep it — encrypted backups need it): pass-phrase-from-the-host
+
+Service status:
+  nftables       active
+  docker         active
+  caddy          active
+
+Remember the DNS records from dns-records.txt — without them Caddy cannot issue certificates.
+
+=== SERVICE CREDENTIALS (save these) ===
+Vaultwarden:  https://vault.example.com
+  Admin panel: https://vault.example.com/admin
+  Admin token (generated on the server): tok-4f2a91c7
+  Sign-in: open the URL and create your own account (your email + a master password you choose). The admin token above is only for the /admin panel.
+  Signups: open
+Nextcloud:    https://cloud.example.com
+  Administrator: admin
+  Password (generated on the server): nc-Pw-92kd
+AdGuard Home: https://dns.example.com
+  Administrator: admin
+  Password (generated on the server): ag-Pw-71mx
+  DNS-over-HTTPS for your devices: https://dns.example.com/dns-query
+  Plain DNS on port 53 answers on this server only: a resolver open to the internet is abused for amplification attacks within days.
+VPN Panel: https://vpn.example.com
+  Admin panel: https://vpn.example.com
+  Administrator: gryonix
+  Password (generated on the server): vp-Pw-33qs
+  Add client devices in the panel: it generates their configs and QR codes.
