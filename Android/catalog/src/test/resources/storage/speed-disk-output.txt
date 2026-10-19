@@ -1,0 +1,4 @@
+write 268435456 bytes (268 MB, 256 MiB) copied, 0.438679 s, 612 MB/s
+read 268435456 bytes (268 MB, 256 MiB) copied, 0.435931 s, 616 MB/s
+mode direct
+GRYONIXNEXUS_SPEED_DONE

@@ -1,0 +1,598 @@
+[
+ {
+  "golden": "change-md-add-spare.sh",
+  "action": "add-spare",
+  "level": "raid5",
+  "member": "",
+  "disks": [
+   "/dev/sdi"
+  ],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [],
+  "kind": "md",
+  "address": "/dev/md127",
+  "name": "gryonixnexus",
+  "identities": [
+   {
+    "path": "/dev/sdi",
+    "serial": "WD-WCC4E1FREE1",
+    "sizeBytes": 4000787030016
+   }
+  ]
+ },
+ {
+  "golden": "change-md-grow-mirror.sh",
+  "action": "grow",
+  "level": "raid1",
+  "member": "",
+  "disks": [
+   "/dev/sdi"
+  ],
+  "devices": 3,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [
+   "/dev/sdb",
+   "/dev/sdc"
+  ],
+  "kind": "md",
+  "address": "/dev/md127",
+  "name": "gryonixnexus",
+  "identities": [
+   {
+    "path": "/dev/sdi",
+    "serial": "WD-WCC4E1FREE1",
+    "sizeBytes": 4000787030016
+   }
+  ]
+ },
+ {
+  "golden": "change-md-grow.sh",
+  "action": "grow",
+  "level": "raid5",
+  "member": "",
+  "disks": [
+   "/dev/sdi"
+  ],
+  "devices": 4,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [
+   "/dev/sdb",
+   "/dev/sdc",
+   "/dev/sdd"
+  ],
+  "kind": "md",
+  "address": "/dev/md127",
+  "name": "gryonixnexus",
+  "identities": [
+   {
+    "path": "/dev/sdi",
+    "serial": "WD-WCC4E1FREE1",
+    "sizeBytes": 4000787030016
+   }
+  ]
+ },
+ {
+  "golden": "change-md-replace.sh",
+  "action": "replace",
+  "level": "raid5",
+  "member": "/dev/sdc",
+  "disks": [
+   "/dev/sdi"
+  ],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [
+   "/dev/sdb",
+   "/dev/sdd"
+  ],
+  "kind": "md",
+  "address": "/dev/md127",
+  "name": "gryonixnexus",
+  "identities": [
+   {
+    "path": "/dev/sdi",
+    "serial": "WD-WCC4E1FREE1",
+    "sizeBytes": 4000787030016
+   }
+  ]
+ },
+ {
+  "golden": "change-md-detach.sh",
+  "action": "detach",
+  "level": "raid5",
+  "member": "/dev/sdc",
+  "disks": [],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [],
+  "kind": "md",
+  "address": "/dev/md127",
+  "name": "gryonixnexus",
+  "identities": []
+ },
+ {
+  "golden": "change-md-remove-mirror.sh",
+  "action": "remove",
+  "level": "raid1",
+  "member": "/dev/sdc",
+  "disks": [],
+  "devices": 1,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [],
+  "kind": "md",
+  "address": "/dev/md127",
+  "name": "gryonixnexus",
+  "identities": []
+ },
+ {
+  "golden": "change-md-remove.sh",
+  "action": "remove",
+  "level": "raid5",
+  "member": "/dev/sdc",
+  "disks": [],
+  "devices": 3,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [
+   "/dev/sdb",
+   "/dev/sdd",
+   "/dev/sde"
+  ],
+  "kind": "md",
+  "address": "/dev/md127",
+  "name": "gryonixnexus",
+  "identities": []
+ },
+ {
+  "golden": "change-md-level5.sh",
+  "action": "change-level",
+  "level": "raid1",
+  "member": "",
+  "disks": [
+   "/dev/sdi"
+  ],
+  "devices": 3,
+  "newLevel": 5,
+  "members": [],
+  "checkDisks": [
+   "/dev/sdb",
+   "/dev/sdc"
+  ],
+  "kind": "md",
+  "address": "/dev/md127",
+  "name": "gryonixnexus",
+  "identities": [
+   {
+    "path": "/dev/sdi",
+    "serial": "WD-WCC4E1FREE1",
+    "sizeBytes": 4000787030016
+   }
+  ]
+ },
+ {
+  "golden": "change-md-level6.sh",
+  "action": "change-level",
+  "level": "raid5",
+  "member": "",
+  "disks": [
+   "/dev/sdi"
+  ],
+  "devices": 4,
+  "newLevel": 6,
+  "members": [],
+  "checkDisks": [
+   "/dev/sdb",
+   "/dev/sdc",
+   "/dev/sdd"
+  ],
+  "kind": "md",
+  "address": "/dev/md127",
+  "name": "gryonixnexus",
+  "identities": [
+   {
+    "path": "/dev/sdi",
+    "serial": "WD-WCC4E1FREE1",
+    "sizeBytes": 4000787030016
+   }
+  ]
+ },
+ {
+  "golden": "change-md-check.sh",
+  "action": "check",
+  "level": "raid5",
+  "member": "",
+  "disks": [],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [],
+  "kind": "md",
+  "address": "/dev/md127",
+  "name": "gryonixnexus",
+  "identities": []
+ },
+ {
+  "golden": "change-md-delete.sh",
+  "action": "delete",
+  "level": "raid5",
+  "member": "",
+  "disks": [],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [
+   "/dev/sdd",
+   "/dev/sdc",
+   "/dev/sdb"
+  ],
+  "checkDisks": [],
+  "kind": "md",
+  "address": "/dev/md127",
+  "name": "gryonixnexus",
+  "identities": []
+ },
+ {
+  "golden": "change-zfs-add-spare.sh",
+  "action": "add-spare",
+  "level": "mirror",
+  "member": "",
+  "disks": [
+   "/dev/sdi"
+  ],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [],
+  "kind": "zfs",
+  "address": "tank",
+  "name": "tank",
+  "identities": [
+   {
+    "path": "/dev/sdi",
+    "serial": "WD-WCC4E1FREE1",
+    "sizeBytes": 4000787030016
+   }
+  ]
+ },
+ {
+  "golden": "change-zfs-grow-mirror.sh",
+  "action": "grow",
+  "level": "mirror",
+  "member": "/dev/sde1",
+  "disks": [
+   "/dev/sdi"
+  ],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [
+   "/dev/sde",
+   "/dev/sdf"
+  ],
+  "kind": "zfs",
+  "address": "tank",
+  "name": "tank",
+  "identities": [
+   {
+    "path": "/dev/sdi",
+    "serial": "WD-WCC4E1FREE1",
+    "sizeBytes": 4000787030016
+   }
+  ]
+ },
+ {
+  "golden": "change-zfs-grow-pair.sh",
+  "action": "grow",
+  "level": "mirror",
+  "member": "",
+  "disks": [
+   "/dev/sdi",
+   "/dev/sdj"
+  ],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [
+   "/dev/sde",
+   "/dev/sdf"
+  ],
+  "kind": "zfs",
+  "address": "tank",
+  "name": "tank",
+  "identities": [
+   {
+    "path": "/dev/sdi",
+    "serial": "WD-WCC4E1FREE1",
+    "sizeBytes": 4000787030016
+   },
+   {
+    "path": "/dev/sdj",
+    "serial": "WD-WCC4E1FREE2",
+    "sizeBytes": 4000787030016
+   }
+  ]
+ },
+ {
+  "golden": "change-zfs-grow-raidz.sh",
+  "action": "grow",
+  "level": "raidz1",
+  "member": "",
+  "disks": [
+   "/dev/sdi"
+  ],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [
+   "/dev/sda",
+   "/dev/sdb",
+   "/dev/sdc"
+  ],
+  "kind": "zfs",
+  "address": "tank",
+  "name": "tank",
+  "identities": [
+   {
+    "path": "/dev/sdi",
+    "serial": "WD-WCC4E1FREE1",
+    "sizeBytes": 4000787030016
+   }
+  ]
+ },
+ {
+  "golden": "change-zfs-grow-stripe.sh",
+  "action": "grow",
+  "level": "stripe",
+  "member": "",
+  "disks": [
+   "/dev/sdi"
+  ],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [
+   "/dev/sde"
+  ],
+  "kind": "zfs",
+  "address": "tank",
+  "name": "tank",
+  "identities": [
+   {
+    "path": "/dev/sdi",
+    "serial": "WD-WCC4E1FREE1",
+    "sizeBytes": 4000787030016
+   }
+  ]
+ },
+ {
+  "golden": "change-zfs-replace.sh",
+  "action": "replace",
+  "level": "mirror",
+  "member": "/dev/sdf1",
+  "disks": [
+   "/dev/sdi"
+  ],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [
+   "/dev/sde"
+  ],
+  "kind": "zfs",
+  "address": "tank",
+  "name": "tank",
+  "identities": [
+   {
+    "path": "/dev/sdi",
+    "serial": "WD-WCC4E1FREE1",
+    "sizeBytes": 4000787030016
+   }
+  ]
+ },
+ {
+  "golden": "change-zfs-detach.sh",
+  "action": "detach",
+  "level": "mirror",
+  "member": "/dev/sdf1",
+  "disks": [],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [],
+  "kind": "zfs",
+  "address": "tank",
+  "name": "tank",
+  "identities": []
+ },
+ {
+  "golden": "change-zfs-remove-mirror.sh",
+  "action": "remove",
+  "level": "mirror",
+  "member": "/dev/sdf1",
+  "disks": [],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [],
+  "kind": "zfs",
+  "address": "tank",
+  "name": "tank",
+  "identities": []
+ },
+ {
+  "golden": "change-zfs-remove-stripe.sh",
+  "action": "remove",
+  "level": "stripe",
+  "member": "/dev/sdf1",
+  "disks": [],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [
+   "/dev/sde"
+  ],
+  "kind": "zfs",
+  "address": "tank",
+  "name": "tank",
+  "identities": []
+ },
+ {
+  "golden": "change-zfs-check.sh",
+  "action": "check",
+  "level": "mirror",
+  "member": "",
+  "disks": [],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [],
+  "kind": "zfs",
+  "address": "tank",
+  "name": "tank",
+  "identities": []
+ },
+ {
+  "golden": "change-zfs-delete.sh",
+  "action": "delete",
+  "level": "mirror",
+  "member": "",
+  "disks": [],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [
+   "/dev/sde1",
+   "/dev/sdf1"
+  ],
+  "checkDisks": [],
+  "kind": "zfs",
+  "address": "tank",
+  "name": "tank",
+  "identities": []
+ },
+ {
+  "golden": "change-btrfs-grow.sh",
+  "action": "grow",
+  "level": "raid1",
+  "member": "",
+  "disks": [
+   "/dev/sdi"
+  ],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [
+   "/dev/sdg",
+   "/dev/sdh"
+  ],
+  "kind": "btrfs",
+  "address": "/srv/data",
+  "name": "data",
+  "identities": [
+   {
+    "path": "/dev/sdi",
+    "serial": "WD-WCC4E1FREE1",
+    "sizeBytes": 4000787030016
+   }
+  ]
+ },
+ {
+  "golden": "change-btrfs-replace.sh",
+  "action": "replace",
+  "level": "raid1",
+  "member": "/dev/sdh",
+  "disks": [
+   "/dev/sdi"
+  ],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [
+   "/dev/sdg"
+  ],
+  "kind": "btrfs",
+  "address": "/srv/data",
+  "name": "data",
+  "identities": [
+   {
+    "path": "/dev/sdi",
+    "serial": "WD-WCC4E1FREE1",
+    "sizeBytes": 4000787030016
+   }
+  ]
+ },
+ {
+  "golden": "change-btrfs-remove.sh",
+  "action": "remove",
+  "level": "raid1",
+  "member": "/dev/sdh",
+  "disks": [],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [
+   "/dev/sdg",
+   "/dev/sdi"
+  ],
+  "kind": "btrfs",
+  "address": "/srv/data",
+  "name": "data",
+  "identities": []
+ },
+ {
+  "golden": "change-btrfs-level.sh",
+  "action": "change-level",
+  "level": "raid1",
+  "member": "",
+  "disks": [],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [
+   "/dev/sdg",
+   "/dev/sdh"
+  ],
+  "kind": "btrfs",
+  "address": "/srv/data",
+  "name": "data",
+  "identities": []
+ },
+ {
+  "golden": "change-btrfs-check.sh",
+  "action": "check",
+  "level": "raid1",
+  "member": "",
+  "disks": [],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [],
+  "checkDisks": [],
+  "kind": "btrfs",
+  "address": "/srv/data",
+  "name": "data",
+  "identities": []
+ },
+ {
+  "golden": "change-btrfs-delete.sh",
+  "action": "delete",
+  "level": "raid1",
+  "member": "",
+  "disks": [],
+  "devices": 0,
+  "newLevel": 0,
+  "members": [
+   "/dev/sdg",
+   "/dev/sdh"
+  ],
+  "checkDisks": [],
+  "kind": "btrfs",
+  "address": "/srv/data",
+  "name": "data",
+  "identities": []
+ }
+]

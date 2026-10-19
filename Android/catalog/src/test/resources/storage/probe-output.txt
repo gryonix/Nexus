@@ -1,0 +1,8 @@
+Welcome banner noise
+GRYONIXNEXUS_HW_BEGIN
+cpu=8
+mem=16777216000
+arch=x86_64
+rootfree=64424509440
+lsblk={"blockdevices": [{"name":"sda","path":"/dev/sda","size":512110190592,"rota":false,"type":"disk","mountpoint":null,"fstype":null,"model":"Samsung SSD 860","tran":"sata","children": [{"name":"sda1","path":"/dev/sda1","size":536870912,"rota":false,"type":"part","mountpoint":"/boot/efi","fstype":"vfat","model":null,"tran":null},{"name":"sda2","path":"/dev/sda2","size":511571427328,"rota":false,"type":"part","mountpoint":"/","fstype":"ext4","model":null,"tran":null}]},{"name":"nvme0n1","path":"/dev/nvme0n1","size":256060514304,"rota":false,"type":"disk","mountpoint":null,"fstype":null,"model":"WD Blue SN570","tran":"nvme"},{"name":"sdb","path":"/dev/sdb","size":4000787030016,"rota":"1","type":"disk","mountpoint":null,"fstype":null,"model":"WDC WD40EFRX","tran":"sata"},{"name":"sdc","path":"/dev/sdc","size":4000787030016,"rota":"1","type":"disk","mountpoint":null,"fstype":"ext4","model":"WDC WD40EFRX","tran":"sata"},{"name":"sdd","path":"/dev/sdd","size":1000204886016,"rota":false,"type":"disk","mountpoint":null,"fstype":null,"model":"Crucial MX500","tran":"sata","children": [{"name":"sdd1","path":"/dev/sdd1","size":1000203837440,"rota":false,"type":"part","mountpoint":"/mnt/fast","fstype":"xfs","model":null,"tran":null}]},{"name":"zram0","path":"/dev/zram0","size":4294967296,"rota":false,"type":"disk","mountpoint":"[SWAP]","fstype":null,"model":null,"tran":null}]}
+GRYONIXNEXUS_HW_END

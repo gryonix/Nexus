@@ -1,0 +1,7 @@
+GRYONIXNEXUS_HW_BEGIN
+cpu=12
+mem=25157267456
+arch=x86_64
+rootfree=677507645440
+lsblk={   "blockdevices": [      {         "name": "vda",         "path": "/dev/vda",         "size": 773094113280,         "rota": true,         "type": "disk",         "mountpoint": null,         "fstype": null,         "model": null,         "tran": "virtio",         "children": [            {               "name": "vda1",               "path": "/dev/vda1",               "size": 772959878656,               "rota": true,               "type": "part",               "mountpoint": "/",               "fstype": "ext4",               "model": null,               "tran": "virtio"            },{               "name": "vda14",               "path": "/dev/vda14",               "size": 3145728,               "rota": true,               "type": "part",               "mountpoint": null,               "fstype": null,               "model": null,               "tran": "virtio"            },{               "name": "vda15",               "path": "/dev/vda15",               "size": 130023424,               "rota": true,               "type": "part",               "mountpoint": "/boot/efi",               "fstype": "vfat",               "model": null,               "tran": "virtio"            }         ]      }   ]}
+GRYONIXNEXUS_HW_END

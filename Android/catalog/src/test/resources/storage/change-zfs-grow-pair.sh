@@ -1,0 +1,48 @@
+#!/bin/bash
+set -euo pipefail
+POOL='tank'
+NEW='/dev/sdi'
+NEW2='/dev/sdj'
+gnx_expect() {
+  case "$1" in
+    '/dev/sdi') echo '4000787030016|WD-WCC4E1FREE1' ;;
+    '/dev/sdj') echo '4000787030016|WD-WCC4E1FREE2' ;;
+  esac
+}
+gnx_free() {
+  if [ ! -b "$1" ]; then
+    echo "$1 is not a disk on this server."
+    exit 3
+  fi
+  local want size serial
+  want="$(gnx_expect "$1")"
+  if [ -n "$want" ]; then
+    size="$(lsblk -dnbo SIZE "$1" | tr -d '[:space:]')"
+    serial="$(lsblk -dno SERIAL "$1" | tr -d '[:space:]')"
+    if [ "${want%%|*}" != "$size" ] || { [ -n "${want#*|}" ] && [ -n "$serial" ] && [ "${want#*|}" != "$serial" ]; }; then
+      echo "$1 is not the disk the app listed. Nothing was erased."
+      exit 3
+    fi
+  fi
+  if [ -n "$(lsblk -rno MOUNTPOINT "$1" | tr -d '[:space:]')" ] || lsblk -rno TYPE "$1" | grep -E '^(raid|lvm|crypt)' >/dev/null; then
+    echo "$1 is in use. Nothing was erased."
+    exit 3
+  fi
+}
+CHECK=('/dev/sde' '/dev/sdf')
+if command -v smartctl >/dev/null 2>&1; then
+  for disk in "${CHECK[@]}"; do
+    if smartctl -H "$disk" 2>/dev/null | grep -q FAILED; then
+      echo "$disk reports that it is failing. Replace that disk first."
+      exit 3
+    fi
+  done
+fi
+if ! zpool status -LP "$POOL" | grep -qw -- "$NEW"; then
+  gnx_free "$NEW"
+  wipefs -a -q "$NEW"
+  gnx_free "$NEW2"
+  wipefs -a -q "$NEW2"
+  zpool add -f "$POOL" mirror "$NEW" "$NEW2"
+fi
+echo GRYONIXNEXUS_ARRAY_CHANGE_DONE

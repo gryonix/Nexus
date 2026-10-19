@@ -1,0 +1,12 @@
+GRYONIXNEXUS_HW_BEGIN
+cpu=8
+mem=34359738368
+arch=x86_64
+rootfree=400000000000
+lsblk={"blockdevices": [{"name": "nvme0n1", "path": "/dev/nvme0n1", "size": 512110190592, "rota": false, "type": "disk", "mountpoint": null, "fstype": null, "label": null, "uuid": null, "model": "Samsung SSD 980", "tran": "nvme", "children": [{"name": "nvme0n1p1", "path": "/dev/nvme0n1p1", "size": 536870912, "rota": false, "type": "part", "mountpoint": "/boot/efi", "fstype": "vfat", "label": null, "uuid": "6EA5-B51D", "model": null, "tran": "nvme"}, {"name": "nvme0n1p2", "path": "/dev/nvme0n1p2", "size": 511571214336, "rota": false, "type": "part", "mountpoint": "/", "fstype": "ext4", "label": null, "uuid": "df4df5bb-613a-4382-8cf9-653304605a1f", "model": null, "tran": "nvme"}]}, {"name": "sda", "path": "/dev/sda", "size": 1000204886016, "rota": true, "type": "disk", "mountpoint": null, "fstype": null, "label": null, "uuid": null, "model": "WDC WD40EFRX-68N", "tran": "sata", "children": [{"name": "sda1", "path": "/dev/sda1", "size": 2147483648, "rota": true, "type": "part", "mountpoint": null, "fstype": null, "label": null, "uuid": null, "model": null, "tran": "sata"}, {"name": "sda2", "path": "/dev/sda2", "size": 3998639460352, "rota": true, "type": "part", "mountpoint": null, "fstype": "zfs_member", "label": "tank", "uuid": "15437563216592283341", "model": null, "tran": "sata"}]}, {"name": "sdb", "path": "/dev/sdb", "size": 1000204886016, "rota": true, "type": "disk", "mountpoint": null, "fstype": null, "label": null, "uuid": null, "model": "WDC WD40EFRX-68N", "tran": "sata", "children": [{"name": "sdb1", "path": "/dev/sdb1", "size": 2147483648, "rota": true, "type": "part", "mountpoint": null, "fstype": null, "label": null, "uuid": null, "model": null, "tran": "sata"}, {"name": "sdb2", "path": "/dev/sdb2", "size": 3998639460352, "rota": true, "type": "part", "mountpoint": null, "fstype": "zfs_member", "label": "tank", "uuid": "15437563216592283341", "model": null, "tran": "sata"}]}]}
+mdstat=Personalities : |unused devices: <none>|
+zpool=
+zfsmount=
+btrfs=
+lvm=
+GRYONIXNEXUS_HW_END
