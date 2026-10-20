@@ -6,6 +6,7 @@ struct VPNPlacementSection: View {
     @ObservedObject var viewModel: DashboardViewModel
     @State private var confirming = false
     @State private var moving = false
+    @State private var recordResult: String?
 
     private var onRelay: Bool { viewModel.deployment.vpnRunsOnRelay }
 
@@ -23,6 +24,16 @@ struct VPNPlacementSection: View {
                       systemImage: "arrow.left.arrow.right")
             }
             .disabled(moving)
+            Button {
+                record()
+            } label: {
+                Label(onRelay ? "The VPN already runs at home" : "The VPN already runs on the VPS",
+                      systemImage: "checkmark.circle")
+            }
+            .disabled(moving)
+            if let recordResult {
+                Text(recordResult).font(.footnote).foregroundStyle(.secondary)
+            }
         } header: {
             InfoSectionHeader("Where the VPN runs", note: "At home, everything the VPN carries crosses your home connection twice, so its upload speed caps the VPN. On the VPS, internet traffic leaves straight from the VPS; only your own sites still go home through the tunnel.")
         } footer: {
@@ -36,6 +47,15 @@ struct VPNPlacementSection: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("The VPN pauses for a few minutes. Devices keep their configurations and reconnect on their own.")
+        }
+    }
+
+    private func record() {
+        guard #available(macOS 15.0, *) else { return }
+        moving = true
+        Task {
+            recordResult = await viewModel.recordVPNOnOtherMachine()
+            moving = false
         }
     }
 

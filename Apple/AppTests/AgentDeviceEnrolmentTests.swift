@@ -34,4 +34,13 @@ final class AgentDeviceEnrolmentTests: XCTestCase {
         XCTAssertFalse(AgentDeviceEnrolment.needsEnrolment(devices: [], thisDevicePublicKey: nil))
         XCTAssertFalse(AgentDeviceEnrolment.needsEnrolment(devices: [], thisDevicePublicKey: ""))
     }
+
+    #if canImport(UIKit)
+    func testTheDeviceIsNamedForItsModelNotJustItsKind() {
+        XCTAssertEqual(DeviceModelName.names["iPhone19,4"], "iPhone Duo")
+        XCTAssertEqual(DeviceModelName.names["iPhone18,1"], "iPhone 17 Pro")
+        XCTAssertNotEqual(AgentDeviceEnrolment.deviceLabel, "iPhone",
+                          "every configuration was called iPhone and could not be told apart")
+    }
+    #endif
 }

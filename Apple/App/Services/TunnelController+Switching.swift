@@ -9,7 +9,7 @@ extension TunnelController {
     func switchTo(deployment: Deployment, protocolID: ServiceID) async {
         let carry = (active ?? selected).map { TunnelCarry(of: $0, pinned: TunnelEndpointPins.shared.pin(for: $0) != nil) }
         if let kept = ThisDeviceTunnelChoices.keptProfile(in: profiles, serverID: deployment.id,
-                                                          protocolID: protocolID, ownName: Self.thisDeviceName) {
+                                                          protocolID: protocolID, isOwn: Self.isThisDevice) {
             let ready = await carrying(carry, to: kept, in: deployment)
             await applyReach(carry, to: ready)
             await choose(ready)
@@ -30,7 +30,7 @@ extension TunnelController {
     /// This device's kept profile, given the carried DNS first
     private func carrying(_ carry: TunnelCarry?, to profile: TunnelProfile, in deployment: Deployment) async -> TunnelProfile {
         guard let carry, !carry.dns.isEmpty, profile.dns != carry.dns,
-              profile.deviceName == Self.thisDeviceName, #available(macOS 15.0, *) else { return profile }
+              Self.isThisDevice(profile.deviceName), #available(macOS 15.0, *) else { return profile }
         let viewModel = DashboardViewModel(deployment: deployment)
         guard let configuration = await carriedConfiguration(of: profile.deviceID, protocolID: profile.protocolID,
                                                              from: viewModel, carry: carry),

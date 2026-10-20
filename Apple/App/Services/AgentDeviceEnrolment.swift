@@ -10,15 +10,7 @@ import UIKit
 @available(macOS 15.0, *)
 enum AgentDeviceEnrolment {
     /// The label the agent records for this device
-    static var deviceLabel: String {
-        #if canImport(UIKit)
-        return UIDevice.current.name
-        #elseif os(macOS)
-        return Host.current().localizedName ?? "Mac"
-        #else
-        return "Device"
-        #endif
-    }
+    static var deviceLabel: String { ThisDeviceName.current }
 
     static func pairingCode(session: AgentConnection.Session, deployment: Deployment) async throws -> String {
         let exec = try await session.runner.run(

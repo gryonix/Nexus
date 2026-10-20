@@ -23,6 +23,9 @@ class InstalledDeploymentRecordTest {
         metricsIndicatorStyle = MetricsIndicatorStyle.RINGS,
         timeouts = OperationTimeouts(quickSeconds = 42),
         wgInterface = "wg1",
+        vpnOnRelay = true,
+        wakeOnLANMAC = "00:11:22:33:44:55",
+        wakeOnLANBroadcast = "192.0.2.255",
     )
 
     private fun generated(id: String) = Deployment(
@@ -57,6 +60,9 @@ class InstalledDeploymentRecordTest {
         assertEquals("wg1", record.wgInterface)
         assertEquals(existing.storedNodes, record.storedNodes)
         assertEquals(existing.placement, record.placement)
+        assertEquals(true, record.vpnOnRelay, "a reinstall moved the VPN back home while it runs on the relay")
+        assertEquals("00:11:22:33:44:55", record.wakeOnLANMAC)
+        assertEquals("192.0.2.255", record.wakeOnLANBroadcast)
     }
 
     @Test

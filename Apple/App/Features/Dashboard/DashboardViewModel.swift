@@ -2987,12 +2987,58 @@ final class DashboardViewModel: ObservableObject {
     }
 
     @available(macOS 15.0, *)
-    private func vpnClientOperations() async throws -> any VPNClientManaging {
+    private func vpnClientOperations(on host: SSHHostID? = nil) async throws -> any VPNClientManaging {
         // Same reason as the mesh seam above.
         let runner = try await session()
         let client = try await AgentConnection.client(deployment: deployment, runner: runner,
-                                                      host: deployment.vpnHost)
+                                                      host: host ?? deployment.vpnHost)
         return AgentVPNClientOperations(client: client, gate: agentGate)
+    }
+
+    /// Retries a panel call where the VPN really runs
+    @available(macOS 15.0, *)
+    private func withVPNPlacementHealed<T>(
+        protocol id: ServiceID,
+        _ body: (any VPNClientManaging) async throws -> T
+    ) async throws -> T {
+        do {
+            return try await body(try await vpnClientOperations())
+        } catch {
+            guard Self.panelIsAbsent(error), let other = deployment.otherVPNHost,
+                  let ops = try? await vpnClientOperations(on: other),
+                  (try? await ops.list(protocol: id)) != nil else { throw error }
+            correctVPNPlacement()
+            return try await body(ops)
+        }
+    }
+
+    /// No VPN panel listens on that machine
+    static func panelIsAbsent(_ error: Error) -> Bool {
+        let text = message(for: error)
+        return text.contains("VPN panel") && text.contains("Connection refused")
+    }
+
+    /// Records where the VPN already runs; nothing moves
+    @available(macOS 15.0, *)
+    func recordVPNOnOtherMachine() async -> String {
+        guard let other = deployment.otherVPNHost,
+              let id = deployment.installedVPNServices.filter({ $0 != .vpnPanel })
+                .sorted(by: { $0.rawValue < $1.rawValue }).first else { return "" }
+        do {
+            _ = try await vpnClientOperations(on: other).list(protocol: id)
+            correctVPNPlacement()
+            return UIL10n.string("Recorded where the VPN runs.")
+        } catch {
+            return Self.message(for: error)
+        }
+    }
+
+    /// Records that the VPN runs on the other machine
+    private func correctVPNPlacement() {
+        let corrected = deployment.movingVPN(toRelay: !deployment.vpnRunsOnRelay)
+        deployment = corrected
+        try? FileDeploymentStore().upsert(corrected)
+        onDeploymentCorrected?(corrected)
     }
 
     func loadVPNClients(protocol id: ServiceID) async {
@@ -3002,7 +3048,7 @@ final class DashboardViewModel: ObservableObject {
         }
         if vpnClients.value == nil { vpnClients = .loading }
         do {
-            let devices = try await vpnClientOperations().list(protocol: id)
+            let devices = try await withVPNPlacementHealed(protocol: id) { try await $0.list(protocol: id) }
             vpnClients = .loaded(devices)
             recordForWidgets(protocol: id, devices: devices, failure: nil)
         } catch {
@@ -3198,7 +3244,7 @@ final class DashboardViewModel: ObservableObject {
         _ body: @escaping (any VPNClientManaging) async throws -> [VPNClientDevice]
     ) async {
         do {
-            let clients = try await body(try await vpnClientOperations())
+            let clients = try await withVPNPlacementHealed(protocol: id, body)
             vpnClients = .loaded(clients)
             quickActionResult = QuickActionResult(message: message, isError: false)
         } catch {
@@ -3211,7 +3257,9 @@ final class DashboardViewModel: ObservableObject {
     func vpnClientConfiguration(protocol id: ServiceID, clientID: String) async -> VPNClientConfiguration? {
         guard #available(macOS 15.0, *) else { return nil }
         do {
-            return try await vpnClientOperations().configuration(protocol: id, clientID: clientID)
+            return try await withVPNPlacementHealed(protocol: id) {
+                try await $0.configuration(protocol: id, clientID: clientID)
+            }
         } catch {
             quickActionResult = QuickActionResult(message: Self.message(for: error), isError: true)
             return nil

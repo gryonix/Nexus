@@ -1,3 +1,4 @@
+import AgentClient
 import AgentControl
 import ServerControl
 import ServiceCatalog
@@ -76,5 +77,13 @@ final class VPNRelayTests: XCTestCase {
         XCTAssertEqual(VPNDNSPriorityEditing.name(of: "local", local: local), local.name)
         XCTAssertTrue(VPNDNSPriorityEditing.name(of: "1.1.1.1", local: local).contains("Cloudflare"))
         XCTAssertEqual(VPNDNSPriorityEditing.name(of: "203.0.113.53", local: local), "203.0.113.53")
+    }
+
+    func testARefusedPanelIsTheVPNRunningOnTheOtherMachine() {
+        let refused = AgentError.rpc(code: "internal",
+                                     message: "the VPN panel could not do that: Connection refused (os error 111)")
+        XCTAssertTrue(DashboardViewModel.panelIsAbsent(refused))
+        let other = AgentError.rpc(code: "internal", message: "the VPN panel could not do that: HTTP 500")
+        XCTAssertFalse(DashboardViewModel.panelIsAbsent(other), "a panel that answered is where the VPN is")
     }
 }

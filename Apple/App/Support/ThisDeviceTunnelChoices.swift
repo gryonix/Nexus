@@ -41,9 +41,9 @@ enum ThisDeviceTunnelChoices {
 
     /// A tunnel already kept here for the pair, own first
     static func keptProfile(in profiles: [TunnelProfile], serverID: UUID, protocolID: ServiceID,
-                            ownName: String) -> TunnelProfile? {
+                            isOwn: (String) -> Bool) -> TunnelProfile? {
         let pair = profiles.filter { $0.serverID == serverID && $0.protocolID == protocolID }
-        return pair.first { $0.deviceName == ownName } ?? pair.first
+        return pair.first { isOwn($0.deviceName) } ?? pair.first
     }
 
     /// Server devices other than this device's own
@@ -60,6 +60,6 @@ enum ThisDeviceTunnelChoices {
     /// The DNS the server lists, else the profile's
     static func dns(of profile: TunnelProfile, listed devices: [VPNClientDevice]) -> [String] {
         let listed = devices.first { $0.id == profile.deviceID }?.dns ?? []
-        return LocalDNS.chosen(listed.isEmpty ? profile.dns : listed)
+        return LocalDNS.chosen(profile.dns.isEmpty ? listed : profile.dns)
     }
 }

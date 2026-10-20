@@ -76,7 +76,7 @@ struct ThisDeviceRows: View {
     private func protocolLabel(_ protocolID: ServiceID) -> String {
         let kept = protocolID == profile.protocolID ? profile
             : ThisDeviceTunnelChoices.keptProfile(in: tunnel.profiles, serverID: profile.serverID,
-                                                  protocolID: protocolID, ownName: TunnelController.thisDeviceName)
+                                                  protocolID: protocolID, isOwn: TunnelController.isThisDevice)
         return ThisDeviceTunnelChoices.protocolLabel(protocolID, obfuscated: kept?.isObfuscated ?? false)
     }
 

@@ -17,6 +17,9 @@ object InstalledDeploymentRecord {
             wgInterface = existing.wgInterface,
             storedNodes = existing.storedNodes,
             placement = existing.placement,
+            vpnOnRelay = existing.vpnOnRelay,
+            wakeOnLANMAC = existing.wakeOnLANMAC,
+            wakeOnLANBroadcast = existing.wakeOnLANBroadcast,
         )
     }
 }

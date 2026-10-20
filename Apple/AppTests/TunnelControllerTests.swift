@@ -265,6 +265,16 @@ final class TunnelControllerTests: XCTestCase {
         XCTAssertEqual(controller.ownProfile(serverID: server, protocolID: .wireguardVPN)?.id, own.id)
     }
 
+    func testAProxyTunnelRemembersTheDNSItWasGiven() throws {
+        let controller = makeController()
+        let profile = try controller.adopt(
+            configurationText: "ss://YWVzLTI1Ni1nY206c2VjcmV0@vpn.example.com:8388#phone\n",
+            protocolID: .shadowsocks, serverID: UUID(), serverName: "Home",
+            deviceID: "ss-1", deviceName: "iPhone", dns: ["9.9.9.9"])
+        XCTAssertEqual(profile.dns, ["9.9.9.9"],
+                       "the DNS row fell back to an older list and the choice looked undone")
+    }
+
     func testReAdoptingTheSameDeviceKeepsItsIdentity() throws {
         let controller = makeController()
         let server = UUID()

@@ -34,17 +34,17 @@ final class ThisDeviceRowChoicesTests: XCTestCase {
         let own = profile(.wireguardVPN, device: "a", named: "iPhone")
         let elsewhere = profile(.wireguardVPN, device: "c", named: "iPhone", server: UUID())
         let kept = ThisDeviceTunnelChoices.keptProfile(in: [borrowed, own, elsewhere], serverID: serverID,
-                                                       protocolID: .wireguardVPN, ownName: "iPhone")
+                                                       protocolID: .wireguardVPN, isOwn: { $0 == "iPhone" })
         XCTAssertEqual(kept?.id, own.id)
     }
 
     func testABorrowedTunnelIsKeptWhenThereIsNoOwn() {
         let borrowed = profile(.wireguardVPN, device: "b", named: "Morgan's laptop")
         let kept = ThisDeviceTunnelChoices.keptProfile(in: [borrowed], serverID: serverID,
-                                                       protocolID: .wireguardVPN, ownName: "iPhone")
+                                                       protocolID: .wireguardVPN, isOwn: { $0 == "iPhone" })
         XCTAssertEqual(kept?.id, borrowed.id)
         XCTAssertNil(ThisDeviceTunnelChoices.keptProfile(in: [borrowed], serverID: serverID,
-                                                         protocolID: .amneziaWG, ownName: "iPhone"))
+                                                         protocolID: .amneziaWG, isOwn: { $0 == "iPhone" }))
     }
 
     func testOtherDevicesLeaveOutThisDevicesOwn() {

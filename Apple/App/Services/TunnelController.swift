@@ -229,10 +229,10 @@ final class TunnelController: ObservableObject {
     }
 
     /// Picks a tunnel, switching a running one over
-    func choose(_ profile: TunnelProfile) async {
+    func choose(_ profile: TunnelProfile, reconnectingSame: Bool = false) async {
         let running = state.status.isActive || state.status.isBusy
         selectedID = profile.id
-        guard running, state.profileID != profile.id else { return }
+        guard running, state.profileID != profile.id || reconnectingSame else { return }
         await engine.stop()
         await waitUntilDown()
         await connect(profile)
@@ -268,8 +268,11 @@ final class TunnelController: ObservableObject {
         let proxy = protocolID == .shadowsocks || protocolID == .xrayReality
         let secret = proxy ? ProxyTunnelText.compose(link: built.secret, dns: dns) : built.secret
         try secrets.store(secret, for: built.profile.secretAccount)
+        var profile = built.profile
+        // A proxy link carries no DNS of its own.
+        if profile.dns.isEmpty { profile.dns = dns }
         do {
-            let stored = try profileStore.store(built.profile)
+            let stored = try profileStore.store(profile)
             reloadProfiles()
             return stored
         } catch {
@@ -305,19 +308,20 @@ final class TunnelController: ObservableObject {
         profiles.first { $0.serverID == serverID && $0.protocolID == protocolID }
     }
 
-    static var thisDeviceName: String {
+    static var thisDeviceName: String { ThisDeviceName.current }
+
+    /// This device's name, or the plain kind it carried before
+    static func isThisDevice(_ name: String) -> Bool {
         #if canImport(UIKit)
-        return UIDevice.current.name
-        #elseif os(macOS)
-        return Host.current().localizedName ?? "Mac"
+        return name == thisDeviceName || name == UIDevice.current.name
         #else
-        return "Device"
+        return name == thisDeviceName
         #endif
     }
 
     func ownProfile(serverID: UUID, protocolID: ServiceID) -> TunnelProfile? {
         profiles.first {
-            $0.serverID == serverID && $0.protocolID == protocolID && $0.deviceName == Self.thisDeviceName
+            $0.serverID == serverID && $0.protocolID == protocolID && Self.isThisDevice($0.deviceName)
         }
     }
 
@@ -409,6 +413,10 @@ final class TunnelController: ObservableObject {
         guard let deployment = ((try? FileDeploymentStore().load()) ?? []).first(where: { $0.id == profile.serverID }) else { return }
         let viewModel = DashboardViewModel(deployment: deployment)
         await viewModel.setVPNClientDNS(protocol: profile.protocolID, clientID: profile.deviceID, dns: dns)
+        if let refused = viewModel.quickActionResult, refused.isError {
+            errorMessage = refused.message
+            return
+        }
         guard let configuration = await viewModel.vpnClientConfiguration(protocol: profile.protocolID,
                                                                          clientID: profile.deviceID) else {
             errorMessage = viewModel.quickActionResult?.message
@@ -494,7 +502,7 @@ final class TunnelController: ObservableObject {
                                     deviceName: client.name,
                                     dns: configuration.dns)
             await applyReach(carry, to: profile)
-            await choose(profile)
+            await choose(profile, reconnectingSame: true)
         } catch {
             errorMessage = VPNText.message(for: error)
         }

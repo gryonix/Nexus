@@ -16,6 +16,9 @@ public enum InstalledDeploymentRecord {
         record.wgInterface = existing.wgInterface
         record.storedNodes = existing.storedNodes
         record.placement = existing.placement
+        record.vpnOnRelay = existing.vpnOnRelay
+        record.wakeOnLANMAC = existing.wakeOnLANMAC
+        record.wakeOnLANBroadcast = existing.wakeOnLANBroadcast
         return record
     }
 }

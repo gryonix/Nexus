@@ -20,6 +20,9 @@ final class InstalledDeploymentRecordTests: XCTestCase {
         deployment.timeouts = OperationTimeouts(quickSeconds: 42)
         deployment.wgInterface = "wg1"
         deployment.placement = ServicePlacement([ServiceID.vaultwarden.rawValue: UUID()])
+        deployment.vpnOnRelay = true
+        deployment.wakeOnLANMAC = "00:11:22:33:44:55"
+        deployment.wakeOnLANBroadcast = "192.0.2.255"
         return deployment
     }
 
@@ -55,6 +58,10 @@ final class InstalledDeploymentRecordTests: XCTestCase {
         XCTAssertEqual(record.wgInterface, "wg1")
         XCTAssertEqual(record.placement, existing.placement)
         XCTAssertEqual(record.storedNodes, existing.storedNodes)
+        XCTAssertEqual(record.vpnOnRelay, true,
+                       "a reinstall moved the VPN back home in the app while it still runs on the relay")
+        XCTAssertEqual(record.wakeOnLANMAC, "00:11:22:33:44:55")
+        XCTAssertEqual(record.wakeOnLANBroadcast, "192.0.2.255")
     }
 
     func testAReinstallStillMovesWhatTheFormDoesOwn() {
