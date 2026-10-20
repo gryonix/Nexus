@@ -16,7 +16,7 @@ final class TunnelActivityLoop: @unchecked Sendable {
         guard timer == nil else { return }
         let source = DispatchSource.makeTimerSource(queue: queue)
         source.schedule(deadline: .now() + 5, repeating: .seconds(10))
-        source.setEventHandler { measure { [weak self] sample in self?.offer(sample) } }
+        source.setEventHandler { [weak self] in measure { sample in self?.offer(sample) } }
         source.resume()
         timer = source
         #endif
