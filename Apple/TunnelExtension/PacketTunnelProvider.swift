@@ -13,6 +13,7 @@ import OpenVPNAdapter
 class PacketTunnelProvider: NEPacketTunnelProvider {
     private var openVPNStarted: ((Error?) -> Void)?
     private let pulse = TunnelPulse()
+    private let activity = TunnelActivityLoop()
 
     enum TunnelError: LocalizedError {
         case missingConfig
@@ -78,6 +79,7 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         }
         TunnelStopRecord().clear()
         pulse.start()
+        activity.start { [weak self] answer in self?.measure(answer) }
         Self.keepGoCrashes()
         guard let text = storedConfig() else {
             completionHandler(TunnelError.missingConfig)
@@ -98,10 +100,19 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
     override func stopTunnel(with reason: NEProviderStopReason,
                              completionHandler: @escaping () -> Void) {
         TunnelStopRecord().write(reason: reason.rawValue)
+        let finish: () -> Void = { [activity] in activity.stop(completionHandler) }
         switch storedDatapath() {
-        case VPNTunnelKeys.xray: stopXray(completionHandler)
-        case VPNTunnelKeys.openVPN: stopOpenVPN(completionHandler)
-        default: stopWireGuard(completionHandler)
+        case VPNTunnelKeys.xray: stopXray(finish)
+        case VPNTunnelKeys.openVPN: stopOpenVPN(finish)
+        default: stopWireGuard(finish)
+        }
+    }
+
+    /// Traffic so far, for the session card
+    private func measure(_ answer: @escaping (TunnelActivityFeed.Sample) -> Void) {
+        statistics { [weak self] counted in
+            answer(.init(received: counted.received, sent: counted.sent,
+                         reconnecting: self?.reasserting ?? false))
         }
     }
 

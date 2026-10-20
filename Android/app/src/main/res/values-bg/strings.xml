@@ -2066,4 +2066,5 @@
     <string name="dns_order_other">Друг адрес…</string>
     <string name="dns_order_add">Добавяне на резолвър</string>
     <string name="dns_order_preset">%1$s (%2$s)</string>
+    <string name="notify_devices_footer">Премахнатото устройство вече не получава известията на този сървър.</string>
 </resources>

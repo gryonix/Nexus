@@ -124,6 +124,16 @@ struct AppSettingsView: View {
             } label: {
                 Label("Take the tour", systemImage: "hand.point.up.left")
             }
+            Link(destination: AppRelease.website) {
+                Label("Website", systemImage: "globe")
+            }
+            Link(destination: AppRelease.sourceRepository) {
+                Label {
+                    Text(verbatim: "GitHub")
+                } icon: {
+                    Image(systemName: "chevron.left.forwardslash.chevron.right")
+                }
+            }
         }
     }
 
@@ -298,6 +308,11 @@ struct AppearanceBarsView: View {
                 WrappingPicker("Server section strip", selection: $tabs.sectionStripStyle) {
                     ForEach(BarStyle.allCases) { style in
                         Text(style.title).tag(style)
+                    }
+                }
+                WrappingPicker("Server section labels", selection: $tabs.sectionLabels) {
+                    ForEach(SectionLabels.allCases) { labels in
+                        Text(labels.title).tag(labels)
                     }
                 }
                 WrappingPicker("Server groups", selection: $tabs.groupStripStyle) {

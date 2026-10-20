@@ -14,10 +14,11 @@ struct AboutView: View {
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
                 }
-                LabeledContent("Website") {
-                    Text(verbatim: "gryonix.com")
-                        .textSelection(.enabled)
-                        .foregroundStyle(.secondary)
+                Link(destination: AppRelease.website) {
+                    LabeledContent("Website") {
+                        Text(verbatim: "gryonix.com")
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 Link(destination: AppRelease.supportChat) {
                     Label {
@@ -35,6 +36,9 @@ struct AboutView: View {
             }
 
             Section {
+                Link(destination: AppRelease.privacyPolicy) {
+                    Label("Privacy Policy", systemImage: "hand.raised")
+                }
                 Link(destination: AppRelease.sourceRepository) {
                     Label("Source code", systemImage: "chevron.left.forwardslash.chevron.right")
                 }
@@ -75,9 +79,13 @@ enum AppRelease {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
     }
 
+    static let website = URL(string: "https://gryonix.com")!
     static let sourceRepository = URL(string: "https://github.com/gryonix/Nexus")!
     static let supportChat = URL(string: "https://discord.gg/RsMMRPgzhK")!
     static let securityPolicy = URL(string: "https://github.com/gryonix/Nexus/blob/main/SECURITY.md")!
+    static let privacyPolicy = URL(string: "https://gryonix.com/privacy")!
+    /// Apple's standard EULA covers App Store purchases.
+    static let termsOfUse = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
 }
 
 struct OpenSourceLicense: Identifiable, Hashable {

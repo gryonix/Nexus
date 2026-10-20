@@ -45,6 +45,12 @@
             "value" : "Το gryonixNexus χρησιμοποιεί το Face ID για να προστατεύει τους αποθηκευμένους κωδικούς και τις εξαγωγές διακομιστών."
           }
         },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus uses Face ID to protect your saved passwords and server exports."
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -211,6 +217,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Το gryonixNexus συνδέεται μέσω SSH σε διακομιστές του τοπικού σας δικτύου για να τους εγκαταστήσει και να τους διαχειριστεί."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus connects over SSH to servers on your local network to install and manage them."
           }
         },
         "es" : {

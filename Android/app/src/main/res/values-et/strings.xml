@@ -2066,4 +2066,5 @@
     <string name="dns_order_other">Muu aadress…</string>
     <string name="dns_order_add">Lisa resolver</string>
     <string name="dns_order_preset">%1$s (%2$s)</string>
+    <string name="notify_devices_footer">Eemaldatud seade ei saa enam selle serveri teavitusi.</string>
 </resources>

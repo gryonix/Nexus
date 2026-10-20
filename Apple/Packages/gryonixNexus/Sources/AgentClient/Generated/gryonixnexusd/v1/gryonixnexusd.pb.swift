@@ -6730,11 +6730,41 @@ public nonisolated struct Gryonixnexusd_V1_NotifySettings: @unchecked Sendable {
     set {_uniqueStorage()._quietKeys = newValue}
   }
 
+  /// The phones and computers that get this server's pushes.
+  public var registered: [Gryonixnexusd_V1_NotifyDevice] {
+    get {_storage._registered}
+    set {_uniqueStorage()._registered = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
   fileprivate var _storage = _StorageClass.defaultInstance
+}
+
+/// One device that gets this server's pushes.
+public nonisolated struct Gryonixnexusd_V1_NotifyDevice: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// "apns" or "fcm".
+  public var platform: String = String()
+
+  public var token: String = String()
+
+  /// The device's name as it registered, e.g. "iPhone".
+  public var name: String = String()
+
+  public var appVersion: String = String()
+
+  /// Unix seconds of the registration; 0 when older than this field.
+  public var addedAt: Int64 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
 }
 
 public nonisolated struct Gryonixnexusd_V1_GetNotifySettingsRequest: Sendable {
@@ -6803,6 +6833,9 @@ public nonisolated struct Gryonixnexusd_V1_RegisterNotifyDeviceRequest: Sendable
 
   /// SHA-256 (hex) of a secret only the phone holds; lets the phone remove itself from the relay.
   public var deviceProof: String = String()
+
+  /// The device's name, shown in the list of devices.
+  public var name: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -17254,7 +17287,7 @@ nonisolated extension Gryonixnexusd_V1_NotifyChecks: SwiftProtobuf.Message, Swif
 
 nonisolated extension Gryonixnexusd_V1_NotifySettings: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".NotifySettings"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}channel\0\u{3}relay_url\0\u{3}ntfy_url\0\u{3}ntfy_topic\0\u{1}checks\0\u{3}server_id\0\u{1}devices\0\u{3}last_error\0\u{3}last_check_at\0\u{3}active_problems\0\u{1}language\0\u{3}relay_maintenance\0\u{3}custom_checks\0\u{3}quiet_keys\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}channel\0\u{3}relay_url\0\u{3}ntfy_url\0\u{3}ntfy_topic\0\u{1}checks\0\u{3}server_id\0\u{1}devices\0\u{3}last_error\0\u{3}last_check_at\0\u{3}active_problems\0\u{1}language\0\u{3}relay_maintenance\0\u{3}custom_checks\0\u{3}quiet_keys\0\u{1}registered\0")
 
   fileprivate class _StorageClass {
     var _channel: Gryonixnexusd_V1_NotifyChannel = .unspecified
@@ -17271,6 +17304,7 @@ nonisolated extension Gryonixnexusd_V1_NotifySettings: SwiftProtobuf.Message, Sw
     var _relayMaintenance: String = String()
     var _customChecks: Bool = false
     var _quietKeys: [String] = []
+    var _registered: [Gryonixnexusd_V1_NotifyDevice] = []
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -17295,6 +17329,7 @@ nonisolated extension Gryonixnexusd_V1_NotifySettings: SwiftProtobuf.Message, Sw
       _relayMaintenance = source._relayMaintenance
       _customChecks = source._customChecks
       _quietKeys = source._quietKeys
+      _registered = source._registered
     }
   }
 
@@ -17327,6 +17362,7 @@ nonisolated extension Gryonixnexusd_V1_NotifySettings: SwiftProtobuf.Message, Sw
         case 12: try { try decoder.decodeSingularStringField(value: &_storage._relayMaintenance) }()
         case 13: try { try decoder.decodeSingularBoolField(value: &_storage._customChecks) }()
         case 14: try { try decoder.decodeRepeatedStringField(value: &_storage._quietKeys) }()
+        case 15: try { try decoder.decodeRepeatedMessageField(value: &_storage._registered) }()
         default: break
         }
       }
@@ -17381,6 +17417,9 @@ nonisolated extension Gryonixnexusd_V1_NotifySettings: SwiftProtobuf.Message, Sw
       if !_storage._quietKeys.isEmpty {
         try visitor.visitRepeatedStringField(value: _storage._quietKeys, fieldNumber: 14)
       }
+      if !_storage._registered.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._registered, fieldNumber: 15)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -17404,10 +17443,61 @@ nonisolated extension Gryonixnexusd_V1_NotifySettings: SwiftProtobuf.Message, Sw
         if _storage._relayMaintenance != rhs_storage._relayMaintenance {return false}
         if _storage._customChecks != rhs_storage._customChecks {return false}
         if _storage._quietKeys != rhs_storage._quietKeys {return false}
+        if _storage._registered != rhs_storage._registered {return false}
         return true
       }
       if !storagesAreEqual {return false}
     }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_NotifyDevice: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".NotifyDevice"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}platform\0\u{1}token\0\u{1}name\0\u{3}app_version\0\u{3}added_at\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.platform) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.token) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.appVersion) }()
+      case 5: try { try decoder.decodeSingularInt64Field(value: &self.addedAt) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.platform.isEmpty {
+      try visitor.visitSingularStringField(value: self.platform, fieldNumber: 1)
+    }
+    if !self.token.isEmpty {
+      try visitor.visitSingularStringField(value: self.token, fieldNumber: 2)
+    }
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 3)
+    }
+    if !self.appVersion.isEmpty {
+      try visitor.visitSingularStringField(value: self.appVersion, fieldNumber: 4)
+    }
+    if self.addedAt != 0 {
+      try visitor.visitSingularInt64Field(value: self.addedAt, fieldNumber: 5)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_NotifyDevice, rhs: Gryonixnexusd_V1_NotifyDevice) -> Bool {
+    if lhs.platform != rhs.platform {return false}
+    if lhs.token != rhs.token {return false}
+    if lhs.name != rhs.name {return false}
+    if lhs.appVersion != rhs.appVersion {return false}
+    if lhs.addedAt != rhs.addedAt {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -17503,7 +17593,7 @@ nonisolated extension Gryonixnexusd_V1_SetNotifySettingsRequest: SwiftProtobuf.M
 
 nonisolated extension Gryonixnexusd_V1_RegisterNotifyDeviceRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".RegisterNotifyDeviceRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}platform\0\u{1}token\0\u{3}app_version\0\u{1}locale\0\u{1}muted\0\u{3}device_proof\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}platform\0\u{1}token\0\u{3}app_version\0\u{1}locale\0\u{1}muted\0\u{3}device_proof\0\u{1}name\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -17517,6 +17607,7 @@ nonisolated extension Gryonixnexusd_V1_RegisterNotifyDeviceRequest: SwiftProtobu
       case 4: try { try decoder.decodeSingularStringField(value: &self.locale) }()
       case 5: try { try decoder.decodeRepeatedStringField(value: &self.muted) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.deviceProof) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.name) }()
       default: break
       }
     }
@@ -17541,6 +17632,9 @@ nonisolated extension Gryonixnexusd_V1_RegisterNotifyDeviceRequest: SwiftProtobu
     if !self.deviceProof.isEmpty {
       try visitor.visitSingularStringField(value: self.deviceProof, fieldNumber: 6)
     }
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 7)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -17551,6 +17645,7 @@ nonisolated extension Gryonixnexusd_V1_RegisterNotifyDeviceRequest: SwiftProtobu
     if lhs.locale != rhs.locale {return false}
     if lhs.muted != rhs.muted {return false}
     if lhs.deviceProof != rhs.deviceProof {return false}
+    if lhs.name != rhs.name {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

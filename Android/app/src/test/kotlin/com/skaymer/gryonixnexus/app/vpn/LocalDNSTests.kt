@@ -53,4 +53,10 @@ class LocalDNSTests {
         assertEquals(DNSSource.Public(PublicDNS.all.first { it.id == "cloudflare" }), LocalDNS().source(emptyList()))
         assertEquals(DNSSource.Typed(listOf("203.0.113.53")), LocalDNS().source(listOf("203.0.113.53")))
     }
+
+    @Test
+    fun `the relay asked after the choice is not shown as the choice`() {
+        assertEquals(listOf("9.9.9.9"), LocalDNS.chosen(listOf("9.9.9.9", LocalDNS.SERVER_ADDRESS)))
+        assertEquals(listOf(LocalDNS.SERVER_ADDRESS), LocalDNS.chosen(listOf(LocalDNS.SERVER_ADDRESS)))
+    }
 }

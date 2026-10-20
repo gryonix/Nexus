@@ -12,7 +12,9 @@ struct CustomTabBar: View {
     @AppStorage(AppIconSettings.choiceKey)
     private var iconRaw = AppIconChoice.default.rawValue
 
-    private var selectedTint: Color {
+    private var selectedTint: Color { Self.selectedTint(accentRaw: accentRaw, iconRaw: iconRaw) }
+
+    static func selectedTint(accentRaw: String, iconRaw: String) -> Color {
         let accent = AppAccentChoice(rawValue: accentRaw) ?? .app
         let icon = AppIconChoice(rawValue: iconRaw) ?? .default
         return accent.tint(icon: icon) ?? Color("AccentColor")

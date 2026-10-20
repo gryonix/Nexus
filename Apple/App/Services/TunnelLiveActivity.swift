@@ -34,6 +34,7 @@ func makeTunnelActivityPresenter() -> any TunnelActivityPresenting {
 
 #if os(iOS)
 import ActivityKit
+import VPNProfile
 
 /// The lock-screen session, started and ended with the tunnel
 @MainActor
@@ -83,9 +84,15 @@ final class TunnelLiveActivity: TunnelActivityPresenting {
         tokenWatch = Task {
             for await data in activity.pushTokenUpdates {
                 let token = data.map { String(format: "%02x", $0) }.joined()
-                TunnelActivityPush.shared.tokenArrived(token, profile: profile, since: since)
+                TunnelActivityTicket(token: token, relayURL: Self.relayURL(), since: since).save()
             }
         }
+    }
+
+    /// The relay the tunnel moves the card through
+    private static func relayURL() -> String {
+        let choice = NotifyChannelDefault.current()
+        return choice.channel == .relay ? choice.relayURL : NotifyDraft.defaultRelayURL
     }
 
     func update(status: TunnelStatus, statistics: TunnelStatistics) {
@@ -108,7 +115,7 @@ final class TunnelLiveActivity: TunnelActivityPresenting {
     func end(statistics: TunnelStatistics) {
         tokenWatch?.cancel()
         tokenWatch = nil
-        TunnelActivityPush.shared.stop()
+        TunnelActivityTicket.clear()
         isStopArmed = false
         guard let activity else { return }
         self.activity = nil

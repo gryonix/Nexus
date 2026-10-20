@@ -93,6 +93,7 @@ struct DashboardView: View {
 
     @ObservedObject private var segments = DashboardTabSettings.shared
     @ObservedObject private var barSettings = TabBarSettings.shared
+    @ObservedObject private var tunnel = TunnelController.shared
     @State private var arrangingSegments = false
 
     @AppStorage(ContainersDisplaySettings.placementKey)
@@ -506,40 +507,89 @@ struct DashboardView: View {
         #if os(macOS)
         dashboardList
         #else
-        if barSettings.sectionStripStyle == .custom {
-            dashboardList.safeAreaInset(edge: .top, spacing: 0) {
-                DashboardSegmentStrip(tabs: visibleTabs, selection: $tab) { held in
-                    segmentMenu(for: held)
-                }
-                .appTourTarget(.serverStrip)
-                .padding(.horizontal, 16)
-                // Room above for the lens that lifts while held.
-                .padding(.top, 14)
-                .padding(.bottom, 8)
-                .onHeaderPlate()
+        dashboardList
+            .contentMargins(.top, 12, for: .scrollContent)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                sectionStrip
+                    .appTourTarget(.serverStrip)
+                    .onHeaderPlate()
             }
-        } else {
-            dashboardList.safeAreaInset(edge: .top, spacing: 0) {
-                Picker("View", selection: $tab) {
-                    ForEach(visibleTabs) { tab in
-                        Text(tab.title).tag(tab)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .controlSize(.large)
-                .frame(height: stripHeight)
-                .appTourTarget(.serverStrip)
-                .segmentMenus(count: visibleTabs.count, probe: "sections") { index in
-                    guard visibleTabs.indices.contains(index) else { return nil }
-                    return segmentMenu(for: visibleTabs[index])
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .onHeaderPlate()
-            }
-        }
         #endif
     }
+
+    #if os(iOS)
+
+    /// The system strip cannot scroll, so long titles use ours
+    @ViewBuilder
+    private var sectionStrip: some View {
+        if barSettings.sectionStripStyle == .custom {
+            customStrip
+        } else if barSettings.sectionLabels == .icons {
+            systemStrip(showsTitles: false)
+        } else {
+            ViewThatFits(in: .horizontal) {
+                titleWidthProbe
+                    .frame(maxWidth: .infinity)
+                    .overlay { systemStrip(showsTitles: true) }
+                customStrip
+            }
+        }
+    }
+
+    /// Hidden titles that give the system strip a real width
+    private var titleWidthProbe: some View {
+        HStack(spacing: 0) {
+            ForEach(visibleTabs) { tab in
+                Text(tab.title)
+                    .font(.subheadline.weight(.semibold))
+                    .padding(.horizontal, 12)
+            }
+        }
+        .fixedSize()
+        .padding(.horizontal, 16)
+        .frame(height: stripHeight + 16)
+        .hidden()
+    }
+
+    private var customStrip: some View {
+        DashboardSegmentStrip(tabs: visibleTabs, labels: barSettings.sectionLabels,
+                              tunnelActive: tunnel.status.isActive,
+                              selection: $tab) { held in
+            segmentMenu(for: held)
+        }
+        .padding(.horizontal, 16)
+        // Room above for the lens that lifts while held.
+        .padding(.top, 14)
+        .padding(.bottom, 8)
+    }
+
+    private func systemStrip(showsTitles: Bool) -> some View {
+        systemTabPicker(showsTitles: showsTitles)
+            .frame(height: stripHeight)
+            .segmentMenus(count: visibleTabs.count, probe: "sections") { index in
+                guard visibleTabs.indices.contains(index) else { return nil }
+                return segmentMenu(for: visibleTabs[index])
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+    }
+
+    private func systemTabPicker(showsTitles: Bool) -> some View {
+        Picker("View", selection: $tab) {
+            ForEach(visibleTabs) { tab in
+                if showsTitles {
+                    Text(tab.title).tag(tab)
+                } else {
+                    tab.icon(tunnelActive: tunnel.status.isActive)
+                        .accessibilityLabel(Text(tab.title))
+                        .tag(tab)
+                }
+            }
+        }
+        .pickerStyle(.segmented)
+        .controlSize(.large)
+    }
+    #endif
 
     #if os(macOS)
     private var tabPicker: some View {
@@ -1240,6 +1290,17 @@ enum DashboardTab: String, CaseIterable, Identifiable {
         case .vpn: return "lock.shield"
         case .terminal: return "apple.terminal"
         }
+    }
+
+    /// The bottom bar's VPN pictures; system symbols otherwise
+    func iconName(tunnelActive: Bool) -> String {
+        guard self == .vpn else { return systemImage }
+        return tunnelActive ? "TabIconLogo" : "TabIconGlobe"
+    }
+
+    func icon(tunnelActive: Bool) -> Image {
+        guard self == .vpn else { return Image(systemName: systemImage) }
+        return Image(iconName(tunnelActive: tunnelActive))
     }
 }
 

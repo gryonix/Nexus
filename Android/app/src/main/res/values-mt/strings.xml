@@ -2075,4 +2075,5 @@
     <string name="dns_order_other">Indirizz ieħor…</string>
     <string name="dns_order_add">Żid resolver</string>
     <string name="dns_order_preset">%1$s (%2$s)</string>
+    <string name="notify_devices_footer">Apparat imneħħi ma jibqax jirċievi n-notifiki ta\' dan is-server.</string>
 </resources>

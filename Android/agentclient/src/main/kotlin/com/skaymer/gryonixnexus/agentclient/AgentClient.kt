@@ -373,10 +373,11 @@ class AgentClient(private val transport: AgentTransport) {
         locale: String,
         muted: List<String> = emptyList(),
         proof: String = "",
+        name: String = "",
     ): NotifySettings =
         unary(
             "/gryonixnexusd.v1.Notify/RegisterNotifyDevice",
-            RegisterNotifyDeviceRequest(platform = platform, token = token, app_version = appVersion, locale = locale, muted = muted, device_proof = proof),
+            RegisterNotifyDeviceRequest(platform = platform, token = token, app_version = appVersion, locale = locale, muted = muted, device_proof = proof, name = name),
             NotifySettings.ADAPTER,
         )
 

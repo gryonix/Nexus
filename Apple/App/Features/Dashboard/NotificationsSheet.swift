@@ -24,6 +24,9 @@ struct NotificationsSheet: View {
                 channelSection
                 eventsSection
                 NotifyStatusSection(settings: settings)
+                NotifyDevicesSection(devices: settings?.registered ?? [], thisToken: push.token) { device in
+                    run { try await remove(device) }
+                }
                 actionsSection
                 transferSection
             }
@@ -200,12 +203,19 @@ struct NotificationsSheet: View {
         settings = try await operations().register(platform: push.platform, token: token, appVersion: version,
                                                    locale: ContentLanguageSetting.current.rawValue,
                                                    muted: NotifyPreferences.current().muted,
-                                                   proof: DevicePushProof.proof)
+                                                   proof: DevicePushProof.proof,
+                                                   name: PushRegistration.deviceName)
         if let settings {
             PushRelays.remember(settings.relayURL)
             await viewModel.mirrorNotify(settings)
         }
         message = QuickActionResult(message: UIL10n.string("This device now gets this server's alerts."), isError: false)
+    }
+
+    private func remove(_ device: Gryonixnexusd_V1_NotifyDevice) async throws {
+        let updated = try await operations().unregister(token: device.token)
+        settings = updated
+        await viewModel.mirrorNotify(updated)
     }
 
     private func sendTest() async throws {

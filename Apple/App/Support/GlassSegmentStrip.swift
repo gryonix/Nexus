@@ -55,6 +55,7 @@ struct StripItem: Equatable {
     let title: String
     let identifier: String
     var iconName: String?
+    var showsTitle = true
 }
 
 /// The strip itself
@@ -271,7 +272,7 @@ final class SegmentStripView: UIView {
 
     private func rowText(_ item: StripItem, tint: UIColor, font: UIFont) -> NSAttributedString {
         let text = NSMutableAttributedString(
-            string: item.title,
+            string: item.showsTitle ? item.title : "",
             attributes: [.font: font, .foregroundColor: tint])
         guard let name = item.iconName else { return text }
         let pointSize = stacksIcon
@@ -298,7 +299,7 @@ final class SegmentStripView: UIView {
             run.addAttribute(.paragraphStyle, value: paragraph,
                              range: NSRange(location: 0, length: run.length))
         } else {
-            run.append(NSAttributedString(string: "\u{2009}\u{2009}"))
+            if item.showsTitle { run.append(NSAttributedString(string: "\u{2009}\u{2009}")) }
             run.append(text)
         }
         return run

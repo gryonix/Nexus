@@ -13,8 +13,10 @@ struct RealityKeySection: View {
             } label: {
                 Label("New Reality key", systemImage: "key.horizontal")
             }
+            .dangerTint()
             .confirmationDialog("Give VLESS / Reality a new key?", isPresented: $asking, titleVisibility: .visible) {
                 Button("New key", role: .destructive) { Task { await renew() } }
+                    .dangerTint()
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Devices keep their names, but every VLESS device needs its configuration again. This device gets it on its own.")

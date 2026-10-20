@@ -125,6 +125,12 @@ struct LocalDNS: Hashable {
 
     var isOffered: Bool { !address.isEmpty && !services.isEmpty }
 
+    /// The choice itself, without the trailing relay
+    static func chosen(_ dns: [String]) -> [String] {
+        guard dns.count > 1, dns.last == serverAddress else { return dns }
+        return Array(dns.dropLast())
+    }
+
     func isChosen(_ addresses: [String]) -> Bool {
         !address.isEmpty && addresses == [address]
     }
@@ -178,17 +184,19 @@ struct VPNDNSMenu: View, Equatable {
         lhs.title == rhs.title && lhs.addresses == rhs.addresses && lhs.local == rhs.local && lhs.owner == rhs.owner
     }
 
+    private var shown: [String] { LocalDNS.chosen(addresses) }
+
     var body: some View {
-        MenuRow(title, value: local.name(for: addresses),
-                valueStyle: local.isGone(addresses) ? AnyShapeStyle(.orange) : AnyShapeStyle(.secondary)) {
+        MenuRow(title, value: local.name(for: shown),
+                valueStyle: local.isGone(shown) ? AnyShapeStyle(.orange) : AnyShapeStyle(.secondary)) {
             if local.isOffered {
                 Section("On your server") {
-                    choice(local.name, chosen: local.isChosen(addresses)) { onChoose([local.address]) }
+                    choice(local.name, chosen: local.isChosen(shown)) { onChoose([local.address]) }
                 }
             }
             Section("Public DNS") {
                 ForEach(PublicDNS.all) { preset in
-                    choice(preset.name, chosen: PublicDNS.matching(addresses)?.id == preset.id) {
+                    choice(preset.name, chosen: PublicDNS.matching(shown)?.id == preset.id) {
                         onChoose(preset.addresses)
                     }
                 }

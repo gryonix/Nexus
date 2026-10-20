@@ -2063,4 +2063,5 @@
     <string name="dns_order_other">其他地址…</string>
     <string name="dns_order_add">添加解析器</string>
     <string name="dns_order_preset">%1$s（%2$s）</string>
+    <string name="notify_devices_footer">移除的设备将不再收到此服务器的通知。</string>
 </resources>

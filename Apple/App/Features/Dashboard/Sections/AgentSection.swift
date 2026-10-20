@@ -45,6 +45,7 @@ struct AgentSection: View {
             Text("From this app").tag(AgentSource.app)
             Text("Repository — main").tag(AgentSource.repositoryMain)
             Text("Repository — beta").tag(AgentSource.repositoryBeta)
+            Text("Repository — wip").tag(AgentSource.repositoryWip)
         }
         .infoNote("Agent sources") { agentSourcesNote }
     }

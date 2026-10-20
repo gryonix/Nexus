@@ -1002,6 +1002,7 @@ class GryonixApplication : Application() {
                     .getString(com.skaymer.gryonixnexus.app.push.GryonixMessagingService.TOKEN_KEY, null)
             },
             appKey = { AppIdentities(secrets).publicKey(it.id) },
+            deviceName = android.os.Build.MODEL.orEmpty(),
             deviceProof = { com.skaymer.gryonixnexus.app.notify.DevicePushProof(secrets).proof },
             hostClient = { deployment, host -> agents.client(deployment, host) },
         )

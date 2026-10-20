@@ -2063,4 +2063,5 @@
     <string name="dns_order_other">その他のアドレス…</string>
     <string name="dns_order_add">リゾルバーを追加</string>
     <string name="dns_order_preset">%1$s（%2$s）</string>
+    <string name="notify_devices_footer">削除したデバイスには、このサーバーの通知が届かなくなります。</string>
 </resources>

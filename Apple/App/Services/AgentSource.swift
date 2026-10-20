@@ -15,6 +15,7 @@ enum AgentSource: String, CaseIterable, Identifiable, Sendable {
     case app
     case repositoryMain
     case repositoryBeta
+    case repositoryWip
 
     var id: String { rawValue }
 
@@ -24,6 +25,7 @@ enum AgentSource: String, CaseIterable, Identifiable, Sendable {
         case .app: return "From this app"
         case .repositoryMain: return "Repository — main"
         case .repositoryBeta: return "Repository — beta"
+        case .repositoryWip: return "Repository — wip"
         }
     }
 
@@ -33,6 +35,7 @@ enum AgentSource: String, CaseIterable, Identifiable, Sendable {
         case .app: return "The exact agent this app was released with."
         case .repositoryMain: return "The public repository's released line, fetched and built by the server itself."
         case .repositoryBeta: return "The public repository's line being tried out, fetched and built by the server itself."
+        case .repositoryWip: return "The line being worked on right now, fetched and built by the server itself. For testing only."
         }
     }
 
@@ -62,6 +65,14 @@ enum AgentSource: String, CaseIterable, Identifiable, Sendable {
                 AgentSourceComparisonRow(id: "needs", label: "Needs",
                                         value: "The server can reach github.com"),
             ]
+        case .repositoryWip:
+            return [
+                AgentSourceComparisonRow(id: "updates", label: "Updates",
+                                        value: "As soon as `wip` changes"),
+                AgentSourceComparisonRow(id: "maturity", label: "Maturity", value: "Work in progress — breaks often"),
+                AgentSourceComparisonRow(id: "needs", label: "Needs",
+                                        value: "The server can reach github.com"),
+            ]
         }
     }
 
@@ -71,6 +82,7 @@ enum AgentSource: String, CaseIterable, Identifiable, Sendable {
         case .app: return nil
         case .repositoryMain: return "main"
         case .repositoryBeta: return "beta"
+        case .repositoryWip: return "wip"
         }
     }
 
@@ -79,10 +91,10 @@ enum AgentSource: String, CaseIterable, Identifiable, Sendable {
         self == .app ? AgentBootstrapSections.bundledVersion : nil
     }
 
-    /// The public repository the two branches are read from
+    /// The public repository the branches are read from
     static let repository = "gryonix/nexus-agent"
 
-    /// Only these two names ever reach a shell command
+    /// Only these names ever reach a shell command
     static func named(_ raw: String) -> AgentSource {
         AgentSource(rawValue: raw) ?? .app
     }

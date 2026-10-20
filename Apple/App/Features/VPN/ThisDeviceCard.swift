@@ -8,7 +8,6 @@ import VPNTunnel
 /// "This device" — the tunnel THIS Mac or phone is running
 struct ThisDeviceCard: View {
     @ObservedObject var tunnel: TunnelController
-    @ObservedObject private var activityPush = TunnelActivityPush.shared
     @ObservedObject private var pins = TunnelEndpointPins.shared
     var highlighted = false
 
@@ -168,9 +167,6 @@ struct ThisDeviceCard: View {
             if let error = tunnel.errorMessage {
                 Label(error, systemImage: "exclamationmark.triangle")
                     .foregroundStyle(.secondary)
-            }
-            if tunnel.status.isActive, let note = activityPush.lastNote {
-                Text(verbatim: note)
             }
         }
     }

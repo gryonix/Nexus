@@ -76,4 +76,11 @@ final class ThisDeviceRowChoicesTests: XCTestCase {
         XCTAssertEqual(ThisDeviceTunnelChoices.dns(of: current, listed: silent), ["9.9.9.9"])
         XCTAssertEqual(ThisDeviceTunnelChoices.dns(of: current, listed: []), ["9.9.9.9"])
     }
+
+    func testTheRelayAskedAfterTheChoiceIsNotShownAsTheChoice() {
+        let current = profile(.wireguardVPN, device: "a", named: "iPhone",
+                              dns: ["9.9.9.9", LocalDNS.serverAddress])
+        XCTAssertEqual(ThisDeviceTunnelChoices.dns(of: current, listed: []), ["9.9.9.9"])
+        XCTAssertEqual(LocalDNS.chosen([LocalDNS.serverAddress]), [LocalDNS.serverAddress])
+    }
 }

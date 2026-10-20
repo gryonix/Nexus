@@ -13,7 +13,7 @@ public enum AgentBootstrapSections {
     public static let unpackRoot = "/opt/gryonixnexus-agent-src"
 
     /// The agent version the SOURCES IN THIS APP build to
-    public static let bundledVersion = "26.10.20"
+    public static let bundledVersion = "26.10.20-2"
 
     public static func wrapper(user: String) -> String {
         #"""

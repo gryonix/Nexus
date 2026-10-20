@@ -15,6 +15,7 @@ final class AgentSourceTests: XCTestCase {
     func testOnlyTheTwoKnownBranchesExist() {
         XCTAssertEqual(AgentSource.repositoryMain.branch, "main")
         XCTAssertEqual(AgentSource.repositoryBeta.branch, "beta")
+        XCTAssertEqual(AgentSource.repositoryWip.branch, "wip")
         // Anything else falls back to the app's own sources
         XCTAssertEqual(AgentSource.named("../../etc"), .app)
         XCTAssertEqual(AgentSource.named(""), .app)

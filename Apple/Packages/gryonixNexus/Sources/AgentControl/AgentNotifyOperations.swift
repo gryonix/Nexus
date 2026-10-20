@@ -24,10 +24,10 @@ public struct AgentNotifyOperations: Sendable {
     @discardableResult
     public func register(platform: String, token: String, appVersion: String,
                          locale: String, muted: [String] = [],
-                         proof: String = "") async throws -> Gryonixnexusd_V1_NotifySettings {
+                         proof: String = "", name: String = "") async throws -> Gryonixnexusd_V1_NotifySettings {
         try await mapping {
             try await client.registerNotifyDevice(platform: platform, token: token, appVersion: appVersion,
-                                                  locale: locale, muted: muted, proof: proof)
+                                                  locale: locale, muted: muted, proof: proof, name: name)
         }
     }
 

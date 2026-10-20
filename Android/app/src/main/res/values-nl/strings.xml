@@ -2066,4 +2066,5 @@
     <string name="dns_order_other">Ander adres…</string>
     <string name="dns_order_add">Resolver toevoegen</string>
     <string name="dns_order_preset">%1$s (%2$s)</string>
+    <string name="notify_devices_footer">Een verwijderd apparaat krijgt geen meldingen van deze server meer.</string>
 </resources>

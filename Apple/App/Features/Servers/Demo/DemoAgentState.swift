@@ -154,6 +154,7 @@ actor DemoAgentState {
         case (DemoServer.relayPairID, .wireguardVPN): return ["Phone", "Work laptop"]
         case (DemoServer.relayPairID, .shadowsocks): return ["Tablet"]
         case (DemoServer.relayPairID, .openVPN): return ["Old router", "Windows PC"]
+        case (DemoServer.relayPairID, .xrayReality): return ["Travel phone"]
         default: return []
         }
     }

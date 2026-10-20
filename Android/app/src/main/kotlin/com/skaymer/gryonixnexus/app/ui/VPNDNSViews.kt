@@ -51,7 +51,7 @@ private fun serverDNSName(names: String?): String =
 /** A device's DNS, named by whose resolver it is */
 @Composable
 fun dnsName(addresses: List<String>, local: LocalDNS = LocalDNS()): String =
-    when (val source = local.source(addresses)) {
+    when (val source = local.source(LocalDNS.chosen(addresses))) {
         is DNSSource.YourServer -> serverDNSName(source.names)
         is DNSSource.Public -> stringResource(R.string.dns_public_named, presetName(source.preset))
         is DNSSource.Typed -> source.addresses.joinToString(", ")
@@ -90,6 +90,7 @@ fun DNSPickerSheet(
     onClose: () -> Unit,
     local: LocalDNS = LocalDNS(),
 ) {
+    val current = LocalDNS.chosen(current)
     val chosen = PublicDNS.matching(current)
     val typedBefore = chosen == null && !local.isChosen(current)
     var typed by remember { mutableStateOf(if (typedBefore) current.joinToString(", ") else "") }

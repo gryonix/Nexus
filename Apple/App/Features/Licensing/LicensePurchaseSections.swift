@@ -30,8 +30,20 @@ struct LicensePlansSection: View {
             }
         } header: {
             Text("Buy")
+        } footer: {
+            if PurchaseStore.isAvailable { PurchaseLegalLinks() }
         }
         .task { await store.loadProducts() }
+    }
+}
+
+private struct PurchaseLegalLinks: View {
+    var body: some View {
+        HStack(spacing: 16) {
+            Link("Terms of Use (EULA)", destination: AppRelease.termsOfUse)
+            Link("Privacy Policy", destination: AppRelease.privacyPolicy)
+        }
+        .font(.footnote)
     }
 }
 

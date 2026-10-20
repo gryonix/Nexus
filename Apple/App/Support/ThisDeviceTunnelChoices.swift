@@ -60,6 +60,6 @@ enum ThisDeviceTunnelChoices {
     /// The DNS the server lists, else the profile's
     static func dns(of profile: TunnelProfile, listed devices: [VPNClientDevice]) -> [String] {
         let listed = devices.first { $0.id == profile.deviceID }?.dns ?? []
-        return listed.isEmpty ? profile.dns : listed
+        return LocalDNS.chosen(listed.isEmpty ? profile.dns : listed)
     }
 }

@@ -38,6 +38,7 @@ import com.skaymer.gryonixnexus.app.ui.design.ToggleRow
 import com.skaymer.gryonixnexus.app.ui.design.ValueRow
 import com.skaymer.gryonixnexus.servercontrol.Deployment
 import gryonixnexusd.v1.NotifyChannel
+import gryonixnexusd.v1.NotifyDevice
 import gryonixnexusd.v1.NotifySettings
 import gryonixnexusd.v1.SetNotifySettingsRequest
 import java.util.Locale
@@ -100,7 +101,38 @@ fun NotificationsDialog(deployment: Deployment, onClose: () -> Unit) {
         NotifyEventsSection(current, { model.preferences }) { draft = it }
         NotifyStatusSection(screen.settings)
         NotifyDeviceSection(model, deployment, screen)
+        NotifyDevicesList(screen.settings?.registered.orEmpty(), model.thisToken(), enabled = !screen.isWorking) {
+            model.remove(deployment, it)
+        }
         NotifyTransferSection(deployment, transferNote, exportFile, importFile)
+    }
+}
+
+@Composable
+private fun NotifyDevicesList(
+    devices: List<NotifyDevice>,
+    thisToken: String?,
+    enabled: Boolean,
+    onRemove: (String) -> Unit,
+) {
+    if (devices.isEmpty()) return
+    GroupedSection(header = stringResource(R.string.license_devices), footer = stringResource(R.string.notify_devices_footer)) {
+        devices.forEachIndexed { index, device ->
+            val detail = if (device.token == thisToken) stringResource(R.string.devices_this_device) else device.app_version
+            ValueRow(
+                title = device.name.ifEmpty { if (device.platform == "fcm") "Android" else "Apple" },
+                value = detail.ifEmpty { null },
+                onClick = null,
+                showDivider = true,
+            )
+            ActionRow(
+                text = stringResource(R.string.vpn_remove),
+                onClick = { onRemove(device.token) },
+                enabled = enabled,
+                danger = true,
+                showDivider = index < devices.lastIndex,
+            )
+        }
     }
 }
 

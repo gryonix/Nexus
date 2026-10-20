@@ -305,7 +305,7 @@ targets:
         # resources as well as to sources.
         EXCLUDED_SOURCE_FILE_NAMES[sdk=macosx*]: AppLaunch.storyboard
         MARKETING_VERSION: "26.10"
-        CURRENT_PROJECT_VERSION: "261020"
+        CURRENT_PROJECT_VERSION: "261020.1"
         SWIFT_VERSION: "5.9"
         ENABLE_PREVIEWS: YES
         # Without this the app follows the user's macOS system accent, so a
@@ -420,7 +420,7 @@ targets:
         CODE_SIGN_ENTITLEMENTS[sdk=macosx*]: Widgets/Extension/gryonixNexusWidgets-macOS.entitlements
         ENABLE_HARDENED_RUNTIME[sdk=macosx*]: YES
         MARKETING_VERSION: "26.10"
-        CURRENT_PROJECT_VERSION: "261020"
+        CURRENT_PROJECT_VERSION: "261020.1"
         SWIFT_VERSION: "5.9"
         # Must match the app's, or the two are built against different SDK
         # floors and the extension silently fails to load on the older one.
@@ -544,7 +544,7 @@ targets:
         DEVELOPMENT_TEAM: Z4PMRLY8L2
         CODE_SIGN_IDENTITY: "Apple Development"
         MARKETING_VERSION: "26.10"
-        CURRENT_PROJECT_VERSION: "261020"
+        CURRENT_PROJECT_VERSION: "261020.1"
         SWIFT_VERSION: "5.9"
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         MACOSX_DEPLOYMENT_TARGET: "14.0"
@@ -600,7 +600,7 @@ targets:
         ENABLE_HARDENED_RUNTIME: YES
         SKIP_INSTALL: YES
         MARKETING_VERSION: "26.10"
-        CURRENT_PROJECT_VERSION: "261020"
+        CURRENT_PROJECT_VERSION: "261020.1"
         SWIFT_VERSION: "5.9"
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         LIBRARY_SEARCH_PATHS:
@@ -641,7 +641,7 @@ targets:
         DEVELOPMENT_TEAM: Z4PMRLY8L2
         CODE_SIGN_IDENTITY: "Apple Development"
         MARKETING_VERSION: "26.10"
-        CURRENT_PROJECT_VERSION: "261020"
+        CURRENT_PROJECT_VERSION: "261020.1"
         SWIFT_VERSION: "5.9"
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         MACOSX_DEPLOYMENT_TARGET: "14.0"
@@ -688,7 +688,7 @@ targets:
         ENABLE_HARDENED_RUNTIME: YES
         SKIP_INSTALL: YES
         MARKETING_VERSION: "26.10"
-        CURRENT_PROJECT_VERSION: "261020"
+        CURRENT_PROJECT_VERSION: "261020.1"
         SWIFT_VERSION: "5.9"
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) GRYONIX_PROXY_TUNNEL"

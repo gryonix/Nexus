@@ -44,6 +44,8 @@ class NotifyViewModel(
     /** This app's SSH public key for a server */
     private val appKey: (Deployment) -> String = { "" },
     private val deviceProof: () -> String = { "" },
+    /** What the server's list of devices calls this phone */
+    private val deviceName: String = "",
     /** The agent on one particular machine of a server */
     private val hostClient: suspend (Deployment, SSHHostID) -> AgentClient = { deployment, _ -> client(deployment) },
 ) {
@@ -80,9 +82,17 @@ class NotifyViewModel(
     /** Registers this phone with the server's relay */
     fun registerThisDevice(deployment: Deployment) = call(deployment) {
         val token = pushToken(settings?.relay_url.orEmpty())
-        val saved = it.registerNotifyDevice("fcm", token, appVersion, locale, preferences.muted, deviceProof())
+        val saved = it.registerNotifyDevice("fcm", token, appVersion, locale, preferences.muted, deviceProof(), deviceName)
         mirror(deployment, saved, token)
         copy(settings = saved, deviceRegistered = true)
+    }
+
+    /** The token this phone registers with */
+    fun thisToken(): String? = cachedToken()
+
+    /** Stops one device getting this server's pushes */
+    fun remove(deployment: Deployment, token: String) = call(deployment) {
+        copy(settings = it.unregisterNotifyDevice(token))
     }
 
     fun test(deployment: Deployment) = call(deployment) {
@@ -115,7 +125,7 @@ class NotifyViewModel(
                 val sends = request ?: draft(current, current.language)
                 val token = if (sends.channel == NotifyChannel.NOTIFY_CHANNEL_RELAY) tokenFor(sends.relay_url) else null
                 if (token != null) {
-                    agent.registerNotifyDevice("fcm", token, appVersion, locale, wanted.muted, deviceProof())
+                    agent.registerNotifyDevice("fcm", token, appVersion, locale, wanted.muted, deviceProof(), deviceName)
                 }
                 if (!mirror(deployment, agent.getNotifySettings())) return@launch
                 store.setString(key, mark)
@@ -153,7 +163,7 @@ class NotifyViewModel(
                 store?.let { RelayServers.remember(it, current.server_id, deployment.id, host) }
                 mirrorRequest(primary, current, key)?.let { agent.setNotifySettings(it) }
                 if (primary.channel == NotifyChannel.NOTIFY_CHANNEL_RELAY && token != null) {
-                    agent.registerNotifyDevice("fcm", token, appVersion, locale, preferences.muted, deviceProof())
+                    agent.registerNotifyDevice("fcm", token, appVersion, locale, preferences.muted, deviceProof(), deviceName)
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled

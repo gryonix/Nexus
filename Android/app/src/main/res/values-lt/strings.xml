@@ -2072,4 +2072,5 @@
     <string name="dns_order_other">Kitas adresas…</string>
     <string name="dns_order_add">Pridėti resolverį</string>
     <string name="dns_order_preset">%1$s (%2$s)</string>
+    <string name="notify_devices_footer">Pašalintas įrenginys nebegauna šio serverio pranešimų.</string>
 </resources>

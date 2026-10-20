@@ -2072,4 +2072,5 @@
     <string name="dns_order_other">Iná adresa…</string>
     <string name="dns_order_add">Pridať resolver</string>
     <string name="dns_order_preset">%1$s (%2$s)</string>
+    <string name="notify_devices_footer">Odstránené zariadenie už nedostáva upozornenia tohto servera.</string>
 </resources>

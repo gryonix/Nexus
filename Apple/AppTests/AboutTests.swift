@@ -155,7 +155,7 @@ final class AboutTests: XCTestCase {
     func testTheLinksAreAddressesRatherThanText() {
         XCTAssertEqual(AppRelease.sourceRepository.scheme, "https")
         XCTAssertEqual(AppRelease.securityPolicy.scheme, "https")
-        XCTAssertTrue(AppRelease.sourceRepository.absoluteString.hasSuffix("gryonixNexus"))
+        XCTAssertTrue(AppRelease.sourceRepository.absoluteString.hasSuffix("gryonix/Nexus"))
         XCTAssertTrue(AppRelease.securityPolicy.absoluteString.contains("SECURITY.md"))
     }
     func testEveryDatapathRuntimeIsNotedAtTheVersionItIsBuiltAt() throws {

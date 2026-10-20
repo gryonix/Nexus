@@ -92,6 +92,20 @@ enum AppTab: String, CaseIterable, Identifiable, Hashable {
     var canBeHidden: Bool { self != .settings }
 }
 
+enum SectionLabels: String, CaseIterable, Identifiable, Hashable {
+    case text
+    case icons
+
+    var id: String { rawValue }
+
+    var title: LocalizedStringKey {
+        switch self {
+        case .text: return "Text"
+        case .icons: return "Icons"
+        }
+    }
+}
+
 enum BarStyle: String, CaseIterable, Identifiable, Hashable {
     case custom
     case system
@@ -120,6 +134,7 @@ final class TabBarSettings: ObservableObject {
         static let groupServicesByCategory = "dashboard.groupServicesByCategory"
         static let barStyle = "tabs.barStyle"
         static let sectionStripStyle = "dashboard.stripStyle"
+        static let sectionLabels = "dashboard.sectionLabels"
         static let groupStripStyle = "fleet.groupsStyle"
         static let periodStripStyle = "metrics.periodStyle"
     }
@@ -132,6 +147,10 @@ final class TabBarSettings: ObservableObject {
 
     @Published var sectionStripStyle: BarStyle {
         didSet { defaults.set(sectionStripStyle.rawValue, forKey: Keys.sectionStripStyle) }
+    }
+
+    @Published var sectionLabels: SectionLabels {
+        didSet { defaults.set(sectionLabels.rawValue, forKey: Keys.sectionLabels) }
     }
 
     @Published var groupStripStyle: BarStyle {
@@ -197,6 +216,8 @@ final class TabBarSettings: ObservableObject {
         barStyle = forced ?? storedBarStyle
         sectionStripStyle = forced ?? defaults.string(forKey: Keys.sectionStripStyle)
             .flatMap(BarStyle.init(rawValue:)) ?? storedBarStyle
+        sectionLabels = defaults.string(forKey: Keys.sectionLabels)
+            .flatMap(SectionLabels.init(rawValue:)) ?? .text
         groupStripStyle = forced ?? defaults.string(forKey: Keys.groupStripStyle)
             .flatMap(BarStyle.init(rawValue:)) ?? storedBarStyle
         periodStripStyle = forced ?? defaults.string(forKey: Keys.periodStripStyle)

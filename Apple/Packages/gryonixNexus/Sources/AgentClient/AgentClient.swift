@@ -501,9 +501,10 @@ public struct AgentClient: Sendable {
 
     public func registerNotifyDevice(platform: String, token: String, appVersion: String,
                                      locale: String, muted: [String] = [],
-                                     proof: String = "") async throws -> Gryonixnexusd_V1_NotifySettings {
+                                     proof: String = "", name: String = "") async throws -> Gryonixnexusd_V1_NotifySettings {
         var req = Gryonixnexusd_V1_RegisterNotifyDeviceRequest()
         req.deviceProof = proof
+        req.name = name
         req.platform = platform
         req.token = token
         req.appVersion = appVersion

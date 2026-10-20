@@ -17,6 +17,15 @@ final class PushRegistration: ObservableObject {
 
     var platform: String { "apns" }
 
+    /// What the server's list of devices calls this one
+    static var deviceName: String {
+        #if os(iOS)
+        UIDevice.current.model
+        #else
+        Host.current().localizedName ?? "Mac"
+        #endif
+    }
+
     /// Asks for permission and a token; nil when refused
     func requestToken() async -> String? {
         if let token { return token }
@@ -106,6 +115,7 @@ final class PushAppDelegate: NSObject, UIApplicationDelegate {
 #else
 final class PushAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        Task { @MainActor in DockPresence.shared.start() }
         UNUserNotificationCenter.current().delegate = ForegroundNotifications.shared
         UNUserNotificationCenter.current().setNotificationCategories(AlertActions.categories())
     }

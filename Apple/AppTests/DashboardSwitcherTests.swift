@@ -78,9 +78,14 @@ final class DashboardSwitcherTests: XCTestCase {
 
     func testOniOSTheSwitcherIsTheStripAboveTheList() throws {
         let content = try iOSBranchOfContent()
-        XCTAssertTrue(content.contains("DashboardSegmentStrip("),
-                      "the iOS content must hold the strip — the system control truncates six "
-                      + "sections to \"Contain…\" and \"Termin…\", which is what it replaced")
+        XCTAssertTrue(content.contains("sectionStrip"),
+                      "the iOS content must hold the section strip above the list")
+        let source = try dashboardSource
+        XCTAssertTrue(source.contains("DashboardSegmentStrip("),
+                      "the app's own strip must still be drawn somewhere")
+        XCTAssertTrue(source.contains("ViewThatFits(in: .horizontal)"),
+                      "titles that do not fit the system control must fall back to the scrolling "
+                      + "strip — the system control truncates six sections to \"Contain…\"")
         XCTAssertFalse(content.contains("tabPicker"),
                        "the iOS content must NOT draw the segmented picker as well — two "
                        + "switchers over one list is the round this file exists to stop")

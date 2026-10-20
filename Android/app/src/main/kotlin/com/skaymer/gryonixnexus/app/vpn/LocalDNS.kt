@@ -33,6 +33,10 @@ data class LocalDNS(
     companion object {
         /** Where the agent relays its server's resolver */
         const val SERVER_ADDRESS = "10.53.0.53"
+
+        /** The choice itself, without the trailing relay */
+        fun chosen(dns: List<String>): List<String> =
+            if (dns.size > 1 && dns.last() == SERVER_ADDRESS) dns.dropLast(1) else dns
     }
 }
 

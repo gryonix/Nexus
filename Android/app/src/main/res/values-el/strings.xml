@@ -2066,4 +2066,5 @@
     <string name="dns_order_other">Άλλη διεύθυνση…</string>
     <string name="dns_order_add">Προσθήκη resolver</string>
     <string name="dns_order_preset">%1$s (%2$s)</string>
+    <string name="notify_devices_footer">Μια συσκευή που αφαιρέθηκε δεν λαμβάνει πλέον τις ειδοποιήσεις αυτού του διακομιστή.</string>
 </resources>

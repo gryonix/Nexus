@@ -17,6 +17,10 @@ struct RootTabView: View {
     @State private var welcomeChoseConfigure = false
     @StateObject private var tour = AppTour.shared
     @AppStorage(PermissionsOnboardingModifier.shownKey) private var permissionsShown = false
+    @AppStorage(AppAccentSettings.choiceKey)
+    private var accentRaw = AppAccentSettings.storedChoice().rawValue
+    @AppStorage(AppIconSettings.choiceKey)
+    private var iconRaw = AppIconChoice.default.rawValue
     /// Where metrics live
     @AppStorage(MetricsDisplaySettings.placementKey)
     private var placementRaw = MetricsPlacement.both.rawValue
@@ -345,18 +349,44 @@ struct RootTabView: View {
 
     #if os(iOS)
     private var customShell: some View {
+        GeometryReader { proxy in
+            let side = SideTabRail.applies(to: proxy.size)
+            customPages(bottomBar: !side)
+                .overlay(alignment: .bottomTrailing) {
+                    if side { sideRail(in: proxy) }
+                }
+        }
+    }
+
+    /// Sits in the trailing safe-area column, below the toolbar buttons
+    private func sideRail(in proxy: GeometryProxy) -> some View {
+        let column = proxy.safeAreaInsets.trailing
+        let width = SideTabRail.width(column: column)
+        return SideTabRail(tabs: visibleTabs, selection: current,
+                           tunnelActive: tunnel.status.isActive,
+                           selectedTint: CustomTabBar.selectedTint(accentRaw: accentRaw, iconRaw: iconRaw),
+                           width: width,
+                           onReselect: { tab in reselectCounters[tab, default: 0] += 1 })
+            .appTourTarget(.sectionBar)
+            .frame(maxHeight: proxy.size.height * 0.6, alignment: .bottom)
+            .padding(.trailing, max(SideTabRail.gap, (column - width) / 2))
+            .padding(.bottom, 8)
+            .ignoresSafeArea(edges: .trailing)
+    }
+
+    private func customPages(bottomBar: Bool) -> some View {
         let active = current.wrappedValue
+        let showsBar = bottomBar && overflow.screensOwningBottom == 0
         return SlidingPages(pages: visibleTabs, selection: active) { tab in
             content(for: tab)
         }
         .bottomBarClearanceEverywhere()
-        .environment(\.barClearance,
-                     overflow.screensOwningBottom == 0 ? CustomTabBar.totalFootprint : 0)
+        .environment(\.barClearance, showsBar ? CustomTabBar.totalFootprint : 0)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 0) {
                 ActivityBanner(surface: .ownCapsule)
                     .padding(.horizontal, ActivityBanner.classicBarInset)
-                if overflow.screensOwningBottom == 0 {
+                if showsBar {
                     CustomTabBar(tabs: visibleTabs, selection: current,
                                  tunnelActive: tunnel.status.isActive,
                                  onReselect: { tab in reselectCounters[tab, default: 0] += 1 })

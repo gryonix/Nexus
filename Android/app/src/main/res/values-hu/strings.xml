@@ -2066,4 +2066,5 @@
     <string name="dns_order_other">Másik cím…</string>
     <string name="dns_order_add">Feloldó hozzáadása</string>
     <string name="dns_order_preset">%1$s (%2$s)</string>
+    <string name="notify_devices_footer">Az eltávolított eszköz többé nem kapja meg ennek a szervernek az értesítéseit.</string>
 </resources>

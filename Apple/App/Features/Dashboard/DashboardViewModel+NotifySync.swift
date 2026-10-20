@@ -34,7 +34,8 @@ extension DashboardViewModel {
                 let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
                 try await operations.register(platform: PushRegistration.shared.platform, token: token,
                                               appVersion: version, locale: ContentLanguageSetting.current.rawValue,
-                                              muted: wanted.muted, proof: DevicePushProof.proof)
+                                              muted: wanted.muted, proof: DevicePushProof.proof,
+                                              name: PushRegistration.deviceName)
             }
             PushRelays.remember(current.relayURL)
             guard await mirrorNotify(try await operations.settings()) else { return }
@@ -88,7 +89,8 @@ extension DashboardViewModel {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
         try await operations.register(platform: PushRegistration.shared.platform, token: token, appVersion: version,
                                       locale: ContentLanguageSetting.current.rawValue,
-                                      muted: NotifyPreferences.current().muted, proof: DevicePushProof.proof)
+                                      muted: NotifyPreferences.current().muted, proof: DevicePushProof.proof,
+                                      name: PushRegistration.deviceName)
     }
 
     /// What another machine needs to match the main one

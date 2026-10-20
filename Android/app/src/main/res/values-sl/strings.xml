@@ -2072,4 +2072,5 @@
     <string name="dns_order_other">Drug naslov…</string>
     <string name="dns_order_add">Dodaj razreševalnik</string>
     <string name="dns_order_preset">%1$s (%2$s)</string>
+    <string name="notify_devices_footer">Odstranjena naprava ne prejema več obvestil tega strežnika.</string>
 </resources>

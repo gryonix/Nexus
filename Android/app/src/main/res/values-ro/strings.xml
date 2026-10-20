@@ -2069,4 +2069,5 @@
     <string name="dns_order_other">Altă adresă…</string>
     <string name="dns_order_add">Adaugă un resolver</string>
     <string name="dns_order_preset">%1$s (%2$s)</string>
+    <string name="notify_devices_footer">Un dispozitiv eliminat nu mai primește notificările acestui server.</string>
 </resources>

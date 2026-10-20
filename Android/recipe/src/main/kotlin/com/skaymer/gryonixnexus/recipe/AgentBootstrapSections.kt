@@ -9,7 +9,7 @@ object AgentBootstrapSections {
     const val AGENT_BINARY_PATH = "/usr/local/bin/gryonixnexusd"
 
     /** Which agent this app carries */
-    const val BUNDLED_VERSION = "26.10.20"
+    const val BUNDLED_VERSION = "26.10.20-2"
 
     const val BRIDGE_SUDOERS_TARGET = "$AGENT_BINARY_PATH bridge"
 

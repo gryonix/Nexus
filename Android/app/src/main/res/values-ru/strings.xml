@@ -2072,4 +2072,5 @@
     <string name="dns_order_other">Другой адрес…</string>
     <string name="dns_order_add">Добавить резолвер</string>
     <string name="dns_order_preset">%1$s (%2$s)</string>
+    <string name="notify_devices_footer">Удалённое устройство больше не получает уведомления этого сервера.</string>
 </resources>

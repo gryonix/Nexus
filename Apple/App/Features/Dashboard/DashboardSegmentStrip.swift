@@ -4,6 +4,8 @@ import UIKit
 
 struct DashboardSegmentStrip: View {
     let tabs: [DashboardTab]
+    let labels: SectionLabels
+    let tunnelActive: Bool
     @Binding var selection: DashboardTab
     let menu: (DashboardTab) -> UIMenu?
 
@@ -11,7 +13,9 @@ struct DashboardSegmentStrip: View {
         GlassSegmentStrip(
             items: tabs.map {
                 StripItem(id: $0.rawValue, title: $0.localizedTitle,
-                          identifier: "dashboard.section.\($0.rawValue)")
+                          identifier: "dashboard.section.\($0.rawValue)",
+                          iconName: labels == .icons ? $0.iconName(tunnelActive: tunnelActive) : nil,
+                          showsTitle: labels == .text)
             },
             selection: Binding(get: { selection.rawValue },
                                set: { id in

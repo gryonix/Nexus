@@ -2175,4 +2175,5 @@
     <string name="dns_order_add">Add a resolver</string>
     <string name="dns_order_preset">%1$s (%2$s)</string>
     <string name="vpn_placement_vps" translatable="false">VPS</string>
+    <string name="notify_devices_footer">A removed device no longer gets this server\'s notifications.</string>
 </resources>

@@ -225,7 +225,7 @@ fun SettingsSection(
                 )
             }
         }
-        item { SupportChatRow() }
+        item { ProjectLinksSection() }
         item { AppUpdateRows(appUpdates, revision) }
         item {
             GroupedSection {
@@ -311,22 +311,31 @@ private const val PAGE_LICENSES = "licenses"
 private const val PAGE_LICENSE = "license"
 
 private const val SUPPORT_CHAT = "https://discord.gg/RsMMRPgzhK"
+private const val WEBSITE = "https://gryonix.com"
+private const val SOURCE_REPOSITORY = "https://github.com/gryonix/Nexus"
 
 @Composable
-private fun SupportChatRow() {
-    val context = LocalContext.current
+private fun ProjectLinksSection() {
     GroupedSection {
-        ActionRow(
-            text = "Discord",
-            showDivider = false,
-            onClick = {
-                context.startActivity(
-                    Intent(Intent.ACTION_VIEW, Uri.parse(SUPPORT_CHAT))
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                )
-            },
-        )
+        LinkRow(stringResource(R.string.license_website), WEBSITE)
+        LinkRow("GitHub", SOURCE_REPOSITORY)
+        LinkRow("Discord", SUPPORT_CHAT, showDivider = false)
     }
+}
+
+@Composable
+private fun LinkRow(text: String, url: String, showDivider: Boolean = true) {
+    val context = LocalContext.current
+    ActionRow(
+        text = text,
+        showDivider = showDivider,
+        onClick = {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        },
+    )
 }
 
 @Composable

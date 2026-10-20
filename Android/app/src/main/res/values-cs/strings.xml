@@ -2072,4 +2072,5 @@
     <string name="dns_order_other">Jiná adresa…</string>
     <string name="dns_order_add">Přidat resolver</string>
     <string name="dns_order_preset">%1$s (%2$s)</string>
+    <string name="notify_devices_footer">Odebrané zařízení už nedostává oznámení tohoto serveru.</string>
 </resources>

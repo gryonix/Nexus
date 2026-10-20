@@ -2072,4 +2072,5 @@
     <string name="dns_order_other">Inny adres…</string>
     <string name="dns_order_add">Dodaj resolver</string>
     <string name="dns_order_preset">%1$s (%2$s)</string>
+    <string name="notify_devices_footer">Usunięte urządzenie nie otrzymuje już powiadomień z tego serwera.</string>
 </resources>
