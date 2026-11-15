@@ -26,6 +26,7 @@ final class LicenseStore: ObservableObject {
     private static let usedSentKey = "licenseUsedSent"
     private static let renewWindow: TimeInterval = 7 * 24 * 3600
     private var appStorePlan: (plan: LicenseToken.Plan, expires: Date?)?
+    private var phonePlan: (plan: LicenseToken.Plan, expires: Date?)?
 
     private init() {
         reload()
@@ -34,7 +35,7 @@ final class LicenseStore: ObservableObject {
     func reload(now: Date = Date()) {
         code = try? keychain.string(for: Self.codeAccount)
         status = Self.testOverride ?? Self.derive(
-            token: storedToken(now: now), appStore: appStorePlan,
+            token: storedToken(now: now), appStore: appStorePlan ?? phonePlan,
             everActive: UserDefaults.standard.bool(forKey: Self.everActiveKey))
         if status.isActive, Self.testOverride == nil {
             UserDefaults.standard.set(true, forKey: Self.everActiveKey)
@@ -59,6 +60,17 @@ final class LicenseStore: ObservableObject {
 
     func setAppStoreEntitlement(_ plan: LicenseToken.Plan?, expires: Date?) {
         appStorePlan = plan.map { ($0, expires) }
+        reload()
+    }
+
+    /// The signed token an Apple TV can check itself
+    var deviceToken: String? {
+        (try? keychain.string(for: Self.tokenAccount)) ?? nil
+    }
+
+    /// What a paired phone said, as the TV computed it
+    func setPhoneLicence(_ plan: LicenseToken.Plan?, until: Date?) {
+        phonePlan = plan.map { ($0, until) }
         reload()
     }
 

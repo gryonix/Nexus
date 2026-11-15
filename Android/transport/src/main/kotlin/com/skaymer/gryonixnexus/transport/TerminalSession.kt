@@ -16,6 +16,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.connection.channel.direct.Session
+import net.schmizz.sshj.userauth.UserAuthException
 import com.hierynomus.sshj.userauth.keyprovider.OpenSSHKeyV1KeyFile
 import org.bouncycastle.jcajce.interfaces.EdDSAPrivateKey
 
@@ -62,7 +63,21 @@ data class TerminalEndpoint(
     val port: Int,
     val pinnedHostKey: String? = null,
     val parent: Hop? = null,
+    /** Machines dialled before [parent], outermost first */
+    val outer: List<Hop> = emptyList(),
+    /** How this route reaches the machine */
+    val kind: Kind = Kind.DIRECT,
+    val connectTimeoutMs: Int = SSHClients.CONNECT_TIMEOUT_MS,
 ) {
+    enum class Kind { DIRECT, LOCAL_NETWORK, RELAY, TUNNEL_ADDRESS, FALLBACK_ADDRESS }
+
+    /** Every machine before this one, outermost first */
+    val hops: List<Hop> get() = outer + listOfNotNull(parent)
+
+    /** The address, and the machines in front of it */
+    val summary: String
+        get() = (hops.map { "${it.host}:${it.port}" } + "$host:$port").joinToString(" → ")
+
     /** The machine in front of this one */
     data class Hop(
         val host: String,
@@ -72,6 +87,10 @@ data class TerminalEndpoint(
     )
 }
 
+/** Every route tried, each with why it failed */
+class TerminalRoutesFailed(val attempts: List<Pair<TerminalEndpoint, String>>) :
+    Exception(attempts.joinToString("\n") { (route, reason) -> "${route.summary}: $reason" })
+
 /** What a live terminal says */
 sealed class TerminalEvent {
     class Output(val bytes: ByteArray) : TerminalEvent()
@@ -80,14 +99,30 @@ sealed class TerminalEvent {
     data class Closed(val reason: String?) : TerminalEvent()
 }
 
-/** One interactive shell over its own SSH connection */
+/** One shell over its own SSH connection, first answering route */
 class TerminalSession(
-    private val endpoint: TerminalEndpoint,
+    private val routes: List<TerminalEndpoint>,
     private val login: TerminalLogin,
     private val onPinHostKey: (String, String) -> Unit = { _, _ -> },
-    private val dial: (TerminalEndpoint, TerminalLogin, (String, String) -> Unit) -> TerminalConnection =
+    /** The last argument says whether to redial a silent hang-up */
+    private val dial: (TerminalEndpoint, TerminalLogin, (String, String) -> Unit, Boolean) -> TerminalConnection =
         ::openConnection,
 ) {
+    constructor(
+        endpoint: TerminalEndpoint,
+        login: TerminalLogin,
+        onPinHostKey: (String, String) -> Unit = { _, _ -> },
+    ) : this(listOf(endpoint), login, onPinHostKey)
+
+    init {
+        require(routes.isNotEmpty()) { "a terminal needs at least one route" }
+    }
+
+    /** The route the shell is open on */
+    @Volatile
+    var connectedRoute: TerminalEndpoint? = null
+        private set
+
     private val events = Channel<TerminalEvent>(capacity = 256)
 
     private val lock = Mutex()
@@ -107,13 +142,7 @@ class TerminalSession(
             if (connection != null) {
                 throw ServerControlError.NotConfigured("this terminal is already open")
             }
-            val connected = withContext(Dispatchers.IO) {
-                runCatching { dial(endpoint, login, onPinHostKey) }
-                    .getOrElse { error ->
-                        if (error is ServerControlError) throw error
-                        throw ServerControlError.ConnectionFailed(error.toString())
-                    }
-            }
+            val connected = withContext(Dispatchers.IO) { connect() }
             connection = connected
 
             withContext(Dispatchers.IO) {
@@ -168,6 +197,21 @@ class TerminalSession(
 
     // --------------------------------------------------------------- Private
 
+    /** Only the last route redials a silent hang-up */
+    private fun connect(): TerminalConnection {
+        val failures = mutableListOf<Pair<TerminalEndpoint, String>>()
+        for ((index, route) in routes.withIndex()) {
+            val error = try {
+                return dial(route, login, onPinHostKey, index == routes.lastIndex).also { connectedRoute = route }
+            } catch (failure: Exception) {
+                failure
+            }
+            if (routes.size == 1 || !mayTryAnotherRoute(error)) throw described(error)
+            failures += route to (error.message ?: error.toString())
+        }
+        throw TerminalRoutesFailed(failures)
+    }
+
     private suspend fun drain() {
         val live = shell ?: return
         val buffer = ByteArray(8 * 1024)
@@ -192,6 +236,25 @@ class TerminalSession(
         events.send(TerminalEvent.Closed(reason))
         events.close()
     }
+
+    companion object {
+        /** Whether the next route may try after this failure */
+        fun mayTryAnotherRoute(error: Throwable): Boolean {
+            val chain = generateSequence(error) { it.cause }.take(6).toList()
+            if (chain.any { it is ServerControlError.HostKeyMismatch || it is UserAuthException }) return false
+            return when (error) {
+                is kotlinx.coroutines.CancellationException -> false
+                is ServerControlError.ConnectionFailed, is ServerControlError.Timeout -> true
+                is ServerControlError -> false
+                else -> chain.any { it is java.io.IOException }
+            }
+        }
+
+        /** The app's own error, even when sshj wrapped it */
+        private fun described(error: Exception): Exception =
+            generateSequence<Throwable>(error) { it.cause }.take(6).filterIsInstance<ServerControlError>().firstOrNull()
+                ?: ServerControlError.ConnectionFailed(error.toString())
+    }
 }
 
 /** A terminal's connection, and everything opened to reach it */
@@ -209,24 +272,33 @@ internal fun openConnection(
     endpoint: TerminalEndpoint,
     login: TerminalLogin,
     onPinHostKey: (String, String) -> Unit,
+    redial: Boolean = true,
 ): TerminalConnection {
-    val hop = endpoint.parent
+    val pauses = if (redial) SSHClients.REDIAL_PAUSES_MS else emptyList()
+    val timeout = endpoint.connectTimeoutMs
+    val hops = endpoint.hops
+    val first = hops.firstOrNull()
         ?: return TerminalConnection(
-            SSHClients.redialing {
-                dialDirect(endpoint.host, endpoint.port, endpoint.pinnedHostKey, login, onPinHostKey)
+            SSHClients.redialing(pauses) {
+                dialDirect(endpoint.host, endpoint.port, endpoint.pinnedHostKey, login, onPinHostKey, timeout)
             },
         )
 
-    val through = SSHClients.redialing {
-        dialDirect(hop.host, hop.port, hop.pinnedHostKey, hop.login, onPinHostKey)
-    }
+    val chain = mutableListOf(
+        SSHClients.redialing(pauses) {
+            dialDirect(first.host, first.port, first.pinnedHostKey, first.login, onPinHostKey, timeout)
+        },
+    )
     val far = runCatching {
-        dialDirect(endpoint.host, endpoint.port, endpoint.pinnedHostKey, login, onPinHostKey, via = through)
+        for (hop in hops.drop(1)) {
+            chain += dialDirect(hop.host, hop.port, hop.pinnedHostKey, hop.login, onPinHostKey, timeout, via = chain.last())
+        }
+        dialDirect(endpoint.host, endpoint.port, endpoint.pinnedHostKey, login, onPinHostKey, timeout, via = chain.last())
     }.getOrElse { failure ->
-        runCatching { through.disconnect() }
+        chain.reversed().forEach { runCatching { it.disconnect() } }
         throw failure
     }
-    return TerminalConnection(far, listOf(AutoCloseable { through.disconnect() }))
+    return TerminalConnection(far, chain.reversed().map { client -> AutoCloseable { client.disconnect() } })
 }
 
 private fun dialDirect(
@@ -235,9 +307,10 @@ private fun dialDirect(
     pin: String?,
     login: TerminalLogin,
     onPinHostKey: (String, String) -> Unit,
+    timeoutMs: Int,
     via: SSHClient? = null,
 ): SSHClient {
-    val client = SSHClients.create()
+    val client = SSHClients.create(timeoutMs)
     client.addHostKeyVerifier(
         TOFUHostKeyVerifier(host, pin) { presented -> onPinHostKey(host, presented) },
     )

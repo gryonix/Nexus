@@ -1,5 +1,7 @@
 package com.skaymer.gryonixnexus.app.security
 
+import com.skaymer.gryonixnexus.app.widgets.WidgetFeed
+
 import com.skaymer.gryonixnexus.agentcontrol.AgentSecurityOperations
 import com.skaymer.gryonixnexus.servercontrol.AccessGrantCommand
 import com.skaymer.gryonixnexus.servercontrol.Deployment
@@ -9,6 +11,7 @@ import com.skaymer.gryonixnexus.servercontrol.HostSecurityDecisions
 import com.skaymer.gryonixnexus.servercontrol.HostSecurityStatus
 import com.skaymer.gryonixnexus.servercontrol.SSHCommandRunner
 import com.skaymer.gryonixnexus.servercontrol.SshPasswordAccess
+import com.skaymer.gryonixnexus.servercontrol.SshUsers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -46,6 +49,8 @@ data class SecurityScreenState(
     /** A change to either list is in flight */
     val listBusy: Boolean = false,
     val listFailure: String? = null,
+    val sshUsers: SshUsers? = null,
+    val workingOnSshUsers: Boolean = false,
 )
 
 class SecurityViewModel(
@@ -79,6 +84,7 @@ class SecurityViewModel(
                 _state.value = _state.value.copy(
                     status = status, hasAnswered = true, statusUnread = false, reading = false,
                 )
+                WidgetFeed.security(deployment, status)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
@@ -283,6 +289,57 @@ class SecurityViewModel(
         }
     }
 
+    /** Every account on this host and what its SSH accepts */
+    fun loadSshUsers(deployment: Deployment) {
+        DemoSecurity.sshUsers(deployment)?.let {
+            _state.value = _state.value.copy(sshUsers = it, sshAccess = it.hostAccess)
+            return
+        }
+        val key = publicKey(deployment)
+        _state.value = _state.value.copy(workingOnSshUsers = true)
+        scope.launch {
+            val users = try {
+                operations(deployment).sshUsers(loginUser(deployment), key)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                release(deployment)
+                SshUsers.UNKNOWN
+            }
+            _state.value = _state.value.copy(
+                sshUsers = users,
+                workingOnSshUsers = false,
+                sshAccess = if (users.host.isKnown) users.hostAccess else _state.value.sshAccess,
+            )
+        }
+    }
+
+    /** Key login only: everyone, some accounts, or none */
+    fun setKeyOnlyUsers(deployment: Deployment, everyone: Boolean, users: List<String>) {
+        if (_state.value.workingOnSshUsers) return
+        DemoSecurity.setKeyOnlyUsers(deployment, everyone, users)?.let {
+            _state.value = _state.value.copy(sshUsers = it, sshAccess = it.hostAccess)
+            return
+        }
+        val key = publicKey(deployment)
+        _state.value = _state.value.copy(workingOnSshUsers = true, failure = null)
+        scope.launch {
+            try {
+                val answer = operations(deployment).setKeyOnlyUsers(everyone, users, loginUser(deployment), key)
+                _state.value = _state.value.copy(
+                    sshUsers = answer,
+                    workingOnSshUsers = false,
+                    sshAccess = if (answer.host.isKnown) answer.hostAccess else _state.value.sshAccess,
+                )
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                release(deployment)
+                _state.value = _state.value.copy(workingOnSshUsers = false, failure = reason(error))
+            }
+        }
+    }
+
     /** Reads the status and SSH access again */
     fun refreshAll(deployment: Deployment) {
         load(deployment)
@@ -402,10 +459,30 @@ class SecurityViewModel(
     fun reset() {
         job?.cancel()
         job = null
+        readFor = null
         _state.value = SecurityScreenState()
     }
 
+    private var readFor: String? = null
+    private var readAt = 0L
+
+    /** Reads again for another server or an old answer */
+    fun loadIfStale(deployment: Deployment, now: Long = System.currentTimeMillis()) {
+        val answered = _state.value.hasAnswered && !_state.value.statusUnread
+        if (readFor == deployment.id && now - readAt < if (answered) FRESH_MS else RETRY_MS) return
+        if (readFor != deployment.id) reset()
+        readFor = deployment.id
+        readAt = now
+        load(deployment)
+        loadSshAccess(deployment)
+    }
+
     companion object {
+        /** A good answer is read again after this long */
+        const val FRESH_MS = 300_000L
+        /** A failed read is tried again after this long */
+        const val RETRY_MS = 45_000L
+
         fun canShow(deployment: Deployment, agentTransportAvailable: Boolean): Boolean =
             deployment.usesAgent && agentTransportAvailable
 

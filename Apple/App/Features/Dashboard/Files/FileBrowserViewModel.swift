@@ -15,6 +15,14 @@ final class FileBrowserViewModel: ObservableObject {
     @Published var isTransferring = false
     @Published var errorMessage: String?
     @Published var pendingDownload: DownloadedFile?
+    @Published var previewURL: URL?
+    @Published var searchResults: [RemoteFileEntry]?
+    @Published var isSearching = false
+    @Published var shortcuts = FileShortcuts()
+    @Published var selection: Set<String> = []
+
+    let shortcutsStore: FileShortcutsStore
+    var searchTask: Task<Void, Never>?
 
     struct DownloadedFile: Identifiable {
         let id = UUID()
@@ -22,14 +30,17 @@ final class FileBrowserViewModel: ObservableObject {
         let data: Data
     }
 
-    private typealias FileSession = any SSHCommandRunner & RemoteFileBrowser
+    typealias FileSession = any SSHCommandRunner & RemoteFileBrowser
     private var session: FileSession?
     private let makeSession: @Sendable () throws -> FileSession
 
     init(deployment: Deployment, host: SSHHostID,
-         makeSession: (@Sendable (Deployment) throws -> any SSHCommandRunner & RemoteFileBrowser)? = nil) {
+         makeSession: (@Sendable (Deployment) throws -> any SSHCommandRunner & RemoteFileBrowser)? = nil,
+         defaults: UserDefaults = .standard) {
         self.deployment = deployment
         self.host = host
+        shortcutsStore = FileShortcutsStore(deploymentID: deployment.id, defaults: defaults)
+        shortcuts = shortcutsStore.load()
         let factory = makeSession ?? { try DashboardSessionFactory.makeRunner(deployment: $0) }
         self.makeSession = { try factory(deployment) }
     }
@@ -62,6 +73,7 @@ final class FileBrowserViewModel: ObservableObject {
 
     func open(_ entry: RemoteFileEntry) async {
         guard entry.kind == .directory else { return }
+        cancelSearch()
         await navigate(to: entry.path)
     }
 
@@ -69,6 +81,7 @@ final class FileBrowserViewModel: ObservableObject {
 
     func goUp() async {
         guard !isAtRoot else { return }
+        cancelSearch()
         await navigate(to: RemotePath.parent(of: path))
     }
 
@@ -87,6 +100,7 @@ final class FileBrowserViewModel: ObservableObject {
             let data = try await session.downloadFile(entry.path, on: self.host,
                                                       maxBytes: Self.downloadLimit)
             self.pendingDownload = DownloadedFile(name: entry.name, data: data)
+            self.noteOpened(entry.path)
         }
     }
 
@@ -130,12 +144,19 @@ final class FileBrowserViewModel: ObservableObject {
     }
 
     func teardown() {
+        searchTask?.cancel()
         session = nil
     }
 
     // MARK: - Internals
 
-    private func navigate(to newPath: String) async {
+    func jump(to newPath: String) async {
+        cancelSearch()
+        guard newPath != path else { return }
+        await navigate(to: newPath)
+    }
+
+    func navigate(to newPath: String) async {
         await run {
             let session = try await self.connect()
             let listing = try await session.listDirectory(newPath, on: self.host)
@@ -144,7 +165,7 @@ final class FileBrowserViewModel: ObservableObject {
         }
     }
 
-    private func connect() async throws -> FileSession {
+    func connect() async throws -> FileSession {
         if let session { return session }
         let make = makeSession
         let fresh = try await Task.detached(priority: .userInitiated) { try make() }.value
@@ -158,7 +179,7 @@ final class FileBrowserViewModel: ObservableObject {
         return fresh
     }
 
-    private func run(_ body: @escaping () async throws -> Void) async {
+    func run(_ body: @escaping () async throws -> Void) async {
         isLoading = true
         defer { isLoading = false }
         do {

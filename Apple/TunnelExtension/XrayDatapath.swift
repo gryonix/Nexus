@@ -38,16 +38,22 @@ final class XrayDatapath: @unchecked Sendable {
     func start(link stored: String, on provider: NEPacketTunnelProvider,
                pin: EndpointPin? = nil) async throws {
         let (text, dns) = ProxyTunnelText.split(stored)
-        let link = try ProxyLinkConfig(parsing: text)
-
         let access = LocalProxyAccess.random()
-        let pinned = pin?.replacingHost(of: link.endpoint)
-        var server = pinned ?? ""
-        if pinned == nil { server = await Self.addressBeforeTunnel(link) }
-        let remote = pinned == nil ? link.host : pin?.address ?? link.host
-        try await provider.setTunnelNetworkSettings(Self.networkSettings(remote: remote, dns: dns))
-        try Self.startCore(link: link, text: text, dns: dns, server: server, access: access)
+        if let advanced = ProxyTunnelText.advancedJSON(in: stored) {
+            try await startAdvanced(json: advanced, dns: dns, access: access, on: provider)
+        } else {
+            let link = try ProxyLinkConfig(parsing: text)
+            let pinned = pin?.replacingHost(of: link.endpoint)
+            var server = pinned ?? ""
+            if pinned == nil { server = await Self.addressBeforeTunnel(link) }
+            let remote = pinned == nil ? link.host : pin?.address ?? link.host
+            try await provider.setTunnelNetworkSettings(Self.networkSettings(remote: remote, dns: dns))
+            try Self.startCore(link: link, text: text, dns: dns, server: server, access: access)
+        }
+        try launchPacketStack(access: access, on: provider)
+    }
 
+    private func launchPacketStack(access: LocalProxyAccess, on provider: NEPacketTunnelProvider) throws {
         guard let fd = Self.tunnelFileDescriptor else {
             Self.stopCores()
             throw Failure.noTunnelInterface
@@ -78,7 +84,7 @@ final class XrayDatapath: @unchecked Sendable {
     }
 
     /// Go's soft ceiling, well under the extension's own limit
-    private static let xrayMemoryLimit: Int64 = 24 << 20
+    static let xrayMemoryLimit: Int64 = 24 << 20
 
     /// Shadowsocks runs our own client; everything else runs Xray
     private static func startCore(link: ProxyLinkConfig, text: String, dns: [String], server: String,
@@ -92,6 +98,11 @@ final class XrayDatapath: @unchecked Sendable {
         let json = try XrayConfiguration.json(forLink: text, access: access,
                                               dns: ProxyTunnelText.reachableDNS(dns),
                                               serverAddress: serverAddress(of: server, link: link))
+        try runCore(json: json)
+    }
+
+    /// Hands a finished xray configuration to the core
+    static func runCore(json: String) throws {
         let directory = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
         let configURL = directory.appendingPathComponent("xray-\(UUID().uuidString).json")
         try Data(json.utf8).write(to: configURL, options: [.completeFileProtectionUntilFirstUserAuthentication])
@@ -107,13 +118,14 @@ final class XrayDatapath: @unchecked Sendable {
         return String(server[..<cut]).trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
     }
 
-    private static func check(_ pointer: UnsafeMutablePointer<CChar>?) throws {
+    static func check(_ pointer: UnsafeMutablePointer<CChar>?) throws {
         if let failure = answer(pointer), !failure.isEmpty {
             throw Failure.coreRefused(failure)
         }
     }
 
     private static func stopCores() {
+        removeAccessLog()
         _ = answer(GryonixSSStop())
         _ = answer(LibXrayStopXray())
     }
@@ -186,7 +198,7 @@ final class XrayDatapath: @unchecked Sendable {
         return "127.0.0.1"
     }
 
-    private static func answer(_ pointer: UnsafeMutablePointer<CChar>?) -> String? {
+    static func answer(_ pointer: UnsafeMutablePointer<CChar>?) -> String? {
         guard let pointer else { return nil }
         defer { free(pointer) }
         return String(cString: pointer)

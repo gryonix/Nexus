@@ -12,10 +12,10 @@ object SSHClients {
     /** Pauses before redialling a server that hung up silently */
     val REDIAL_PAUSES_MS = listOf(15_000L, 30_000L)
 
-    fun create(): SSHClient {
+    fun create(timeoutMs: Int = CONNECT_TIMEOUT_MS): SSHClient {
         val config = DefaultConfig().apply { keepAliveProvider = KeepAliveProvider.KEEP_ALIVE }
         return SSHClient(config).apply {
-            connectTimeout = CONNECT_TIMEOUT_MS
+            connectTimeout = timeoutMs
             connection.keepAlive.keepAliveInterval = KEEPALIVE_SECONDS
         }
     }

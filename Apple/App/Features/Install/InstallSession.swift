@@ -130,6 +130,11 @@ enum InstallAddressStore {
         }
     }
 
+    /// One machine's login user, when it leaves the deployment
+    static func forget(deploymentID: UUID, node: UUID) {
+        UserDefaults.standard.removeObject(forKey: userKey(deploymentID, .node(node)))
+    }
+
     static func forget(deploymentID: UUID, nodeIDs: [UUID]) {
         let defaults = UserDefaults.standard
         defaults.removeObject(forKey: addressPrefix + deploymentID.uuidString)

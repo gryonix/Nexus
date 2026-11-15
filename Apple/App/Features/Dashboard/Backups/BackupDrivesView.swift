@@ -32,7 +32,7 @@ struct BackupDrivesView: View {
         .formRowButtons()
         #endif
         .bottomBarClearance()
-        .navigationTitle("USB drives")
+        .screenTitle("USB drives")
         .raisedNavigationTitle()
         .refreshable { await model.load() }
         .task { await model.load() }

@@ -21,6 +21,9 @@ class NodeDerivedDashboardTest {
         "DeploymentRecorder.kt",
         // Routes a scenario choice into the configurator.
         "AppShell.kt",
+        // Picks the shape of a server being added.
+        "AddHostScreen.kt",
+        "AddHostForm.kt",
         "Deployment.kt",
     )
 

@@ -1,5 +1,5 @@
 import SwiftUI
-#if os(iOS)
+#if os(iOS) || os(tvOS)
 import UIKit
 #elseif os(macOS)
 import AppKit
@@ -93,6 +93,7 @@ private struct HapticButton: View {
         .scaleEffect(isPressed && !reduceMotion ? 0.96 : 1)
         .opacity(isPressed ? 0.75 : 1)
         .animation(.spring(response: 0.22, dampingFraction: 0.7), value: isPressed)
+        #if !os(tvOS)
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { value in
@@ -102,5 +103,6 @@ private struct HapticButton: View {
                 }
                 .onEnded { _ in isPressed = false }
         )
+        #endif
     }
 }

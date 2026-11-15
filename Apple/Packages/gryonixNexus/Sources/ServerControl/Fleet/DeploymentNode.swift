@@ -89,7 +89,7 @@ public extension Deployment {
                     id: Self.nodeID(for: id, slot: .home),
                     endpoint: HostEndpoint(host: homeWGAddress ?? "",
                                            port: entry.port,
-                                           user: entry.user),
+                                           user: effectiveHomeUser),
                     capabilities: [.worker],
                     routedThrough: relayID,
                     servesOwnTraffic: true,

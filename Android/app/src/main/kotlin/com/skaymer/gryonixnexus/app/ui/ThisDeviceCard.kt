@@ -1,5 +1,18 @@
 package com.skaymer.gryonixnexus.app.ui
 
+import com.skaymer.gryonixnexus.app.ui.design.Gryonix
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.padding
+import com.skaymer.gryonixnexus.app.ui.design.ProminentButton
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -19,10 +32,10 @@ import com.skaymer.gryonixnexus.app.ui.design.CheckRow
 import com.skaymer.gryonixnexus.app.ui.design.GroupedRow
 import com.skaymer.gryonixnexus.app.ui.design.GroupedSection
 import com.skaymer.gryonixnexus.app.ui.design.IOSSheet
-import com.skaymer.gryonixnexus.app.ui.design.PlainButton
 import com.skaymer.gryonixnexus.app.ui.design.RowLabel
 import com.skaymer.gryonixnexus.app.vpn.EndpointPin
 import com.skaymer.gryonixnexus.app.vpn.EndpointPinStore
+import com.skaymer.gryonixnexus.app.vpn.ImportedTunnels
 import com.skaymer.gryonixnexus.app.vpn.EndpointPins
 import com.skaymer.gryonixnexus.app.vpn.LastTunnel
 import com.skaymer.gryonixnexus.app.vpn.TunnelChoice
@@ -91,22 +104,39 @@ fun ThisDeviceCard(
     val pinned = remember(profile, picks) { profile?.let { tunnel.endpointPins?.pinnedEndpoint(it) } }
     val start = rememberTunnelStarter(tunnel)
     val actions = rememberThisDeviceActions(tunnel, clients, profile, start) { picks++ }
+    val chooseImported = rememberImportedChooser(tunnel, start) { picks++ }
     var choosing by remember { mutableStateOf(false) }
+    var importing by remember { mutableStateOf(false) }
     val idle = state !is VpnTunnel.State.Working
 
     GroupedSection(
         header = stringResource(R.string.vpn_this_device),
         footer = pinned?.let { stringResource(R.string.vpn_pinned_footer, it) },
     ) {
-        GroupedRow(trailing = { ConnectButton(state, profile, start, tunnel::disconnect) }) {
-            RowLabel(title = stateTitle(state), subtitle = (state as? VpnTunnel.State.Failed)?.message)
+        GroupedRow(
+            showDivider = false,
+            leading = {
+                Icon(
+                    if (state is VpnTunnel.State.Up) Icons.Outlined.Lock else Icons.Outlined.LockOpen, null,
+                    tint = if (state is VpnTunnel.State.Up) Gryonix.colors.success else Gryonix.colors.secondaryLabel,
+                )
+            },
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(stateTitle(state), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold,
+                    color = Gryonix.colors.label)
+                (state as? VpnTunnel.State.Failed)?.message?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = Gryonix.colors.secondaryLabel)
+                }
+            }
         }
+        ConnectButton(state, profile, start, tunnel::disconnect)
         profile?.let { chosen ->
             ThisDeviceRows(chosen, servers, clients, { TunnelChoices.protocols(it, tunnel::canCarry) }, idle, actions, pinned)
         }
         ActionRow(
             text = stringResource(R.string.vpn_choose_config),
-            enabled = idle && servers.isNotEmpty(),
+            enabled = idle,
             onClick = { choosing = true },
             showDivider = false,
         )
@@ -117,9 +147,35 @@ fun ThisDeviceCard(
             tunnel, servers, clients, profile,
             onOwn = actions.own,
             onOther = actions.other,
+            onImported = chooseImported,
+            onImport = { choosing = false; importing = true },
             onClose = { choosing = false },
         )
     }
+    if (importing) {
+        ImportTunnelSheet(
+            onAdd = { detected, name -> tunnel.imported?.add(detected, name)?.let(chooseImported) },
+            onClose = { importing = false },
+        )
+    }
+}
+
+/** Picks an imported tunnel, switching a running one over */
+@Composable
+private fun rememberImportedChooser(
+    tunnel: VpnTunnel,
+    start: (TunnelStart) -> Unit,
+    picked: () -> Unit,
+): (ImportedTunnels.Entry) -> Unit {
+    val choose = rememberChooser(tunnel, start, picked)
+    return { entry -> choose(importedStart(entry)) }
+}
+
+private fun importedStart(entry: ImportedTunnels.Entry): TunnelStart {
+    val proxy = entry.protocolID == ServiceID.SHADOWSOCKS || entry.protocolID == ServiceID.XRAY_REALITY
+    val choice = TunnelChoice(entry.serverId, ImportedTunnels.CLIENT, entry.name)
+    return TunnelStart(entry.name, entry.text, entry.protocolID, entry.name, choice,
+        if (proxy) ImportedTunnels.PROXY_DNS else emptyList())
 }
 
 /** What the card's rows call, wired to this tunnel */
@@ -142,7 +198,16 @@ private fun rememberThisDeviceActions(
         changePin = tunnel.endpointPins?.let { pins ->
             { chosen, pin -> changePin(tunnel, pins, start, chosen, pin); picked() }
         },
+        removeImported = { profile?.let { removeImported(tunnel, it) }; picked() },
     )
+}
+
+/** Forgets an imported tunnel, taking it down if it runs */
+private fun removeImported(tunnel: VpnTunnel, profile: LastTunnel.Profile) {
+    if (!ImportedTunnels.isImported(profile.serverId)) return
+    if (tunnel.runningDevice() != null) tunnel.disconnect()
+    tunnel.imported?.remove(profile.serverId.removePrefix(ImportedTunnels.PREFIX))
+    tunnel.lastTunnel?.clear()
 }
 
 /** Stores or drops the pin, restarting a running tunnel */
@@ -243,11 +308,18 @@ private fun ConnectButton(
     start: (TunnelStart) -> Unit,
     onDisconnect: () -> Unit,
 ) {
+    val padded = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
     when (state) {
-        is VpnTunnel.State.Up, is VpnTunnel.State.Working ->
-            PlainButton(text = stringResource(R.string.vpn_disconnect), onClick = onDisconnect, danger = true)
+        is VpnTunnel.State.Up, is VpnTunnel.State.Working -> ProminentButton(
+            text = stringResource(R.string.vpn_disconnect), onClick = onDisconnect,
+            modifier = padded, danger = true,
+        )
         else -> if (profile != null) {
-            PlainButton(text = stringResource(R.string.vpn_connect), onClick = { start(restartOf(profile)) })
+            ProminentButton(
+                text = stringResource(R.string.vpn_connect),
+                onClick = { start(restartOf(profile)) },
+                modifier = padded,
+            )
         }
     }
 }
@@ -261,6 +333,8 @@ private fun TunnelConfigurationSheet(
     profile: LastTunnel.Profile?,
     onOwn: (Deployment, ServiceID) -> Unit,
     onOther: (Deployment, ServiceID, VPNClientDevice) -> Unit,
+    onImported: (ImportedTunnels.Entry) -> Unit,
+    onImport: () -> Unit,
     onClose: () -> Unit,
 ) {
     val devices = remember { mutableStateOf<Map<String, List<VPNClientDevice>>>(emptyMap()) }
@@ -277,6 +351,7 @@ private fun TunnelConfigurationSheet(
         onClose = onClose,
         closeLabel = stringResource(R.string.close),
     ) {
+        ImportedConfigurations(tunnel.imported?.all().orEmpty(), profile, onImported, onImport, onClose)
         servers.forEach { server ->
             TunnelChoices.protocols(server, tunnel::canCarry).forEach { protocol ->
                 val ownId = clients.ownClientId(server, protocol)
@@ -295,6 +370,27 @@ private fun TunnelConfigurationSheet(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ImportedConfigurations(
+    imported: List<ImportedTunnels.Entry>,
+    profile: LastTunnel.Profile?,
+    onImported: (ImportedTunnels.Entry) -> Unit,
+    onImport: () -> Unit,
+    onClose: () -> Unit,
+) {
+    GroupedSection(header = stringResource(R.string.vpn_imported)) {
+        imported.forEach { entry ->
+            CheckRow(
+                title = entry.name,
+                subtitle = protocolName(entry.protocolID),
+                checked = profile?.serverId == entry.serverId,
+                onClick = { onImported(entry); onClose() },
+            )
+        }
+        ActionRow(stringResource(R.string.vpn_import_add), onClick = onImport, showDivider = false)
     }
 }
 

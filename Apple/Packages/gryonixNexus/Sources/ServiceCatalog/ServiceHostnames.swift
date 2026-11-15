@@ -24,9 +24,15 @@ extension ServiceSettings {
         .n8n: \.n8nHostname,
         .homeAssistant: \.homeAssistantHostname,
         .zigbee2MQTT: \.zigbee2MQTTHostname,
+        .odio: \.odioHostname,
         .anythingLLM: \.anythingLLMHostname,
         .openclaw: \.openclawHostname,
     ]
+
+    /// Whether this service's address can be typed
+    public static func asksHostname(_ id: ServiceID) -> Bool {
+        hostnameSettings[id] != nil
+    }
 
     public static let fixedHostnameServices: Set<ServiceID> = [
         .mailcow, .mailu, .dockerMailserver, .vpnPanel,

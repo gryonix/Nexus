@@ -39,4 +39,12 @@ extension DashboardViewModel {
         applyDeployment(updated)
         return updated
     }
+
+    /// Keeps the settings chosen while adding services
+    func adoptSettings(_ settings: ServiceSettings) -> Deployment {
+        var updated = deployment
+        updated.serviceSettings = settings
+        applyDeployment(updated)
+        return updated
+    }
 }

@@ -81,6 +81,15 @@ enum DeploymentEraser {
         try store.remove(id: deployment.id)
     }
 
+    /// One machine's secrets, when it leaves a deployment that stays
+    static func eraseNodeSecrets(deploymentID id: UUID, nodeID: UUID) {
+        let host = SSHHostID.node(nodeID)
+        DashboardPasswordStore(deploymentID: id).delete(host: host)
+        InstallCredentialStore(deploymentID: id).delete(host)
+        HostKeyPinStore(deploymentID: id).reset(host)
+        InstallAddressStore.forget(deploymentID: id, node: nodeID)
+    }
+
     static func eraseSecrets(deploymentID id: UUID, nodeIDs: [UUID] = []) {
         try? KeychainSSHIdentityStore(deploymentID: id).delete()
         PendingTransferStore(deploymentID: id).clear()

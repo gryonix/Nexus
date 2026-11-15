@@ -11,6 +11,8 @@ data class DashboardConfig(
     val sshPort: Int = 22,
     /** Same login on both machines; also the sudoers subject */
     val sshUser: String = "",
+    /** Login on the home machine; empty means [sshUser] */
+    val homeSSHUser: String = "",
     val homeWGAddress: String = "10.8.0.2",
     val wgInterface: String = "wg0",
 

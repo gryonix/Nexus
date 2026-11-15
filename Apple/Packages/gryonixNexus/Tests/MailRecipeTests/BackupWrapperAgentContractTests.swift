@@ -120,7 +120,7 @@ final class BackupWrapperAgentContractTests: XCTestCase {
             "n8n",
             "anythingllm", "qdrant",
             "searxng", "openclaw",
-            "home-assistant", "mosquitto", "zigbee2mqtt"
+            "home-assistant", "mosquitto", "zigbee2mqtt", "shairport-sync"
         ]
         let context = ServiceContext(domain: "example.com", sshUser: "admin")
         var restorable: Set<String> = []

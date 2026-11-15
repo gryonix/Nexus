@@ -31,12 +31,12 @@ struct CountryRegionPickerView: View {
                     .background(WorldMapView.pageBackground)
             }
         }
-        .navigationTitle("Countries")
-        #if os(iOS)
+        .screenTitle("Countries")
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar { moreMenu }
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         .fullScreenCover(isPresented: $fullScreenMap) { fullScreen }
         #else
         .sheet(isPresented: $fullScreenMap) { fullScreen }
@@ -44,7 +44,7 @@ struct CountryRegionPickerView: View {
         #if os(iOS)
         .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always),
                     prompt: Text("Search countries"))
-        #else
+        #elseif os(macOS)
         .searchable(text: $search, prompt: Text("Search countries"))
         #endif
     }
@@ -65,8 +65,8 @@ struct CountryRegionPickerView: View {
                              fillsSpace: true)
                     .padding(10)
             }
-                .navigationTitle("Countries")
-                #if os(iOS)
+                .screenTitle("Countries")
+                #if os(iOS) || os(tvOS)
                 .navigationBarTitleDisplayMode(.inline)
                 #endif
                 .toolbar {

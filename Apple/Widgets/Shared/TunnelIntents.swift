@@ -77,20 +77,3 @@ struct RefreshFleetIntent: AppIntent {
         return .result()
     }
 }
-
-/// The phrases Siri and Shortcuts offer without anybody configuring anything
-@available(iOS 17.0, macOS 14.0, *)
-struct TunnelShortcuts: AppShortcutsProvider {
-    static var appShortcuts: [AppShortcut] {
-        AppShortcut(intent: ConnectTunnelIntent(),
-                    phrases: ["Connect \(.applicationName)",
-                              "Turn on \(.applicationName)"],
-                    shortTitle: "Connect",
-                    systemImageName: "lock.shield.fill")
-        AppShortcut(intent: DisconnectTunnelIntent(),
-                    phrases: ["Disconnect \(.applicationName)",
-                              "Turn off \(.applicationName)"],
-                    shortTitle: "Disconnect",
-                    systemImageName: "lock.open")
-    }
-}

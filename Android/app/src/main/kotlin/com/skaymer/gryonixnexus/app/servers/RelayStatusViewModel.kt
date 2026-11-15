@@ -25,6 +25,8 @@ data class RelayStatusState(
     val forwardingHome: RelayRead<Boolean> = RelayRead.Idle,
     val selfPing: RelayRead<PingResult> = RelayRead.Idle,
     val tunnelPing: RelayRead<PingResult> = RelayRead.Idle,
+    /** Configuring the relay: running, then its notes or failure */
+    val configuring: RelayRead<List<String>> = RelayRead.Idle,
 ) {
     val forwarding: RelayRead<Boolean>
         get() {
@@ -44,12 +46,34 @@ class RelayStatusViewModel(
     private val scope: CoroutineScope,
     private val runners: suspend (Deployment) -> SSHCommandRunner,
     private val release: suspend (Deployment) -> Unit = {},
+    /** Writes the relay's forwards and firewall again */
+    private val reprovision: suspend (Deployment) -> List<String> = { emptyList() },
 ) {
     private val _state = MutableStateFlow(RelayStatusState())
     val state: StateFlow<RelayStatusState> = _state.asStateFlow()
 
     fun forget() {
         _state.value = RelayStatusState()
+    }
+
+    fun configure(deployment: Deployment) {
+        if (_state.value.configuring is RelayRead.Loading) return
+        _state.value = _state.value.copy(configuring = RelayRead.Loading)
+        scope.launch {
+            val result = try {
+                RelayRead.Loaded(reprovision(deployment))
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                release(deployment)
+                RelayRead.Failed(reason(failure))
+            }
+            _state.value = _state.value.copy(configuring = result)
+        }
+    }
+
+    fun dismissConfiguring() {
+        _state.value = _state.value.copy(configuring = RelayRead.Idle)
     }
 
     /** Asks, once, on demand */

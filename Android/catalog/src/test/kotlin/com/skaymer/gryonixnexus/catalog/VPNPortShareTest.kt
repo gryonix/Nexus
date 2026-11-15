@@ -2,6 +2,7 @@ package com.skaymer.gryonixnexus.catalog
 
 import com.skaymer.gryonixnexus.catalog.services.AmneziaWGVPNService
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -28,9 +29,13 @@ class VPNPortShareTest {
         assertTrue(text.contains("table inet gryonixnexus_vpn_share\ndelete table inet gryonixnexus_vpn_share\n"))
         assertTrue(
             text.contains(
-                "udp dport 51821 @th,64,32 != { 0x01000000, 0x02000000, 0x03000000, 0x04000000 } redirect to :51822\n"
+                "udp dport 51821 @th,64,32 != { 0x01000000, 0x02000000, 0x03000000, 0x04000000 } " +
+                    "udp dport set 51822 meta mark set 0x4e580001\n"
             )
         )
+        assertTrue(text.contains("type filter hook prerouting priority raw;"))
+        assertFalse(text.contains("redirect"))
+        assertTrue(text.contains("ct mark 0x4e580001 udp sport 51822 udp sport set 51821\n"))
         assertTrue(text.endsWith("    }\n}\n"))
     }
 
@@ -39,7 +44,7 @@ class VPNPortShareTest {
         val alone = VPNPortShare.section(context(setOf(ServiceID.AMNEZIA_WG)))
         assertTrue(alone.contains("nft delete table inet gryonixnexus_vpn_share 2>/dev/null || true"))
         val both = context(setOf(ServiceID.WIREGUARD_VPN, ServiceID.AMNEZIA_WG))
-        assertTrue(VPNPortShare.section(both).contains("redirect to :51822\n    }\n}\nEOF_VPN_SHARE\nnft -f "))
+        assertTrue(VPNPortShare.section(both).contains("udp sport set 51820\n    }\n}\nEOF_VPN_SHARE\nnft -f "))
         assertTrue(AmneziaWGVPNService().reportSteps(both).first().contains("vpn.example.com:51820 (UDP)"))
     }
 }

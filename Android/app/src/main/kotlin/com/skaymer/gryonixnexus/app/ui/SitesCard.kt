@@ -5,9 +5,11 @@ import android.content.Intent
 import androidx.core.net.toUri
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.NorthEast
+import com.skaymer.gryonixnexus.app.ui.design.SymbolIcons
+import com.skaymer.gryonixnexus.catalog.ServiceRegistry
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -64,26 +66,18 @@ fun SitesCard(deployment: Deployment, tabs: TabBarSettings) {
     val meshAddress = meshAddresses[deployment.id.toString()]
     val homeOnly = sites.any { it.host.lowercase().endsWith(".local") }
     GroupedSection(
-        header = stringResource(R.string.sites_title),
+        header = if (collapsible) null else stringResource(R.string.sites_title),
         footer = if (homeOnly) stringResource(R.string.sites_home_only) else null,
     ) {
         if (collapsible) GroupedRow(
             onClick = { folded = !folded },
             showDivider = expanded,
             trailing = {
-                // Folded, the count is the only thing left to read.
-                if (sites.isNotEmpty()) {
-                    Text(
-                        sites.size.toString(),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Gryonix.colors.secondaryLabel,
-                    )
-                }
                 Icon(
-                    if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                    if (expanded) Icons.Filled.ExpandMore else Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
-                    tint = Gryonix.colors.accent,
-                    modifier = Modifier.size(20.dp),
+                    tint = Gryonix.colors.label,
+                    modifier = Modifier.size(22.dp),
                 )
             },
         ) {
@@ -91,6 +85,12 @@ fun SitesCard(deployment: Deployment, tabs: TabBarSettings) {
                 stringResource(R.string.sites_title),
                 style = MaterialTheme.typography.bodyLarge,
                 color = Gryonix.colors.label,
+            )
+            // Folded, the count is the only thing left to read.
+            Text(
+                if (sites.isNotEmpty()) sites.size.toString() else "",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Gryonix.colors.secondaryLabel,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -168,12 +168,19 @@ private fun SiteRow(site: WebSite, showDivider: Boolean) {
             }
         },
         showDivider = showDivider,
+        leading = {
+            Icon(
+                SymbolIcons.of(ServiceRegistry.service(site.id)?.systemImage),
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
+            )
+        },
         trailing = {
             Icon(
-                Icons.Filled.OpenInNew,
+                Icons.Filled.NorthEast,
                 contentDescription = null,
-                tint = Gryonix.colors.tertiaryLabel,
-                modifier = Modifier.size(18.dp),
+                tint = Gryonix.colors.accent,
+                modifier = Modifier.size(20.dp),
             )
         },
     ) {

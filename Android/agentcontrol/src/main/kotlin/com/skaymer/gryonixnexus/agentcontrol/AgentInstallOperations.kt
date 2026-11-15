@@ -90,6 +90,18 @@ class AgentInstallOperations(
         }
     }
 
+    suspend fun check(services: List<ServiceID>): List<InstallFinding> =
+        client.checkInstall(services.mapNotNull { AgentServiceMapping.agentID(it) }).mapNotNull { item ->
+            val service = AgentServiceMapping.serviceID(item.service) ?: return@mapNotNull null
+            InstallFinding(
+                service = service,
+                isBlocking = item.severity == gryonixnexusd.v1.InstallFinding.Severity.SEVERITY_BLOCKED,
+                code = item.code,
+                args = item.args,
+                message = item.message,
+            )
+        }
+
     /** A plan by id; empty id means newest */
     suspend fun plan(id: String = ""): AgentInstallPlan = AgentInstallPlan.of(client.installPlan(id))
 
@@ -202,4 +214,15 @@ data class AgentInstallContext(
     val language: AppLanguage = AppLanguage.EN,
     val settings: Map<String, String> = emptyMap(),
     val host: AgentHostSurface = AgentHostSurface(),
+)
+
+/** One thing a machine lacks for one service */
+data class InstallFinding(
+    val service: ServiceID,
+    /** The service will not install; otherwise it installs with less */
+    val isBlocking: Boolean,
+    val code: String,
+    val args: List<String>,
+    /** The agent's own English wording */
+    val message: String,
 )

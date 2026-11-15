@@ -526,7 +526,7 @@ internal object DashboardAccessSections {
             "  # shellcheck disable=SC2064",
             "  trap \"rm -rf '${SH}stage' '${SH}tmp'\" EXIT",
             "  tar --numeric-owner -xzf \"${SH}plain\" -C \"${SH}stage\"",
-            "  if [ ! -d \"${SH}stage/${plan.dataSlot}\" ]; then",
+            "  if ${restorableTest(plan)}; then",
             "    echo \"the archive carries no $target data\" >&2",
             "    exit 1",
             "  fi"
@@ -536,18 +536,30 @@ internal object DashboardAccessSections {
         listOf(
             "  # The old data is moved aside, never deleted: if the move back",
             "  # fails it is the only way home.",
-            "  previous='$data'\".pre-restore-${SH}STAMP\"",
-            "  if [ -d '$data' ]; then mv '$data' \"${SH}previous\"; saved=1; fi",
-            "  if mv \"${SH}stage/${plan.dataSlot}\" '$data'; then",
-            "    if [ \"${SH}saved\" -eq 1 ]; then echo \"previous data kept at ${SH}{previous}\"; fi",
+            "  if [ ! -d \"${SH}stage/${plan.dataSlot}\" ]; then",
+            "    echo \"the archive carries no ${plan.dataSlot}, it is left as it is\"",
             "  else",
-            "    echo \"restore failed, rolling back to the previous data\" >&2",
-            "    rm -rf '$data'",
-            "    if [ \"${SH}saved\" -eq 1 ]; then mv \"${SH}previous\" '$data'; fi",
-            "    gd_compose_start_all '$project'",
-            "    exit 1",
+            "    previous='$data'\".pre-restore-${SH}STAMP\"",
+            "    if [ -d '$data' ]; then mv '$data' \"${SH}previous\"; saved=1; fi",
+            "    if mv \"${SH}stage/${plan.dataSlot}\" '$data'; then",
+            "      if [ \"${SH}saved\" -eq 1 ]; then echo \"previous data kept at ${SH}{previous}\"; fi",
+            "    else",
+            "      echo \"restore failed, rolling back to the previous data\" >&2",
+            "      rm -rf '$data'",
+            "      if [ \"${SH}saved\" -eq 1 ]; then mv \"${SH}previous\" '$data'; fi",
+            "      gd_compose_start_all '$project'",
+            "      exit 1",
+            "    fi",
             "  fi"
         )
+
+    /** Shell test: the archive holds no part of this service */
+    private fun restorableTest(plan: ArchiveBackupPlan): String {
+        val dumps = plan.databases.map {
+            "[ ! -f \"${SH}stage/${ArchiveBackupPlan.DUMP_DIRECTORY_NAME}/${it.fileName}\" ]"
+        }
+        return (listOf("[ ! -d \"${SH}stage/${plan.dataSlot}\" ]") + dumps).joinToString(" && ")
+    }
 
     private fun restoreDatabaseLines(project: String, plan: ArchiveBackupPlan): List<String> {
         val lines = mutableListOf<String>()
@@ -557,13 +569,15 @@ internal object DashboardAccessSections {
             } else {
                 "gd_load_mysql"
             }
+            val dump = "${SH}stage/${ArchiveBackupPlan.DUMP_DIRECTORY_NAME}/${database.fileName}"
             lines += listOf(
-                "  # The database container has to be up to take its dump back;",
-                "  # the rest of the project stays down until it is loaded.",
-                "  gd_compose_start '$project' '${database.service}'",
-                "  $helper '$project' '${database.service}' " +
-                    "\"${SH}stage/${ArchiveBackupPlan.DUMP_DIRECTORY_NAME}/${database.fileName}\"" +
-                    (database.databaseName?.let { " '$it'" } ?: "") + " || rc=1"
+                "  if [ -f \"$dump\" ]; then",
+                "    # The database container has to be up to take its dump back;",
+                "    # the rest of the project stays down until it is loaded.",
+                "    gd_compose_start '$project' '${database.service}'",
+                "    $helper '$project' '${database.service}' \"$dump\"" +
+                    (database.databaseName?.let { " '$it'" } ?: "") + " || rc=1",
+                "  fi"
             )
         }
         return lines

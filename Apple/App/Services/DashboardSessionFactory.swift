@@ -25,6 +25,8 @@ enum DashboardSessionFactory {
         let usesPasswordAuth: Bool
         let nodes: String
         let access: ServerAccessOptions
+        let homePath: HomePathChoice
+        let homeLAN: String
 
         init(_ deployment: Deployment) {
             config = deployment.dashboardConfig
@@ -33,6 +35,8 @@ enum DashboardSessionFactory {
                 .map { "\($0.id)@\($0.sshHost)" }
                 .joined(separator: ",")
             access = ServerAccessStore.options(for: deployment.id)
+            homePath = HomePathChoice.load(for: deployment.id)
+            homeLAN = InstallAddressStore.homeAddress(deploymentID: deployment.id)
         }
     }
 
@@ -68,10 +72,10 @@ enum DashboardSessionFactory {
         await runner.disconnect()
     }
 
-    private static func hop(_ bastion: BastionHop?,
-                            for deployment: Deployment,
-                            identity: AppSSHIdentity,
-                            pins: HostKeyPinStore) -> SSHConnectionSettings.Hop? {
+    static func hop(_ bastion: BastionHop?,
+                    for deployment: Deployment,
+                    identity: AppSSHIdentity,
+                    pins: HostKeyPinStore) -> SSHConnectionSettings.Hop? {
         guard let bastion, bastion.isUsable else { return nil }
         if let id = bastion.fleetServerID {
             guard let server = (try? FileDeploymentStore().load())?.first(where: { $0.id == id })
@@ -97,6 +101,17 @@ enum DashboardSessionFactory {
                      privateKeySeed: identity.privateKeySeed,
                      password: nil,
                      pinnedHostKey: pins.pin(forBastion: "\(manual.host):\(manual.port)"))
+    }
+
+    /// The proxy this server's connections go through
+    static func proxy(for access: ServerAccessOptions) -> ProxyConnect.Endpoint? {
+        guard let profile = ProxyStore.profile(access.proxyID), profile.isUsable else { return nil }
+        return ProxyConnect.Endpoint(
+            kind: profile.kind == .socks5 ? .socks5 : .httpConnect,
+            host: profile.host.trimmingCharacters(in: .whitespaces),
+            port: profile.port,
+            username: profile.username.isEmpty ? nil : profile.username,
+            password: ProxyPasswordStore.password(profile.id))
     }
 
     private static func makeSSHRunner(deployment: Deployment,
@@ -134,6 +149,7 @@ enum DashboardSessionFactory {
             pinnedHomeHostKey: pins.pin(for: .home),
             homeLANHost: InstallAddressStore.homeAddress(deploymentID: deployment.id)
         )
+        settings.homePath = HomePathChoice.load(for: deployment.id)
         settings.additionalNodes = SSHConnectionSettings.additionalNodes(of: deployment) {
             pins.pin(for: $0)
         }
@@ -146,14 +162,7 @@ enum DashboardSessionFactory {
                 port: endpoint.port,
                 bastion: hop(fallback.bastion, for: deployment, identity: identity, pins: pins))
         }
-        if let profile = ProxyStore.profile(access.proxyID), profile.isUsable {
-            settings.proxy = ProxyConnect.Endpoint(
-                kind: profile.kind == .socks5 ? .socks5 : .httpConnect,
-                host: profile.host.trimmingCharacters(in: .whitespaces),
-                port: profile.port,
-                username: profile.username.isEmpty ? nil : profile.username,
-                password: ProxyPasswordStore.password(profile.id))
-        }
+        settings.proxy = proxy(for: access)
         let runner = CitadelCommandRunner(settings: settings) { host, presentedKey in
             pins.store(presentedKey, for: host)
         } onPinBastionHostKey: { endpoint, presentedKey in

@@ -28,8 +28,8 @@ struct MetricPanelReorderView: View {
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle("Arrange panels")
-            #if os(iOS)
+            .screenTitle("Arrange panels")
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             .environment(\.editMode, .constant(.active))
             #endif
@@ -51,7 +51,7 @@ struct MetricPanelReorderView: View {
         HStack(spacing: 12) {
             Image(systemName: panel.metric.systemImage)
                 .foregroundStyle(panel.metric.tint)
-                .frame(width: 22)
+                .rowIconFrame(22)
             VStack(alignment: .leading, spacing: 2) {
                 title(panel)
                 subtitle(panel)

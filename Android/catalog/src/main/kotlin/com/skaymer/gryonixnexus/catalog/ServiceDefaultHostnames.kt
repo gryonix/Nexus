@@ -49,6 +49,7 @@ object ServiceDefaultHostnames {
         ServiceID.N8N to "flows",
         ServiceID.HOME_ASSISTANT to "home",
         ServiceID.ZIGBEE2MQTT to "zigbee",
+        ServiceID.ODIO to "odio",
     )
 
     fun hostname(id: ServiceID, context: ServiceContext): String =

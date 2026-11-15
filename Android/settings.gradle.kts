@@ -31,4 +31,6 @@ include(":servercontrol")  // ServerControl: commands, parsers, fleet models
 include(":agentclient")    // AgentClient: proto types + Connect framing
 include(":agentcontrol")   // AgentControl: the agent-backed half of ServiceControlling
 include(":transport")      // sshj transport — the Android replacement for Citadel
+include(":tvlink")         // TVLink: the phone side of the Apple TV link
+include(":aiassistant")    // AIAssistant: redaction, provider requests, chat history
 include(":app")            // Compose UI

@@ -1,5 +1,6 @@
 package com.skaymer.gryonixnexus.app.agent
 
+import com.skaymer.gryonixnexus.app.servers.DemoDeployments
 import com.skaymer.gryonixnexus.R
 import com.skaymer.gryonixnexus.app.notify.OperationKind
 import com.skaymer.gryonixnexus.app.notify.OperationNotices
@@ -33,6 +34,11 @@ class AgentSelfUpdateViewModel(
     val state: StateFlow<AgentSelfUpdateState> = _state.asStateFlow()
 
     fun load(deployment: Deployment) {
+        _state.value = AgentSelfUpdateState()
+        if (DemoDeployments.isDemoID(deployment.id)) {
+            _state.value = AgentSelfUpdateState(status = AgentUpdateStatus())
+            return
+        }
         scope.launch {
             val agent = client(deployment) ?: return@launch
             val status = try {
@@ -48,6 +54,10 @@ class AgentSelfUpdateViewModel(
 
     /** Switches automatic agent updates on every machine of the server */
     fun setAutoUpdate(deployment: Deployment, enabled: Boolean) {
+        if (DemoDeployments.isDemoID(deployment.id)) {
+            _state.value = _state.value.copy(status = _state.value.status?.copy(auto_update = enabled))
+            return
+        }
         scope.launch {
             for (host in deployment.agentHosts) {
                 val status = try {

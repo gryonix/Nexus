@@ -35,6 +35,15 @@ object AgentServiceMapping {
         "home-assistant" to ServiceID.HOME_ASSISTANT,
         "mosquitto" to ServiceID.MOSQUITTO,
         "zigbee2mqtt" to ServiceID.ZIGBEE2MQTT,
+        "shairport-sync" to ServiceID.SHAIRPORT_SYNC,
+        "uxplay" to ServiceID.UXPLAY,
+        "odio" to ServiceID.ODIO,
+        "snapserver" to ServiceID.SNAPSERVER,
+        "snapclient" to ServiceID.SNAPCLIENT,
+        "upmpdcli" to ServiceID.UPMPDCLI,
+        "bluealsa" to ServiceID.BLUEALSA,
+        "raspotify" to ServiceID.RASPOTIFY,
+        "mympd" to ServiceID.MYMPD,
         "anythingllm" to ServiceID.ANYTHING_LLM,
         "qdrant" to ServiceID.QDRANT,
         "searxng" to ServiceID.SEARXNG,
@@ -69,6 +78,10 @@ object AgentServiceMapping {
         }
         return found
     }
+
+    /** Services this app installed, by the agent's record; VPN aside */
+    fun installedByApp(services: List<Pair<String, Boolean>>): Set<ServiceID> =
+        serviceIDs(services.filter { (id, outside) -> !outside && id != "vpn" }.map { it.first })
 
     fun serviceID(agentID: String): ServiceID? = byAgentID[agentID]
 

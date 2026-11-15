@@ -34,8 +34,8 @@ struct ContainerGroupLogSheet: View {
                     logList
                 }
             }
-            .navigationTitle(Text(verbatim: group.displayName))
-            #if os(iOS)
+            .screenTitle(Text(verbatim: group.displayName))
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
@@ -125,8 +125,8 @@ struct ContainerBackupPlanSheet: View {
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle("Backup")
-            #if os(iOS)
+            .screenTitle("Backup")
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
@@ -385,8 +385,8 @@ struct ContainerRemovalSheet: View {
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle(Text(verbatim: group.displayName))
-            #if os(iOS)
+            .screenTitle(Text(verbatim: group.displayName))
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
@@ -543,8 +543,8 @@ struct ContainerOperationSheet: View {
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle(Text(verbatim: group.displayName))
-            #if os(iOS)
+            .screenTitle(Text(verbatim: group.displayName))
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {

@@ -1,6 +1,15 @@
 package com.skaymer.gryonixnexus.app
 
+import android.content.Intent
 import android.os.Bundle
+import com.skaymer.gryonixnexus.app.notify.AlertAction
+import com.skaymer.gryonixnexus.app.notify.AlertTap
+import com.skaymer.gryonixnexus.app.notify.AlertDestination
+import com.skaymer.gryonixnexus.app.notify.RelayServers
+import com.skaymer.gryonixnexus.app.push.GryonixMessagingService
+import com.skaymer.gryonixnexus.app.shell.ServerSection
+import com.skaymer.gryonixnexus.app.widgets.AppShortcuts
+import com.skaymer.gryonixnexus.app.widgets.ShortcutTarget
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -30,6 +39,7 @@ import com.skaymer.gryonixnexus.app.ui.LocalChartAutoScale
 import com.skaymer.gryonixnexus.app.ui.design.LocalHaptics
 import com.skaymer.gryonixnexus.app.ui.LocalOfferedCharts
 import com.skaymer.gryonixnexus.app.ui.design.GryonixTheme
+import com.skaymer.gryonixnexus.app.ui.design.SystemBarsFollowTheme
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
 
@@ -40,6 +50,55 @@ class MainActivity : ComponentActivity() {
         val app = application as GryonixApplication
         followMetricsWhileStarted(app)
         setContent { AppRoot(app, this) }
+        openTappedAlert(intent)
+        openShortcut(intent)
+        recordOpenedServers(app)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        openTappedAlert(intent)
+        openShortcut(intent)
+    }
+
+    /** Opens the section or server a shortcut asks for */
+    private fun openShortcut(intent: Intent?) {
+        val app = application as GryonixApplication
+        when (val target = ShortcutTarget.of(intent)) {
+            is ShortcutTarget.Tab -> app.navigator.show(target.tab)
+            is ShortcutTarget.Server -> app.navigator.open(target.id, ServerSection.GENERAL)
+            null -> return
+        }
+        intent?.action = null
+    }
+
+    /** Keeps the launcher's server shortcuts on the servers opened last */
+    private fun recordOpenedServers(app: GryonixApplication) {
+        val shortcuts = AppShortcuts(this)
+        lifecycleScope.launch {
+            app.navigator.openServerID.collect { id ->
+                if (id == null) shortcuts.publish() else shortcuts.opened(id)
+            }
+        }
+    }
+
+    /** Opens the server a tapped alert is about */
+    private fun openTappedAlert(intent: Intent?) {
+        val gnx = intent?.getStringExtra(GryonixMessagingService.EXTRA_ALERT) ?: return
+        intent.removeExtra(GryonixMessagingService.EXTRA_ALERT)
+        val app = application as GryonixApplication
+        val tap = AlertTap.of(
+            AlertAction.data(gnx),
+            intent.getStringExtra(GryonixMessagingService.EXTRA_ALERT_TITLE),
+            intent.getStringExtra(GryonixMessagingService.EXTRA_ALERT_BODY),
+        ) { RelayServers.target(app.store, it)?.first }
+        tap.jobID?.let { job ->
+            app.runningJobs.open(job)
+            tap.destination?.let { app.runningJobs.adoptNamed(job, it.deploymentID) }
+            app.runningJobs.sweep()
+        }
+        val destination = tap.destination ?: return
+        app.navigator.open(destination.deploymentID, destination.section, destination.service, tap.card)
     }
 
     private fun followMetricsWhileStarted(app: GryonixApplication) {
@@ -49,6 +108,7 @@ class MainActivity : ComponentActivity() {
                 app.runningJobs.sweep()
                 app.agentUpdateOffer.checkOnLaunch()
                 launch { app.license.refreshIfDue() }
+                launch { app.appleTv.vouchAll() }
                 try {
                     awaitCancellation()
                 } finally {
@@ -66,6 +126,7 @@ private fun AppRoot(app: GryonixApplication, activity: ComponentActivity) {
     val accent = remember(revision) { app.store.appAccent() }
     val updateScope = rememberCoroutineScope()
     LaunchedEffect(Unit) { app.appUpdates.checkIfDue(updateScope) }
+    SystemBarsFollowTheme(activity)
     GryonixTheme(accent = accent) {
         val autoScale = remember(revision) {
             ChartScale.auto(app.store.boolean(ChartScale.AUTO_KEY))

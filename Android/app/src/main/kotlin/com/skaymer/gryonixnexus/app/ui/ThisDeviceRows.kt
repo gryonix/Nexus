@@ -18,6 +18,8 @@ import com.skaymer.gryonixnexus.app.vpn.LastTunnel
 import com.skaymer.gryonixnexus.app.vpn.LocalDNS
 import com.skaymer.gryonixnexus.app.vpn.TunnelChoices
 import com.skaymer.gryonixnexus.app.vpn.VPNClientsViewModel
+import com.skaymer.gryonixnexus.app.ui.design.ActionRow
+import com.skaymer.gryonixnexus.app.vpn.ImportedTunnels
 import com.skaymer.gryonixnexus.catalog.ServiceID
 import com.skaymer.gryonixnexus.catalog.ServiceRegistry
 import com.skaymer.gryonixnexus.servercontrol.Deployment
@@ -30,6 +32,8 @@ class ThisDeviceActions(
     val changeDNS: suspend (Deployment, String, List<String>) -> Unit,
     /** Null when this phone keeps no pins */
     val changePin: PinChange? = null,
+    /** Forgets the imported tunnel in use */
+    val removeImported: () -> Unit = {},
 )
 
 /** Server, protocol, configuration, DNS and endpoint, each a popup */
@@ -83,6 +87,9 @@ fun ThisDeviceRows(
         }
     }
     TunnelChoices.endpoint(profile)?.let { EndpointRow(profile, it, pinned, enabled, actions.changePin) }
+    if (ImportedTunnels.isImported(profile.serverId)) {
+        ActionRow(stringResource(R.string.vpn_remove), onClick = actions.removeImported, enabled = enabled, danger = true)
+    }
 }
 
 @Composable

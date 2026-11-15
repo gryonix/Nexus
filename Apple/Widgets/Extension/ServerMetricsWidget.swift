@@ -32,7 +32,7 @@ struct ServerMetricsWidget: Widget {
 
         func timeline(for configuration: ServerSelectionConfiguration,
                       in context: Context) async -> Timeline<ServerMetricsEntry> {
-            Timeline(entries: [entry(for: configuration)], policy: .never)
+            Timeline(entries: [entry(for: configuration)], policy: .rereadSoon)
         }
 
         private func entry(for configuration: ServerSelectionConfiguration) -> ServerMetricsEntry {

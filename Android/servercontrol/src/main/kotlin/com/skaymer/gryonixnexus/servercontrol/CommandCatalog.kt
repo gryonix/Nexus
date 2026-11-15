@@ -13,7 +13,7 @@ data class PurgeOptions(val data: Boolean = false, val backups: Boolean = false)
 
 /** Every remote command the dashboard sends, as exact literals */
 object CommandCatalog {
-    const val IP_FORWARDING_CHECK = "sudo sysctl net.ipv4.ip_forward"
+    const val IP_FORWARDING_CHECK = "PATH=\$PATH:/usr/sbin:/sbin sysctl net.ipv4.ip_forward"
 
     fun pingSelf(vpsHost: String): String =
         "ping -c 1 -W 2 ${ShellQuoting.singleQuoted(vpsHost)}"
@@ -48,8 +48,10 @@ object CommandCatalog {
         const val STATUS = "sudo /opt/gryonixnexus-admin-lockdown.sh status"
 
         /** Guard only the given vhosts */
-        fun only(hosts: List<String>): String =
-            "sudo /opt/gryonixnexus-admin-lockdown.sh only " + hosts.joinToString(" ")
+        fun only(hosts: List<String>, denyVPN: List<String>? = null): String {
+            val base = "sudo /opt/gryonixnexus-admin-lockdown.sh only " + hosts.joinToString(" ")
+            return if (denyVPN == null) base else (listOf(base, "--no-vpn") + denyVPN).joinToString(" ")
+        }
 
         /** Client-side mirror of the wrapper's host validation */
         fun isValidHost(host: String): Boolean =
@@ -299,6 +301,15 @@ object CommandCatalog {
         const val SHOW_DRIVES = "sudo $CONTROL_SCRIPT_PATH show-drives"
 
         /** `sudo <wrapper> set-drives <mode> <0|1> [uuids...]` */
+        const val SHOW_PARTS = "sudo $CONTROL_SCRIPT_PATH show-parts"
+
+        /** `sudo <wrapper> set-parts <backup|update> [--service <id>] [parts...]` */
+        fun setParts(scope: String, parts: List<String>, service: String? = null): String {
+            val own = service?.let { listOf("--service", it) }.orEmpty()
+            val quoted = (listOf(scope) + own + parts).joinToString(" ") { ShellQuoting.singleQuoted(it) }
+            return "sudo $CONTROL_SCRIPT_PATH set-parts $quoted"
+        }
+
         fun setDrives(mode: String, encrypt: Boolean, uuids: List<String>): String {
             val quoted = (listOf(mode, if (encrypt) "1" else "0") + uuids).joinToString(" ") { ShellQuoting.singleQuoted(it) }
             return "sudo $CONTROL_SCRIPT_PATH set-drives $quoted"

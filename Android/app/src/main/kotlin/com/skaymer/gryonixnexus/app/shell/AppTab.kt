@@ -11,6 +11,8 @@ enum class AppTab(val key: String) {
 
     TERMINAL("terminal"),
 
+    AI("ai"),
+
     CONFIGURATOR("configurator"),
     SETTINGS("settings");
 

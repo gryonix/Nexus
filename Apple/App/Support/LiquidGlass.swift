@@ -5,7 +5,7 @@ extension View {
 
     @ViewBuilder
     func toolbarGlassButtonStyle() -> some View {
-        if #available(iOS 26.0, macOS 26.0, *), AppChrome.usesGlass {
+        if #available(iOS 26.0, macOS 26.0, tvOS 26.0, *), AppChrome.usesGlass {
             menuIndicator(.hidden)
         } else {
             buttonStyle(.bordered)
@@ -15,7 +15,7 @@ extension View {
 
     @ViewBuilder
     func prominentActionButtonStyle() -> some View {
-        if #available(iOS 26.0, macOS 26.0, *), AppChrome.usesGlass {
+        if #available(iOS 26.0, macOS 26.0, tvOS 26.0, *), AppChrome.usesGlass {
             buttonStyle(.glassProminent)
                 .buttonBorderShape(.capsule)
         } else {
@@ -25,7 +25,7 @@ extension View {
 
     @ViewBuilder
     func secondaryActionButtonStyle() -> some View {
-        if #available(iOS 26.0, macOS 26.0, *), AppChrome.usesGlass {
+        if #available(iOS 26.0, macOS 26.0, tvOS 26.0, *), AppChrome.usesGlass {
             buttonStyle(.glass)
                 .buttonBorderShape(.capsule)
         } else {
@@ -38,7 +38,7 @@ extension View {
         #if os(macOS)
         buttonStyle(.bordered)
         #else
-        if #available(iOS 26.0, *), AppChrome.usesGlass {
+        if #available(iOS 26.0, tvOS 26.0, *), AppChrome.usesGlass {
             buttonStyle(.glass)
         } else {
             buttonStyle(.bordered)

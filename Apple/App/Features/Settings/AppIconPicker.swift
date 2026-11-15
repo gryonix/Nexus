@@ -73,7 +73,7 @@ enum AppIconChoice: String, CaseIterable, Identifiable {
     }
 
     static func current() -> AppIconChoice {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         let name = UIApplication.shared.alternateIconName
         return allCases.first { $0.assetName == name } ?? .default
         #else
@@ -94,13 +94,13 @@ enum AppIconSettings {
         defaults.set(choice.rawValue, forKey: choiceKey)
     }
 
-    #if os(iOS)
+    #if os(iOS) || os(tvOS)
     static func reconcileWithSystem(_ defaults: UserDefaults = .standard) {
         store(AppIconChoice.current(), in: defaults)
     }
     #endif
 
-    #if os(iOS)
+    #if os(iOS) || os(tvOS)
     /// Repaints the UIKit half of the app
     @MainActor
     static func applyWindowTint(_ colour: UIColor?) {
@@ -167,7 +167,7 @@ struct AppAccentTint: ViewModifier {
     func body(content: Content) -> some View {
         content
             .tint(tint)
-            #if os(iOS)
+            #if os(iOS) || os(tvOS)
             .task(id: "\(accentRaw)-\(choiceRaw)") {
                 AppIconSettings.applyWindowTint(tint.map(UIColor.init))
             }
@@ -204,7 +204,7 @@ struct AppIconPicker: View {
             }
         } header: {
             InfoSectionHeader("App icon") {
-                #if os(iOS)
+                #if os(iOS) || os(tvOS)
                 Text("The icon on the home screen. iOS confirms the change itself.")
                 #else
                 Text("The icon in the Dock and the app switcher. macOS gives an app no way to change its own icon in Finder, so that one stays as it shipped.")
@@ -251,7 +251,7 @@ struct AppIconPicker: View {
         selection = choice
         AppIconSettings.store(choice)
         failure = nil
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         UIApplication.shared.setAlternateIconName(choice.assetName) { error in
             guard let error else { return }
             Task { @MainActor in
@@ -268,7 +268,7 @@ struct AppIconPicker: View {
 
     /// The flat artwork behind a swatch
     private static func preview(_ choice: AppIconChoice) -> Image? {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         UIImage(named: choice.previewName).map(Image.init(uiImage:))
         #else
         NSImage(named: choice.previewName).map(Image.init(nsImage:))

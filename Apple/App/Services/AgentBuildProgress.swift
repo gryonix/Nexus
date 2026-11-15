@@ -16,19 +16,3 @@ struct AgentBuildSteps: Equatable {
         min(Double(compiled) / Double(Self.crates), Self.ceiling)
     }
 }
-
-/// Moves a run's percentage with each finished build step
-@MainActor
-final class AgentBuildProgress {
-    private var steps = AgentBuildSteps()
-    private weak var state: LongOperationState?
-
-    init(state: LongOperationState) {
-        self.state = state
-    }
-
-    func line(_ text: String) {
-        steps.line(text)
-        state?.progress = steps.fraction
-    }
-}

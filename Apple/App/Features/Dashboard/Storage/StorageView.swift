@@ -19,11 +19,11 @@ struct StorageView: View {
 
     var body: some View {
         Form {
-            StorageArraysSection(model: model, sheet: $sheet)
+            StorageArraysSection(model: model, sheet: viewOnlySheet)
             if let job = model.hardware?.diskJob, job.isRecent() {
                 DiskJobSection(job: job)
             }
-            if let hardware = model.hardware, RaidPlan.candidates(in: hardware).count >= 2 {
+            if !Self.viewOnly, let hardware = model.hardware, RaidPlan.candidates(in: hardware).count >= 2 {
                 Section {
                     Button("Build an array…") { sheet = .build }
                         .buttonStyle(.borderless)
@@ -40,11 +40,11 @@ struct StorageView: View {
                 }
             }
             if let hardware = model.hardware {
-                StorageDisksSection(disks: hardware.disks, sheet: $sheet)
+                StorageDisksSection(disks: hardware.disks, sheet: viewOnlySheet)
             }
         }
-        .navigationTitle("Disks and RAID")
-        #if os(iOS)
+        .screenTitle("Disks and RAID")
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .task { await model.load() }
@@ -60,6 +60,23 @@ struct StorageView: View {
         .sheet(item: $sheet) { shown in
             NavigationStack { content(of: shown) }
         }
+    }
+
+    /// The TV only looks at disks
+    static var viewOnly: Bool {
+        #if os(tvOS)
+        true
+        #else
+        false
+        #endif
+    }
+
+    /// Opens only the health page when disks are view-only
+    private var viewOnlySheet: Binding<StorageSheet?> {
+        Binding(get: { sheet }, set: { wanted in
+            guard Self.viewOnly else { return sheet = wanted }
+            if case .health = wanted { sheet = wanted }
+        })
     }
 
     @ViewBuilder private func content(of shown: StorageSheet) -> some View {
@@ -104,7 +121,7 @@ private struct StorageArraysSection: View {
                     .foregroundStyle(.secondary)
             }
             ForEach(model.arrays) { array in
-                if ArrayChange.manages(array) {
+                if ArrayChange.manages(array), !StorageView.viewOnly {
                     Button { sheet = .manage(array) } label: { ArrayRow(array: array).wholeRowTappable() }
                         .buttonStyle(.plain)
                 } else {
@@ -121,7 +138,7 @@ private struct StorageArraysSection: View {
     }
 
     @ViewBuilder private func repair(_ array: StorageArray) -> some View {
-        if array.needsAttention && array.repairsHere {
+        if array.needsAttention && array.repairsHere && !StorageView.viewOnly {
             Button(array.state == .stopped ? "Bring back…" : "Replace a disk…") { sheet = .repair(array) }
                 .buttonStyle(.borderless)
         } else if array.needsAttention {
@@ -151,7 +168,9 @@ private struct StorageDisksSection: View {
         } header: {
             Text("Disks")
         } footer: {
-            Text("Tap a disk to see its serial number, format it or make its light blink.")
+            if !StorageView.viewOnly {
+                Text("Tap a disk to see its serial number, format it or make its light blink.")
+            }
         }
     }
 }
@@ -218,8 +237,8 @@ struct StorageRepairView: View {
             StorageRunSection(model: model, title: array.state == .stopped ? "Bring back" : "Replace",
                               step: step) { dismiss() }
         }
-        .navigationTitle(array.state == .stopped ? "Bring back the array" : "Replace a disk")
-        #if os(iOS)
+        .screenTitle(array.state == .stopped ? "Bring back the array" : "Replace a disk")
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {
@@ -271,12 +290,12 @@ struct StorageSection: View {
         if !hosts.isEmpty || !cacheHosts.isEmpty {
             Section("Storage") {
                 ForEach(hosts, id: \.sshHost) { node in
-                    NavigationLink(value: StorageTarget(deployment: deployment, host: node.sshHost)) {
+                    ServerPageLink(value: StorageTarget(deployment: deployment, host: node.sshHost)) {
                         Label(title(for: node), systemImage: "internaldrive")
                     }
                 }
-                ForEach(cacheHosts, id: \.sshHost) { node in
-                    NavigationLink(value: CacheDiskTarget(deployment: deployment, host: node.sshHost)) {
+                ForEach(StorageView.viewOnly ? [] : cacheHosts, id: \.sshHost) { node in
+                    ServerPageLink(value: CacheDiskTarget(deployment: deployment, host: node.sshHost)) {
                         Label(cacheTitle(for: node), systemImage: "bolt.horizontal")
                     }
                 }

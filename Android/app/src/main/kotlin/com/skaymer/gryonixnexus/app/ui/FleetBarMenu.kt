@@ -19,7 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.size
 import com.skaymer.gryonixnexus.R
-import com.skaymer.gryonixnexus.app.ui.design.IOSBarButton
+import com.skaymer.gryonixnexus.app.ui.design.BarIconButton
 
 class FleetBarCommands {
     enum class Command { ADD_SERVER, IMPORT, EXPORT_SEVERAL, REORDER }
@@ -37,11 +37,11 @@ class FleetBarCommands {
 @Composable
 fun FleetBarMenu(commands: FleetBarCommands, modifier: Modifier = Modifier) {
     var open by remember { mutableStateOf(false) }
-    IOSBarButton(onClick = { open = true }, modifier = modifier) {
+    BarIconButton(onClick = { open = true }, modifier = modifier) {
         Icon(
             Icons.Filled.MoreHoriz,
             contentDescription = stringResource(R.string.fleet_more),
-            modifier = Modifier.size(26.dp),
+            
         )
     }
     DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
@@ -53,7 +53,7 @@ fun FleetBarMenu(commands: FleetBarCommands, modifier: Modifier = Modifier) {
             },
         )
         DropdownMenuItem(
-            text = { Text(stringResource(R.string.import_server)) },
+            text = { Text(stringResource(R.string.transfer_import)) },
             onClick = {
                 open = false
                 commands.ask(FleetBarCommands.Command.IMPORT)
@@ -61,7 +61,7 @@ fun FleetBarMenu(commands: FleetBarCommands, modifier: Modifier = Modifier) {
         )
         if (commands.count > 0) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.export_several)) },
+                text = { Text(stringResource(R.string.transfer_export)) },
                 onClick = {
                     open = false
                     commands.ask(FleetBarCommands.Command.EXPORT_SEVERAL)
@@ -101,21 +101,21 @@ class MetricsBarCommands {
 @Composable
 fun MetricsBarActions(commands: MetricsBarCommands) {
     var open by remember { mutableStateOf(false) }
-    IOSBarButton(
+    BarIconButton(
         onClick = { commands.ask(MetricsBarCommands.Command.ADD_PANEL) },
         enabled = commands.canAdd,
     ) {
         Icon(
             Icons.Filled.Add,
             contentDescription = stringResource(R.string.metrics_add_panel),
-            modifier = Modifier.size(26.dp),
+            
         )
     }
-    IOSBarButton(onClick = { open = true }, enabled = commands.canArrange) {
+    BarIconButton(onClick = { open = true }, enabled = commands.canArrange) {
         Icon(
             Icons.Filled.MoreHoriz,
             contentDescription = stringResource(R.string.metrics_board_options),
-            modifier = Modifier.size(26.dp),
+            
         )
     }
     DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
@@ -126,5 +126,40 @@ fun MetricsBarActions(commands: MetricsBarCommands) {
                 commands.ask(MetricsBarCommands.Command.ARRANGE)
             },
         )
+    }
+}
+
+class ServerBarCommands {
+    enum class Command { CONNECTION, KEY, SECTIONS }
+
+    var pending by mutableStateOf<Command?>(null)
+        private set
+
+    fun ask(command: Command) { pending = command }
+
+    fun taken() { pending = null }
+}
+
+/** The server page menu */
+@Composable
+fun ServerBarMenu(commands: ServerBarCommands) {
+    var open by remember { mutableStateOf(false) }
+    BarIconButton(onClick = { open = true }) {
+        Icon(Icons.Filled.MoreHoriz, contentDescription = stringResource(R.string.server_menu_more))
+    }
+    DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        listOf(
+            ServerBarCommands.Command.CONNECTION to R.string.server_menu_connection,
+            ServerBarCommands.Command.KEY to R.string.server_menu_key,
+            ServerBarCommands.Command.SECTIONS to R.string.server_menu_sections,
+        ).forEach { (command, title) ->
+            DropdownMenuItem(
+                text = { Text(stringResource(title)) },
+                onClick = {
+                    open = false
+                    commands.ask(command)
+                },
+            )
+        }
     }
 }

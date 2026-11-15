@@ -31,7 +31,7 @@ struct ServerConfigExportView: View {
             }
             portsSection
         }
-        .navigationTitle(Text("Configuration"))
+        .screenTitle(Text("Configuration"))
         .raisedNavigationTitle()
         .task { await load() }
     }
@@ -194,6 +194,7 @@ private struct PortsShareButtons: View {
             Label("Copy ports", systemImage: "doc.on.doc")
         }
         .rowActionButtonStyle()
+        #if !os(tvOS)
         if let url = RecordShareButtons.artifactURL(txtFile) {
             ShareLink(item: url) {
                 Label("Export file (text)", systemImage: "square.and.arrow.up")
@@ -204,12 +205,13 @@ private struct PortsShareButtons: View {
                 Label("Export file (CSV)", systemImage: "tablecells")
             }
         }
+        #endif
     }
 
     private func copyToClipboard(_ string: String) {
         #if os(iOS)
         UIPasteboard.general.string = string
-        #else
+        #elseif os(macOS)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(string, forType: .string)
         #endif

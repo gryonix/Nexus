@@ -34,6 +34,8 @@ object ServicePower {
             is StatusProbe.Container -> "logs --tail 500 --timestamps ${probe.name}"
             is StatusProbe.ComposeProject ->
                 "compose -p ${probe.project} logs --tail 500 --timestamps"
+            is StatusProbe.SystemdUnits ->
+                return ServiceCommand(probe.journal, ServiceCommand.TimeoutClass.QUICK, streamsOutput = true)
         }
         return ServiceCommand(
             PrivilegedCommand("/usr/bin/docker", arguments),
@@ -43,6 +45,16 @@ object ServicePower {
     }
 }
 
+fun ServicePower.systemctl(verb: String, units: String,
+                           timeoutClass: ServiceCommand.TimeoutClass = ServiceCommand.TimeoutClass.RESTART):
+    ServiceCommand =
+    ServiceCommand(PrivilegedCommand("/usr/bin/systemctl", "$verb $units"), timeoutClass)
+
+fun ServicePower.helper(path: String, verb: String,
+                        timeoutClass: ServiceCommand.TimeoutClass = ServiceCommand.TimeoutClass.RESTART):
+    ServiceCommand =
+    ServiceCommand(PrivilegedCommand(path, verb), timeoutClass)
+
 /** How to read the service's health */
 sealed class StatusProbe {
     /** `sudo docker compose -p <project> ps` — one row per container */
@@ -50,10 +62,14 @@ sealed class StatusProbe {
 
     data class Container(val name: String, val list: PrivilegedCommand) : StatusProbe()
 
+    /** `systemctl show` blocks per unit, plus the journal command */
+    data class SystemdUnits(val list: PrivilegedCommand, val journal: PrivilegedCommand) : StatusProbe()
+
     val privilegedCommands: List<PrivilegedCommand>
         get() = when (this) {
             is ComposeProject -> listOf(list)
             is Container -> listOf(list)
+            is SystemdUnits -> listOf(list)
         }
 }
 

@@ -19,9 +19,18 @@ data class MetricsHistoryPoint(
     val powerWatts: Double? = null,
     /** The sensor: rapl, hwmon, ipmi, ups or pi */
     val powerSource: String? = null,
+    val swapUsedBytes: Long? = null,
+    val swapTotalBytes: Long? = null,
 ) {
     val memUsedFraction: Double
         get() = if (memTotalBytes > 0) memUsedBytes.toDouble() / memTotalBytes.toDouble() else 0.0
+
+    val swapUsedFraction: Double?
+        get() {
+            val used = swapUsedBytes ?: return null
+            val total = swapTotalBytes ?: return null
+            return if (total > 0) used.toDouble() / total.toDouble() else null
+        }
 
     val diskUsedFraction: Double
         get() = if (diskTotalBytes > 0) diskUsedBytes.toDouble() / diskTotalBytes.toDouble() else 0.0
@@ -52,7 +61,7 @@ object MetricsHistoryParser {
 
     private fun parseLine(line: String): MetricsHistoryPoint? {
         val fields = line.split(",")
-        if (fields.size != 12) return null
+        if (fields.size != 12 && fields.size != 14) return null
         val epoch = fields[0].toDoubleOrNull() ?: return null
         val memUsed = fields[2].toLongOrNull() ?: return null
         val memTotal = fields[3].toLongOrNull() ?: return null
@@ -75,6 +84,8 @@ object MetricsHistoryParser {
             diskWrittenPerSecond = optionalDouble(fields[9]),
             load1 = load1,
             temperatureCelsius = optionalDouble(fields[11]),
+            swapUsedBytes = fields.getOrNull(12)?.toLongOrNull(),
+            swapTotalBytes = fields.getOrNull(13)?.toLongOrNull(),
         )
     }
 

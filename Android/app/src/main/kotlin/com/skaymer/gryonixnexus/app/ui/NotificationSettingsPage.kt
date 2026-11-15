@@ -1,5 +1,12 @@
 package com.skaymer.gryonixnexus.app.ui
 
+import android.icu.text.MeasureFormat
+import android.icu.util.Measure
+import android.icu.util.MeasureUnit
+import androidx.compose.ui.platform.LocalConfiguration
+import com.skaymer.gryonixnexus.app.push.NotifySounds
+import com.skaymer.gryonixnexus.app.push.NotifySoundGroup
+import com.skaymer.gryonixnexus.app.push.NotifySound
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -59,6 +66,8 @@ fun NotificationSettingsPage(store: SettingsStore, secrets: SecretStore) {
                 NotifyEventRows(wishes, change, withAppUpdate = true)
             }
         }
+        item { NotifySoundsSection(store) }
+        item { WidgetRefreshSection(wishes, change) }
         item { StopNotificationsSection(secrets) }
     }
 }
@@ -126,6 +135,51 @@ private fun StopNotificationsSection(secrets: SecretStore) {
     }
 }
 
+/** A sound for each kind of alert */
+@Composable
+private fun NotifySoundsSection(store: SettingsStore) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val revision by store.revision.collectAsState()
+    GroupedSection(header = stringResource(R.string.notify_sounds), note = stringResource(R.string.notify_sounds_note)) {
+        NotifySoundGroup.entries.forEach { group ->
+            val current = remember(revision) { NotifySounds.sound(store, group) }
+            ChoiceRow(
+                title = stringResource(group.title),
+                value = stringResource(current.title),
+                showDivider = group != NotifySoundGroup.entries.last(),
+                options = NotifySound.entries.map { sound ->
+                    stringResource(sound.title) to {
+                        NotifySounds.set(store, group, sound)
+                        sound.play(context)
+                    }
+                },
+            )
+        }
+    }
+}
+
+/** How often servers refresh this device's widgets */
+@Composable
+private fun WidgetRefreshSection(wishes: NotifyPreferences, change: (NotifyPreferences) -> Unit) {
+    val locale = LocalConfiguration.current.locales[0]
+    GroupedSection(header = stringResource(R.string.widgets_section), note = stringResource(R.string.widgets_refresh_note)) {
+        GroupedRow(showDivider = false) {
+            IOSSegmentedControl(
+                segments = NotifyPreferences.WIDGET_MINUTE_CHOICES,
+                selected = wishes.widgetMinutes,
+                label = { spelledMinutes(it, locale) },
+                onSelect = { change(wishes.copy(widgetMinutes = it)) },
+            )
+        }
+    }
+}
+
+/** A short span of minutes in the reader's language */
+private fun spelledMinutes(minutes: Int, locale: java.util.Locale): String {
+    val format = MeasureFormat.getInstance(locale, MeasureFormat.FormatWidth.SHORT)
+    return if (minutes < 60) format.format(Measure(minutes, MeasureUnit.MINUTE)) else format.format(Measure(minutes / 60, MeasureUnit.HOUR))
+}
+
 /** The server events a person can switch on or off */
 @Composable
 fun NotifyEventRows(wishes: NotifyPreferences, change: (NotifyPreferences) -> Unit, withAppUpdate: Boolean) {
@@ -140,7 +194,11 @@ fun NotifyEventRows(wishes: NotifyPreferences, change: (NotifyPreferences) -> Un
     ToggleRow(stringResource(R.string.notify_operations), wishes.operations, { change(wishes.copy(operations = it)) })
     ToggleRow(
         stringResource(R.string.notify_ssh_logins), wishes.sshLogins,
-        { change(wishes.copy(sshLogins = it)) }, showDivider = false,
+        { change(wishes.copy(sshLogins = it)) },
+    )
+    ToggleRow(
+        stringResource(R.string.notify_unusual_load), wishes.unusualLoad,
+        { change(wishes.copy(unusualLoad = it)) }, showDivider = false,
     )
 }
 

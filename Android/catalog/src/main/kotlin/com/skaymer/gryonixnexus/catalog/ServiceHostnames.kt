@@ -30,11 +30,15 @@ object ServiceHostnames {
         ServiceID.N8N to Slot({ it.n8nHostname }, { s, v -> s.copy(n8nHostname = v) }),
         ServiceID.HOME_ASSISTANT to Slot({ it.homeAssistantHostname }, { s, v -> s.copy(homeAssistantHostname = v) }),
         ServiceID.ZIGBEE2MQTT to Slot({ it.zigbee2MQTTHostname }, { s, v -> s.copy(zigbee2MQTTHostname = v) }),
+        ServiceID.ODIO to Slot({ it.odioHostname }, { s, v -> s.copy(odioHostname = v) }),
         ServiceID.ANYTHING_LLM to
             Slot({ it.anythingLLMHostname }, { s, v -> s.copy(anythingLLMHostname = v) }),
         ServiceID.OPENCLAW to
             Slot({ it.openclawHostname }, { s, v -> s.copy(openclawHostname = v) })
     )
+
+    /** Whether this service's address can be typed */
+    fun asksHostname(id: ServiceID): Boolean = settings[id] != null
 
     val fixedHostnameServices: Set<ServiceID> = setOf(
         ServiceID.MAILCOW, ServiceID.MAILU, ServiceID.DOCKER_MAILSERVER, ServiceID.VPN_PANEL

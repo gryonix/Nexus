@@ -110,7 +110,7 @@ enum LicenseAPI {
     }
 
     private static var platform: String {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         return "ios"
         #else
         return "macos"

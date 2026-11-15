@@ -78,7 +78,7 @@ object XrayConfiguration {
     }
 
     /** Xray's own resolver: one shared connection, answers cached */
-    private val DNS_OUTBOUND: JsonObject = buildJsonObject {
+    internal val DNS_OUTBOUND: JsonObject = buildJsonObject {
         put("tag", "dns-out")
         put("protocol", "dns")
         putJsonObject("settings") {
@@ -99,13 +99,13 @@ object XrayConfiguration {
         }
     }
 
-    private val BLOCK_OUTBOUND: JsonObject = buildJsonObject {
+    internal val BLOCK_OUTBOUND: JsonObject = buildJsonObject {
         put("tag", "block")
         put("protocol", "blackhole")
     }
 
     /** QUIC refused: apps fall back to TCP, far cheaper here */
-    private val QUIC_RULE: JsonObject = buildJsonObject {
+    internal val QUIC_RULE: JsonObject = buildJsonObject {
         put("type", "field")
         put("network", "udp")
         put("port", "443")
@@ -127,14 +127,14 @@ object XrayConfiguration {
     )
 
     /** Refused here, since the server holds them a minute */
-    private val PRIVATE_RULE: JsonObject = buildJsonObject {
+    internal val PRIVATE_RULE: JsonObject = buildJsonObject {
         put("type", "field")
         putJsonArray("ip") { PRIVATE_RANGES.forEach { add(it) } }
         put("outboundTag", "block")
     }
 
     /** Every DNS question from the device goes to that resolver */
-    private val DNS_RULE: JsonObject = buildJsonObject {
+    internal val DNS_RULE: JsonObject = buildJsonObject {
         put("type", "field")
         putJsonArray("inboundTag") { add("socks-in") }
         put("port", "53")

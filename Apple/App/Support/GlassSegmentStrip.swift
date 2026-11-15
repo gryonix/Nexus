@@ -195,11 +195,30 @@ final class SegmentStripView: UIView {
 
     func apply(items: [StripItem], selection: String) {
         let sectionsChanged = items != self.items
+        let idsChanged = items.map(\.id) != self.items.map(\.id)
         let selectionChanged = selection != self.selection
         self.items = items
         self.selection = selection
 
-        if sectionsChanged { rebuildLabels() }
+        if sectionsChanged, !idsChanged {
+            // Same sections, new picture or title: redraw in place.
+            UIView.performWithoutAnimation {
+                applyFonts()
+                if hasLaidOut {
+                    setNeedsLayout()
+                    layoutIfNeeded()
+                }
+            }
+        } else if sectionsChanged {
+            // New labels start at zero; placing them must not animate.
+            UIView.performWithoutAnimation {
+                rebuildLabels()
+                if hasLaidOut {
+                    setNeedsLayout()
+                    layoutIfNeeded()
+                }
+            }
+        }
         if sectionsChanged || selectionChanged {
             updateSelectedTraits()
             applyFonts()
@@ -349,13 +368,23 @@ final class SegmentStripView: UIView {
             let width = columns?[index] ?? natural[index]
             let frame = CGRect(x: x, y: Self.inset, width: width, height: rowHeight)
             itemFrames[item.id] = frame
-            greyLabels[item.id]?.frame = frame
-            inkLabels[item.id]?.frame = frame
+            place(greyLabels[item.id], at: frame)
+            place(inkLabels[item.id], at: frame)
             x += width
         }
 
         revealSelection(animated: false)
         hasLaidOut = true
+    }
+
+    /// A label that has never been placed appears in place
+    private func place(_ label: UILabel?, at frame: CGRect) {
+        guard let label else { return }
+        if label.frame == .zero {
+            UIView.performWithoutAnimation { label.frame = frame }
+        } else {
+            label.frame = frame
+        }
     }
 
     static func filledColumns(natural: [CGFloat], available: CGFloat) -> [CGFloat]? {

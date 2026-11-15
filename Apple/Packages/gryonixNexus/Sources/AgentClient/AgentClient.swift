@@ -55,6 +55,28 @@ public struct AgentClient: Sendable {
                         Gryonixnexusd_V1_ListSerialDevicesRequest())
     }
 
+    public func systemSettings() async throws -> Gryonixnexusd_V1_SystemSettings {
+        try await unary("/gryonixnexusd.v1.Control/GetSystemSettings", Gryonixnexusd_V1_GetSystemSettingsRequest())
+    }
+
+    public func setTimeZone(_ zone: String) async throws -> Gryonixnexusd_V1_SystemSettings {
+        var req = Gryonixnexusd_V1_SetTimeZoneRequest()
+        req.timeZone = zone
+        return try await unary("/gryonixnexusd.v1.Control/SetTimeZone", req)
+    }
+
+    public func setHostName(_ name: String) async throws -> Gryonixnexusd_V1_SystemSettings {
+        var req = Gryonixnexusd_V1_SetHostNameRequest()
+        req.hostName = name
+        return try await unary("/gryonixnexusd.v1.Control/SetHostName", req)
+    }
+
+    public func setTimeSync(enabled: Bool) async throws -> Gryonixnexusd_V1_SystemSettings {
+        var req = Gryonixnexusd_V1_SetTimeSyncRequest()
+        req.enabled = enabled
+        return try await unary("/gryonixnexusd.v1.Control/SetTimeSync", req)
+    }
+
     // MARK: Backups
 
     public func listBackups(serviceID: String) async throws -> Gryonixnexusd_V1_BackupList {
@@ -129,6 +151,14 @@ public struct AgentClient: Sendable {
         var req = Gryonixnexusd_V1_SetBackupDrivesRequest()
         req.drives = drives
         return try await unary("/gryonixnexusd.v1.Backup/SetBackupDrives", req)
+    }
+
+    @discardableResult
+    public func setBackupParts(_ parts: Gryonixnexusd_V1_BackupPartChoice) async throws
+        -> Gryonixnexusd_V1_BackupSchedulePolicy {
+        var req = Gryonixnexusd_V1_SetBackupPartsRequest()
+        req.parts = parts
+        return try await unary("/gryonixnexusd.v1.Backup/SetBackupParts", req)
     }
 
     /// Stages a drive archive where a restore reads it
@@ -323,6 +353,45 @@ public struct AgentClient: Sendable {
         return try await unary("/gryonixnexusd.v1.Containers/ListContainerGroupBackups", req)
     }
 
+    // MARK: Docker images and volumes
+
+    public func listImages() async throws -> Gryonixnexusd_V1_ImageInventory {
+        try await unary("/gryonixnexusd.v1.Containers/ListImages", Gryonixnexusd_V1_ListImagesRequest())
+    }
+
+    public func listVolumes() async throws -> Gryonixnexusd_V1_VolumeInventory {
+        try await unary("/gryonixnexusd.v1.Containers/ListVolumes", Gryonixnexusd_V1_ListVolumesRequest())
+    }
+
+    public func removeImage(reference: String) async throws -> Gryonixnexusd_V1_DockerRemovalResult {
+        var req = Gryonixnexusd_V1_RemoveImageRequest()
+        req.reference = reference
+        return try await unary("/gryonixnexusd.v1.Containers/RemoveImage", req)
+    }
+
+    public func removeVolume(name: String) async throws -> Gryonixnexusd_V1_DockerRemovalResult {
+        var req = Gryonixnexusd_V1_RemoveVolumeRequest()
+        req.name = name
+        return try await unary("/gryonixnexusd.v1.Containers/RemoveVolume", req)
+    }
+
+    public func listNetworks() async throws -> Gryonixnexusd_V1_NetworkInventory {
+        try await unary("/gryonixnexusd.v1.Containers/ListNetworks", Gryonixnexusd_V1_ListNetworksRequest())
+    }
+
+    public func removeNetwork(name: String) async throws -> Gryonixnexusd_V1_DockerRemovalResult {
+        var req = Gryonixnexusd_V1_RemoveNetworkRequest()
+        req.name = name
+        return try await unary("/gryonixnexusd.v1.Containers/RemoveNetwork", req)
+    }
+
+    public func pruneUnused(images: Bool, volumes: Bool) async throws -> Gryonixnexusd_V1_PruneUnusedResult {
+        var req = Gryonixnexusd_V1_PruneUnusedRequest()
+        req.images = images
+        req.volumes = volumes
+        return try await unary("/gryonixnexusd.v1.Containers/PruneUnused", req)
+    }
+
     // MARK: Updates
 
     public func checkUpdates() async throws -> Gryonixnexusd_V1_UpdateCheckResult {
@@ -376,11 +445,132 @@ public struct AgentClient: Sendable {
 
     /// Changes the admin-guard state
     public func setLockdown(mode: Gryonixnexusd_V1_LockdownMode,
-                            hosts: [String] = []) async throws -> Gryonixnexusd_V1_LockdownState {
+                            hosts: [String] = [],
+                            denyVPN: [String]? = nil) async throws -> Gryonixnexusd_V1_LockdownState {
         var req = Gryonixnexusd_V1_SetLockdownRequest()
         req.mode = mode
         req.hosts = hosts
+        if let denyVPN {
+            req.setDenyVpnHosts = true
+            req.denyVpnHosts = denyVPN
+        }
         return try await unary("/gryonixnexusd.v1.Lockdown/SetLockdown", req)
+    }
+
+    /// Which of these ports answer on the server's public address
+    public func probePublicPorts(host: String, ports: [UInt32]) async throws -> Gryonixnexusd_V1_ProbePublicPortsResponse {
+        var req = Gryonixnexusd_V1_ProbePublicPortsRequest()
+        req.host = host
+        req.ports = ports
+        return try await unary("/gryonixnexusd.v1.Exposure/ProbePublicPorts", req)
+    }
+
+    /// Caddy's local root certificate, PEM
+    public func getLocalRootCA() async throws -> String {
+        let reply: Gryonixnexusd_V1_GetLocalRootCAResponse =
+            try await unary("/gryonixnexusd.v1.Exposure/GetLocalRootCA", Gryonixnexusd_V1_GetLocalRootCARequest())
+        return reply.pem
+    }
+
+    /// Module ids this server keeps on
+    public func getAppModules() async throws -> [String] {
+        let reply: Gryonixnexusd_V1_AppModuleSet =
+            try await unary("/gryonixnexusd.v1.AppModules/GetAppModules", Gryonixnexusd_V1_GetAppModulesRequest())
+        return reply.on
+    }
+
+    public func setAppModules(_ on: [String]) async throws -> [String] {
+        var req = Gryonixnexusd_V1_AppModuleSet()
+        req.on = on
+        let reply: Gryonixnexusd_V1_AppModuleSet = try await unary("/gryonixnexusd.v1.AppModules/SetAppModules", req)
+        return reply.on
+    }
+
+    /// Names given to services, by service id
+    public func getServiceNames() async throws -> [String: String] {
+        let reply: Gryonixnexusd_V1_ServiceNameSet =
+            try await unary("/gryonixnexusd.v1.ServiceNames/GetServiceNames", Gryonixnexusd_V1_GetServiceNamesRequest())
+        return reply.names
+    }
+
+    /// Names one service; empty puts the catalog name back
+    public func setServiceName(_ serviceID: String, name: String) async throws -> [String: String] {
+        var req = Gryonixnexusd_V1_SetServiceNameRequest()
+        req.serviceID = serviceID
+        req.name = name
+        let reply: Gryonixnexusd_V1_ServiceNameSet =
+            try await unary("/gryonixnexusd.v1.ServiceNames/SetServiceName", req)
+        return reply.names
+    }
+
+    /// The machine's sound outputs, default first
+    public func listAudioOutputs() async throws -> [Gryonixnexusd_V1_AudioOutput] {
+        let reply: Gryonixnexusd_V1_ListAudioOutputsResponse =
+            try await unary("/gryonixnexusd.v1.Audio/ListAudioOutputs", Gryonixnexusd_V1_ListAudioOutputsRequest())
+        return reply.outputs
+    }
+
+    /// Sites with a .local name, by host
+    public func getLocalAliases() async throws -> [String: String] {
+        let reply: Gryonixnexusd_V1_LocalAliasesState =
+            try await unary("/gryonixnexusd.v1.Exposure/GetLocalAliases", Gryonixnexusd_V1_GetLocalAliasesRequest())
+        return Dictionary(reply.aliases.map { ($0.host, $0.alias) }) { first, _ in first }
+    }
+
+    /// Adds or removes one site's .local name
+    public func setLocalAlias(host: String, on: Bool) async throws -> [String: String] {
+        var req = Gryonixnexusd_V1_SetLocalAliasRequest()
+        req.host = host
+        req.on = on
+        let reply: Gryonixnexusd_V1_LocalAliasesState = try await unary("/gryonixnexusd.v1.Exposure/SetLocalAlias", req)
+        return Dictionary(reply.aliases.map { ($0.host, $0.alias) }) { first, _ in first }
+    }
+
+    /// Keeps these ports to private addresses; empty clears
+    public func setHomeOnlyPorts(_ ports: [(proto: String, port: Int)]) async throws {
+        var req = Gryonixnexusd_V1_SetHomeOnlyPortsRequest()
+        req.ports = ports.map { entry in
+            var port = Gryonixnexusd_V1_HomeOnlyPort()
+            port.proto = entry.proto
+            port.port = UInt32(entry.port)
+            return port
+        }
+        let _: Gryonixnexusd_V1_SetHomeOnlyPortsResponse = try await unary("/gryonixnexusd.v1.Exposure/SetHomeOnlyPorts", req)
+    }
+
+    /// The read-only MCP door's state
+    public func getMcpAccess() async throws -> Gryonixnexusd_V1_McpAccessState {
+        try await unary("/gryonixnexusd.v1.McpAccess/GetMcpAccess", Gryonixnexusd_V1_GetMcpAccessRequest())
+    }
+
+    /// Opens the MCP door for this key, or closes it
+    public func setMcpAccess(enabled: Bool, publicKey: String = "") async throws -> Gryonixnexusd_V1_McpAccessState {
+        var req = Gryonixnexusd_V1_SetMcpAccessRequest()
+        req.enabled = enabled
+        req.publicKey = publicKey
+        return try await unary("/gryonixnexusd.v1.McpAccess/SetMcpAccess", req)
+    }
+
+    /// One allowed call to the audio hub's local API
+    public func odioCall(method: String, path: String, body: String = "") async throws -> Gryonixnexusd_V1_OdioCallResponse {
+        var req = Gryonixnexusd_V1_OdioCallRequest()
+        req.method = method
+        req.path = path
+        req.body = body
+        return try await unary("/gryonixnexusd.v1.Audio/OdioCall", req)
+    }
+
+    /// Paths each site answers without the VPN
+    public func getOpenAPI() async throws -> Gryonixnexusd_V1_OpenAPIState {
+        try await unary("/gryonixnexusd.v1.Lockdown/GetOpenAPI", Gryonixnexusd_V1_GetOpenAPIRequest())
+    }
+
+    /// Replaces one service's open paths
+    public func setOpenAPI(serviceID: String, paths: [String]) async throws -> Gryonixnexusd_V1_OpenAPIState {
+        var req = Gryonixnexusd_V1_SetOpenAPIRequest()
+        req.serviceID = serviceID
+        req.paths = paths
+        return try await unary("/gryonixnexusd.v1.Lockdown/SetOpenAPI", req)
     }
 
     // MARK: Security
@@ -404,6 +594,16 @@ public struct AgentClient: Sendable {
         req.loginUser = loginUser
         req.appPublicKey = appPublicKey
         return try await unary("/gryonixnexusd.v1.Security/ListSshUsers", req)
+    }
+
+    /// Puts the app's key on one login account
+    public func authorizeAppKey(user: String, loginUser: String,
+                                appPublicKey: String) async throws -> Gryonixnexusd_V1_SshUsers {
+        var req = Gryonixnexusd_V1_AuthorizeAppKeyRequest()
+        req.user = user
+        req.loginUser = loginUser
+        req.appPublicKey = appPublicKey
+        return try await unary("/gryonixnexusd.v1.Security/AuthorizeAppKey", req)
     }
 
     public func setSSHKeyOnlyUsers(everyone: Bool, users: [String], loginUser: String,
@@ -501,8 +701,10 @@ public struct AgentClient: Sendable {
 
     public func registerNotifyDevice(platform: String, token: String, appVersion: String,
                                      locale: String, muted: [String] = [],
-                                     proof: String = "", name: String = "") async throws -> Gryonixnexusd_V1_NotifySettings {
+                                     proof: String = "", name: String = "",
+                                     sounds: [String: String] = [:]) async throws -> Gryonixnexusd_V1_NotifySettings {
         var req = Gryonixnexusd_V1_RegisterNotifyDeviceRequest()
+        req.sounds = sounds
         req.deviceProof = proof
         req.name = name
         req.platform = platform
@@ -704,6 +906,14 @@ public struct AgentClient: Sendable {
         return try await unary("/gryonixnexusd.v1.Install/StartInstallPlan", req)
     }
 
+    /// What this machine lacks for the services, before any install
+    public func checkInstall(_ services: [String]) async throws -> [Gryonixnexusd_V1_InstallFinding] {
+        var req = Gryonixnexusd_V1_CheckInstallRequest()
+        req.services = services
+        let result: Gryonixnexusd_V1_CheckInstallResult = try await unary("/gryonixnexusd.v1.Install/CheckInstall", req)
+        return result.findings
+    }
+
     /// A plan by id; empty id means newest
     public func installPlan(id: String = "") async throws -> Gryonixnexusd_V1_InstallPlan {
         var req = Gryonixnexusd_V1_GetInstallPlanRequest()
@@ -890,6 +1100,18 @@ public struct AgentClient: Sendable {
     /// The DNS new devices get, with the server's own resolver
     public func vpnDefaultDNS() async throws -> Gryonixnexusd_V1_VpnDns {
         try await unary("/gryonixnexusd.v1.Vpn/GetVpnDns", Gryonixnexusd_V1_GetVpnDnsRequest())
+    }
+
+    /// Moves AmneziaWG into the kernel module or back
+    public func setAmneziaKernel(_ enabled: Bool) async throws -> Gryonixnexusd_V1_VpnSpeedFacts {
+        var req = Gryonixnexusd_V1_SetAmneziaKernelRequest()
+        req.enabled = enabled
+        return try await unary("/gryonixnexusd.v1.Vpn/SetAmneziaKernel", req)
+    }
+
+    /// What decides the tunnels' speed on the host
+    public func getVPNSpeedFacts() async throws -> Gryonixnexusd_V1_VpnSpeedFacts {
+        try await unary("/gryonixnexusd.v1.Vpn/GetVpnSpeedFacts", Gryonixnexusd_V1_GetVpnSpeedFactsRequest())
     }
 
     @discardableResult

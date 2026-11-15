@@ -20,6 +20,9 @@ extension DemoAgentState {
             return history(bucket: asked.bucket, limit: asked.limit, machine: machine).demoPayload
         case "/gryonixnexusd.v1.Control/ListSerialDevices":
             return Self.serialDevices().demoPayload
+        case "/gryonixnexusd.v1.Control/GetSystemSettings", "/gryonixnexusd.v1.Control/SetTimeZone",
+             "/gryonixnexusd.v1.Control/SetHostName", "/gryonixnexusd.v1.Control/SetTimeSync":
+            return try await DemoSystemSettingsStore.shared.answer(path, request, machine)
         case "/gryonixnexusd.v1.Control/ServiceStatus":
             let asked = try Gryonixnexusd_V1_ServiceStatusRequest(serializedBytes: request)
             var answer = Gryonixnexusd_V1_ServiceStatusResponse()
@@ -35,6 +38,7 @@ extension DemoAgentState {
     private func state(of machine: DemoAgentMachine) async -> Gryonixnexusd_V1_State {
         var state = Gryonixnexusd_V1_State()
         state.agentVersion = DemoAgentOffer.installedVersion
+        state.agentHealth = Self.agentHealth()
         state.host = Self.host(of: machine)
         state.discoveredAt = Int64(Date().timeIntervalSince1970 * 1000)
         var services: [Gryonixnexusd_V1_Service] = []
@@ -43,6 +47,29 @@ extension DemoAgentState {
         }
         state.services = services
         return state
+    }
+
+    private static func agentHealth() -> Gryonixnexusd_V1_AgentHealth {
+        var health = Gryonixnexusd_V1_AgentHealth()
+        health.memoryBytes = 21_500_000
+        health.peakMemoryBytes = 34_800_000
+        health.openChannels = 3
+        health.startedAt = Int64((Date().timeIntervalSince1970 - 5 * 86_400) * 1000)
+        health.modules = [
+            demoModule("gryonixnexusd-metrics", 4_200_000, true),
+            demoModule("gryonixnexusd-xray", 18_600_000, true),
+        ]
+        return health
+    }
+
+    private static func demoModule(_ name: String, _ size: UInt64,
+                                   _ running: Bool) -> Gryonixnexusd_V1_AgentModule {
+        var module = Gryonixnexusd_V1_AgentModule()
+        module.name = name
+        module.version = DemoAgentOffer.installedVersion
+        module.sizeBytes = size
+        module.running = running
+        return module
     }
 
     private static func host(of machine: DemoAgentMachine) -> Gryonixnexusd_V1_Host {
@@ -95,6 +122,11 @@ extension DemoAgentState {
         case "/gryonixnexusd.v1.Lockdown/SetLockdown":
             let asked = try Gryonixnexusd_V1_SetLockdownRequest(serializedBytes: request)
             return try await setLockdown(asked, machine).demoPayload
+        case "/gryonixnexusd.v1.Lockdown/GetOpenAPI":
+            return await DemoOpenAPI.shared.state(of: machine).demoPayload
+        case "/gryonixnexusd.v1.Lockdown/SetOpenAPI":
+            let asked = try Gryonixnexusd_V1_SetOpenAPIRequest(serializedBytes: request)
+            return await DemoOpenAPI.shared.set(asked, on: machine).demoPayload
         case "/gryonixnexusd.v1.Dns/GetDynamicDNS":
             return dynamicDNS(machine).demoPayload
         case "/gryonixnexusd.v1.Dns/SetDynamicDNS":

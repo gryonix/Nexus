@@ -1,7 +1,7 @@
 [
   {
     "name" : "ipForwardingCheck",
-    "value" : "sudo sysctl net.ipv4.ip_forward"
+    "value" : "PATH=$PATH:/usr/sbin:/sbin sysctl net.ipv4.ip_forward"
   },
   {
     "name" : "pingSelf",
@@ -17,7 +17,7 @@
   },
   {
     "name" : "generalProbe",
-    "value" : "sudo sysctl net.ipv4.ip_forward; echo '___GRYONIXNEXUS_NEXT___'; ping -c 1 -W 2 '203.0.113.10'; echo '___GRYONIXNEXUS_NEXT___'; ping -c 1 -W 2 '10.8.0.2'"
+    "value" : "PATH=$PATH:/usr/sbin:/sbin sysctl net.ipv4.ip_forward; echo '___GRYONIXNEXUS_NEXT___'; ping -c 1 -W 2 '203.0.113.10'; echo '___GRYONIXNEXUS_NEXT___'; ping -c 1 -W 2 '10.8.0.2'"
   },
   {
     "name" : "pingTunnel",

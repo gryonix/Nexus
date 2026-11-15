@@ -41,6 +41,7 @@ fun ServerSettingsDialog(
 ) {
     val machines = remember(deployment) { ConnectionEdit.editable(deployment) }
     val store = remember(deployment.id) { DeploymentSecrets(secrets, deployment.id) }
+    val fleetDeployments by fleet.deployments.collectAsState()
     var drafts by remember(deployment.id) {
         mutableStateOf(machines.associate { it.id to ConnectionEdit.draft(it) })
     }
@@ -51,6 +52,8 @@ fun ServerSettingsDialog(
     var access by remember(deployment.id) {
         mutableStateOf(ServerAccessStore.options(settings, deployment.id))
     }
+    var lanAddress by remember(deployment.id) { mutableStateOf(store.homeAddress().orEmpty()) }
+    var homePath by remember(deployment.id) { mutableStateOf(store.homePath()) }
     var advancedOpen by remember(deployment.id) { mutableStateOf(false) }
     var page by remember(deployment.id) { mutableStateOf<String?>(null) }
     var forgotten by remember(deployment.id) { mutableStateOf(emptySet<String>()) }
@@ -74,6 +77,10 @@ fun ServerSettingsDialog(
                     settings, deployment.id,
                     access.copy(sftpDirectory = access.sftpDirectory?.trim()?.ifEmpty { null }),
                 )
+                if (deployment.hasHomeHost) {
+                    store.setHomeAddress(lanAddress)
+                    store.setHomePath(homePath)
+                }
                 fleet.update(updated)
                 onDismiss()
             },
@@ -137,6 +144,18 @@ fun ServerSettingsDialog(
             )
         }
 
+        if (deployment.hasHomeHost) {
+            GroupedSection(note = stringResource(R.string.add_server_lan_note)) {
+                FieldRow(
+                    label = stringResource(R.string.add_server_lan_address),
+                    value = lanAddress,
+                    placeholder = "192.168.1.50",
+                    onValueChange = { lanAddress = it },
+                )
+                HomePathRow(homePath, showDivider = false) { homePath = it }
+            }
+        }
+
         val revision by settings.revision.collectAsState()
         GroupedSection(
             header = stringResource(R.string.settings_connection_header),
@@ -173,7 +192,7 @@ fun ServerSettingsDialog(
                 )
                 ValueRow(
                     title = stringResource(R.string.server_bastion),
-                    value = bastionSummary(access.bastion, fleet.deployments.value),
+                    value = bastionSummary(access.bastion, fleetDeployments),
                     onClick = { page = PAGE_BASTION },
                 )
                 ValueRow(
@@ -195,7 +214,7 @@ fun ServerSettingsDialog(
     when (page) {
         PAGE_BASTION -> BastionPickerSheet(
             selection = access.bastion,
-            fleet = fleet.deployments.value.filter { it.id != deployment.id },
+            fleet = fleetDeployments.filter { it.id != deployment.id },
             onSelect = { access = access.copy(bastion = it); page = null },
             onDismiss = { page = null },
         )
@@ -207,7 +226,7 @@ fun ServerSettingsDialog(
         )
         PAGE_FALLBACK -> FallbackAddressSheet(
             fallback = access.fallback,
-            fleet = fleet.deployments.value.filter { it.id != deployment.id },
+            fleet = fleetDeployments.filter { it.id != deployment.id },
             primary = deployment.entry,
             onApply = { access = access.copy(fallback = it); page = null },
             onDismiss = { page = null },

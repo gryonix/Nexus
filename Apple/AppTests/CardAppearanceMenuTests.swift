@@ -20,7 +20,7 @@ final class CardAppearanceMenuTests: XCTestCase {
                        "the appearance menu is a Picker again — that is the control whose choice "
                        + "never reliably reached the card, and the size was then only changeable "
                        + "from Settings, which is the app-wide default and a different setting")
-        XCTAssertTrue(menu.contains("menuChoice("),
+        XCTAssertTrue(menu.contains("MenuChoice("),
                       "the appearance menu must be built from buttons that each carry their own tick")
     }
 
@@ -49,9 +49,9 @@ final class CardAppearanceMenuTests: XCTestCase {
             XCTAssertTrue(menu.contains(answer),
                           "the appearance menu stopped offering every \(answer)")
         }
-        XCTAssertEqual(menu.components(separatedBy: "menuChoice(\"App default\"").count - 1, 2,
+        XCTAssertEqual(menu.components(separatedBy: "MenuChoice(\"App default\"").count - 1, 2,
                        "the way back to the app-wide default is missing from the appearance menu")
-        XCTAssertTrue(menu.contains("menuChoice(\"Default\""),
+        XCTAssertTrue(menu.contains("MenuChoice(\"Default\""),
                       "the way back to the default colour is missing from the appearance menu")
     }
 
@@ -60,12 +60,14 @@ final class CardAppearanceMenuTests: XCTestCase {
         for setter in ["setCardSize(", "setIndicatorStyle(", "setTint("] {
             XCTAssertTrue(menu.contains(setter), "\(setter) call missing from the appearance menu")
         }
-        XCTAssertFalse(menu.contains("cardColumns.cardSize ="),
+        let wiring = try wiringBody()
+        XCTAssertFalse(wiring.contains("cardColumns.cardSize ="),
                        "a choice in this menu wrote the app-wide default directly — that is the "
                        + "exact defect \"one card resizes the whole fleet\" came from")
-        let setterCalls = menu.components(separatedBy: .newlines).filter {
-            $0.contains("setCardSize(") || $0.contains("setIndicatorStyle(") || $0.contains("setTint(")
+        let setterCalls = wiring.components(separatedBy: .newlines).filter {
+            $0.contains("setCardSize:") || $0.contains("setIndicatorStyle:") || $0.contains("setTint:")
         }
+        XCTAssertEqual(setterCalls.count, 3)
         XCTAssertTrue(setterCalls.allSatisfy { $0.contains("for: target())") },
                       "a setter call in this menu does not close on `for: target())`: \(setterCalls)")
     }
@@ -73,13 +75,25 @@ final class CardAppearanceMenuTests: XCTestCase {
     // MARK: - Slicing the source
 
     private func appearanceChoicesBody() throws -> String {
+        let repoRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(contentsOf: repoRoot
+            .appendingPathComponent("App/Features/Servers/ServerAppearance.swift"), encoding: .utf8)
+        guard let start = source.range(of: "struct ServerAppearanceChoices") else {
+            XCTFail("`ServerAppearanceChoices` is gone or renamed — point this test at whatever "
+                    + "replaced it rather than leaving it passing on an empty string")
+            return ""
+        }
+        return String(source[start.upperBound...])
+    }
+
+    private func wiringBody() throws -> String {
         let source = try listSource
         guard let start = source.range(of: "private func appearanceChoices("),
               let end = source.range(of: "private func menuChoice(", range: start.upperBound..<source.endIndex)
         else {
-            XCTFail("`appearanceChoices` or the `menuChoice` helper right after it is gone or "
-                    + "renamed — this test has to be pointed at whatever replaced them rather "
-                    + "than left passing on an empty string")
+            XCTFail("`appearanceChoices` wiring in ServerListView is gone or renamed")
             return ""
         }
         return String(source[start.upperBound..<end.lowerBound])

@@ -6,7 +6,7 @@ enum AppChrome {
 
     /// Whether the app's own surfaces draw glass right now
     static var usesGlass: Bool {
-        guard #available(iOS 26.0, macOS 26.0, *) else { return false }
+        guard #available(iOS 26.0, macOS 26.0, tvOS 26.0, *) else { return false }
         return !isClassic
     }
 
@@ -15,7 +15,7 @@ enum AppChrome {
     }
 
     static var isChoosable: Bool {
-        if #available(iOS 26.0, macOS 26.0, *) { return true }
+        if #available(iOS 26.0, macOS 26.0, tvOS 26.0, *) { return true }
         return false
     }
 

@@ -17,7 +17,10 @@ final class VPNPortShareTests: XCTestCase {
         let text = VPNPortShare.dropIn(wireGuardPort: 51821, amneziaPort: 51822)
         XCTAssertTrue(text.contains("table inet gryonixnexus_vpn_share\ndelete table inet gryonixnexus_vpn_share\n"))
         XCTAssertTrue(text.contains("udp dport 51821 @th,64,32 != { 0x01000000, 0x02000000, 0x03000000, "
-                                    + "0x04000000 } redirect to :51822\n"))
+                                    + "0x04000000 } udp dport set 51822 meta mark set 0x4e580001\n"))
+        XCTAssertTrue(text.contains("type filter hook prerouting priority raw;"), "before conntrack")
+        XCTAssertFalse(text.contains("redirect"), "a redirect sends AmneziaWG through docker-proxy")
+        XCTAssertTrue(text.contains("ct mark 0x4e580001 udp sport 51822 udp sport set 51821\n"))
         XCTAssertTrue(text.hasSuffix("    }\n}\n"))
     }
 
@@ -26,7 +29,7 @@ final class VPNPortShareTests: XCTestCase {
         XCTAssertTrue(alone.contains("rm -f /etc/nftables.d/gryonixnexus-svc-vpn-share.nft"))
         XCTAssertTrue(alone.contains("nft delete table inet gryonixnexus_vpn_share 2>/dev/null || true"))
         let both = VPNPortShare.section(context([.wireguardVPN, .amneziaWG]))
-        XCTAssertTrue(both.contains("redirect to :51822\n    }\n}\nEOF_VPN_SHARE\nnft -f "))
+        XCTAssertTrue(both.contains("udp sport set 51820\n    }\n}\nEOF_VPN_SHARE\nnft -f "))
         XCTAssertEqual(AmneziaWGVPNService().reportSteps(context([.wireguardVPN, .amneziaWG])).first?
             .contains("vpn.example.com:51820 (UDP)"), true)
     }

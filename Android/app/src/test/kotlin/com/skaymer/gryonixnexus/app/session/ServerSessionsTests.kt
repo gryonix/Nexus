@@ -64,6 +64,28 @@ class ServerSessionsTests {
         assertEquals("10.8.0.2", settings.homeHost)
     }
 
+    @Test
+    fun `the home machine's network address is the way in when the relay is down`() {
+        val deployment = pair()
+        DeploymentSecrets(store, deployment.id).setHomeAddress(" 192.168.1.50 ")
+        assertEquals("192.168.1.50", sessions.settings(deployment).homeLANHost)
+    }
+
+    @Test
+    fun `a single machine has no home network address`() {
+        val deployment = single()
+        DeploymentSecrets(store, deployment.id).setHomeAddress("192.168.1.50")
+        assertNull(sessions.settings(deployment).homeLANHost)
+    }
+
+    @Test
+    fun `a blank network address is forgotten`() {
+        val secrets = DeploymentSecrets(store, "PAIR-1")
+        secrets.setHomeAddress("192.168.1.50")
+        secrets.setHomeAddress("  ")
+        assertNull(secrets.homeAddress())
+    }
+
     /** Two machines, two passwords — the whole reason the map exists */
     @Test
     fun `each machine offers its own password`() {

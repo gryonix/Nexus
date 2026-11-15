@@ -23,7 +23,7 @@ struct RealitySiteSection: View {
                 .buttonStyle(.plain)
             }
             TextField("Another site", text: Binding(get: { isListed ? "" : site }, set: { site = $0 }))
-                #if os(iOS)
+                #if os(iOS) || os(tvOS)
                 .textInputAutocapitalization(.never)
                 .keyboardType(.URL)
                 #endif

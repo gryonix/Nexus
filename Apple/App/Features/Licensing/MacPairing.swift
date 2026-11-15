@@ -20,7 +20,7 @@ struct MacPairingView: View {
             if let failure { Text(failure).foregroundStyle(.red) }
         }
         .padding()
-        .navigationTitle(Text("Restore with iPhone"))
+        .screenTitle(Text("Restore with iPhone"))
         .task { await pair() }
     }
 
@@ -102,7 +102,7 @@ struct PairApprovalSheet: View {
                     if let failure = approval.failure { Text(failure).foregroundStyle(.red) }
                 }
             }
-            .navigationTitle(Text("Restore with iPhone"))
+            .screenTitle(Text("Restore with iPhone"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { approval.nonce = nil }

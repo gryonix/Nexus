@@ -119,6 +119,10 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
     /// The app asking how much has gone through
     override func handleAppMessage(_ messageData: Data,
                                    completionHandler: ((Data?) -> Void)?) {
+        if messageData == AdvancedTraffic.request {
+            answerAdvancedTraffic(completionHandler)
+            return
+        }
         guard messageData == TunnelProviderMessage.statisticsRequest else {
             completionHandler?(nil)
             return
@@ -246,6 +250,15 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         completionHandler()
     }
 
+    private func answerAdvancedTraffic(_ completionHandler: ((Data?) -> Void)?) {
+        let datapath = xray
+        Task {
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            completionHandler?(try? encoder.encode(await datapath.advancedTraffic()))
+        }
+    }
+
     private func proxyStatistics() -> TunnelProviderMessage.Statistics {
         let counters = xray.counters
         return .init(received: Int64(counters.received), sent: Int64(counters.sent))
@@ -261,6 +274,10 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
 
     private func stopXray(_ completionHandler: @escaping () -> Void) {
         completionHandler()
+    }
+
+    private func answerAdvancedTraffic(_ completionHandler: ((Data?) -> Void)?) {
+        completionHandler?(nil)
     }
 
     private func proxyStatistics() -> TunnelProviderMessage.Statistics {

@@ -29,8 +29,8 @@ struct TopProcessesView: View {
             }
             ProcessListSection(rows: rows, loaded: model.loaded, error: model.errorMessage)
         }
-        .navigationTitle("Top processes")
-        #if os(iOS)
+        .screenTitle("Top processes")
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .task { await model.follow() }

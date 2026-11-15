@@ -572,9 +572,9 @@ private fun RemovableLine(text: String, onRemove: () -> Unit) {
 private fun Header(text: String, note: String? = null) {
     if (note == null) {
         Text(
-            text.uppercase(),
-            style = MaterialTheme.typography.bodySmall,
-            color = Gryonix.colors.secondaryLabel,
+            text,
+            style = MaterialTheme.typography.titleSmall,
+            color = Gryonix.colors.accent,
             modifier = Modifier.padding(top = 6.dp),
         )
         return
@@ -584,9 +584,9 @@ private fun Header(text: String, note: String? = null) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text.uppercase(),
-            style = MaterialTheme.typography.bodySmall,
-            color = Gryonix.colors.secondaryLabel,
+            text,
+            style = MaterialTheme.typography.titleSmall,
+            color = Gryonix.colors.accent,
             modifier = Modifier.weight(1f),
         )
         InfoNoteButton(title = text, note = note)

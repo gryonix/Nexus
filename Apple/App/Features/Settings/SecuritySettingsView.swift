@@ -22,6 +22,10 @@ struct SecuritySettingsView: View {
                 } header: {
                     InfoSectionHeader("Require unlock", note: "Face ID, Touch ID or your device passcode guards these actions.")
                 }
+                Section {
+                    NavigationLink("Known hosts") { KnownHostsView() }
+                    NavigationLink("SSH keys") { SSHKeysView() }
+                }
             } else {
                 Section {
                     Label(failed ? "Not unlocked." : "Unlocking…",
@@ -33,8 +37,8 @@ struct SecuritySettingsView: View {
                 }
             }
         }
-        .navigationTitle("Security")
-        #if os(iOS)
+        .screenTitle("Security")
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .task {

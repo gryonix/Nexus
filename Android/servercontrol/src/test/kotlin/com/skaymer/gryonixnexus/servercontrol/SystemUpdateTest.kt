@@ -94,4 +94,38 @@ class SystemUpdateTest {
             SystemUpdate.scheduleCommand(weekly),
         )
     }
+
+    @Test
+    fun `the reboot schedule is read and sent`() {
+        val status = requireNotNull(SystemUpdateStatus.parse("state=idle\nreboot_schedule=weekly:7@04:30\nlog:\n"))
+        assertEquals(RebootSchedule.Weekly(7, 4, 30), status.rebootSchedule)
+        assertNull(SystemUpdateStatus.parse(fresh)?.rebootSchedule)
+        assertEquals(
+            "sudo -n /opt/gryonixnexus-system-ctl.sh reboot-schedule daily@03:05",
+            SystemUpdate.rebootScheduleCommand(RebootSchedule.Daily(3, 5)),
+        )
+        assertEquals(
+            "sudo -n /opt/gryonixnexus-system-ctl.sh reboot-schedule off",
+            SystemUpdate.rebootScheduleCommand(RebootSchedule.Off),
+        )
+        assertEquals(
+            "sudo -n /opt/gryonixnexus-system-ctl.sh reboot-schedule weekly:1@23:59",
+            SystemUpdate.rebootScheduleCommand(RebootSchedule.Weekly(1, 23, 59)),
+        )
+    }
+
+    @Test
+    fun `a reboot schedule refuses anything else`() {
+        listOf("", "daily", "daily@25:00", "weekly:8@01:00", "weekly:x@01:00", "daily@01:60;x", "every:1d@01:00")
+            .forEach { assertNull(RebootSchedule.fromWrapperArgument(it), it) }
+        assertEquals(RebootSchedule.Off, RebootSchedule.fromWrapperArgument("off"))
+        assertEquals(RebootSchedule.Daily(0, 0), RebootSchedule.fromWrapperArgument("daily@00:00"))
+    }
+
+    @Test
+    fun `host names are rfc 1123 labels`() {
+        listOf("orion", "a", "web-01", "0abc", "a".repeat(63)).forEach { assertTrue(HostNameRules.isValid(it), it) }
+        listOf("", "-a", "a-", "Orion", "a.b", "a b", "a_b", "é", "a".repeat(64))
+            .forEach { assertFalse(HostNameRules.isValid(it), it) }
+    }
 }

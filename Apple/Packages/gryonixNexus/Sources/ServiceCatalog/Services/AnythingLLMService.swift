@@ -202,6 +202,7 @@ public struct AnythingLLMService: ManagedService {
                 plan: .archive(ArchiveBackupPlan(
                     composeProject: Self.composeProject,
                     dataPath: path,
+                    dataPart: .files,
                     databases: [],
                     // SQLite and a vector index, both written continuously.
                     quiesceServices: [Self.container],

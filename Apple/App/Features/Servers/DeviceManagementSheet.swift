@@ -8,19 +8,20 @@ struct DeviceManagementSheet: View {
     let deployment: Deployment
 
     @StateObject private var model = DeviceManagementModel()
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dismiss) private var dismissSheet
+    @Environment(\.sidePaneClose) private var paneClose
     @State private var confirmingRevoke: Gryonixnexusd_V1_Device?
 
     var body: some View {
-        NavigationStack {
+        SheetStack {
             content
-                .navigationTitle("Paired Devices")
-                #if os(iOS)
+                .screenTitle("Paired Devices")
+                #if os(iOS) || os(tvOS)
                 .navigationBarTitleDisplayMode(.inline)
                 #endif
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Done") { dismiss() }
+                        Button("Done") { closePage() }
                     }
                 }
         }
@@ -157,7 +158,7 @@ struct DeviceManagementSheet: View {
         HStack(spacing: 12) {
             Image(systemName: icon(for: device))
                 .foregroundStyle(model.isThisDevice(device) ? Color.green : Color.secondary)
-                .frame(width: 22)
+                .rowIconFrame(22)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     if device.label.isEmpty {
@@ -358,5 +359,13 @@ extension Array where Element == Gryonixnexusd_V1_Device {
     func uniquedByID() -> [Element] {
         var seen = Set<String>()
         return filter { seen.insert($0.id).inserted }
+    }
+}
+
+@available(macOS 15.0, *)
+private extension DeviceManagementSheet {
+    /// Closes the column page, or the sheet
+    func closePage() {
+        if let paneClose { paneClose() } else { dismissSheet() }
     }
 }

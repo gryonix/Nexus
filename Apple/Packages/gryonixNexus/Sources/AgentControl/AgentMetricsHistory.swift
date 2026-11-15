@@ -44,7 +44,9 @@ extension MetricsHistoryPoint {
             load1: point.load1,
             temperatureCelsius: point.hasTemperatureCelsius ? point.temperatureCelsius : nil,
             powerWatts: point.hasPowerWatts ? point.powerWatts : nil,
-            powerSource: point.powerSource.isEmpty ? nil : point.powerSource
+            powerSource: point.powerSource.isEmpty ? nil : point.powerSource,
+            swapUsedBytes: point.hasSwapUsedBytes ? point.swapUsedBytes : nil,
+            swapTotalBytes: point.hasSwapTotalBytes ? point.swapTotalBytes : nil
         )
     }
 }

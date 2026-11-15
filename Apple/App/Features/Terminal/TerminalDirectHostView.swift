@@ -34,7 +34,7 @@ struct TerminalDirectHostView: View {
             }
         }
         .bottomBarClearance()
-        .navigationTitle(Text(verbatim: host.title))
+        .screenTitle(Text(verbatim: host.title))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

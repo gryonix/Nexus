@@ -1,7 +1,7 @@
 import Foundation
 import ServerControl
 import UserNotifications
-#if os(iOS)
+#if os(iOS) || os(tvOS)
 import UIKit
 #else
 import AppKit
@@ -17,7 +17,9 @@ final class NotifyFleetSync {
     /// Fetches the push token when notifications are already allowed
     func refreshTokenIfAllowed() async {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
-        #if os(iOS)
+        #if os(tvOS)
+        return
+        #elseif os(iOS)
         guard [.authorized, .provisional, .ephemeral].contains(settings.authorizationStatus) else { return }
         UIApplication.shared.registerForRemoteNotifications()
         #else

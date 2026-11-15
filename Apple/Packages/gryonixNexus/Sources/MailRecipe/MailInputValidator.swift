@@ -59,6 +59,8 @@ public struct MailInputValidator: InputValidator {
             throw ValidationError.inconsistentTopology(L10nGeneration.errConflictingServices(language, names: names))
         }
         if input.scope == .localOnly { try checkLocalOnlyServices(input) }
+        try checkAirPlayScreen(input)
+        try checkAudioHubPlayers(input)
         try checkHomeOnlyServices(input)
         try checkHomeAssistantStick(input)
         try checkSmartHomeAddOns(input)
@@ -71,6 +73,24 @@ public struct MailInputValidator: InputValidator {
                     L10nGeneration.errTunnelCarriesOnlyWeb(language, service: offender.displayName))
             }
         }
+    }
+
+    /// Screen and AirPlay 2 speaker clash on one machine
+    private func checkAirPlayScreen(_ input: MailRecipeInput) throws {
+        guard input.services.contains(.uxplay), input.services.contains(.shairportSync),
+              input.serviceSettings.shairportMode != ShairportSyncService.airplay1
+        else { return }
+        throw ValidationError.inconsistentTopology(
+            L10nGeneration.errAirPlayScreenNeedsAirPlay1(input.language))
+    }
+
+    /// The hub already runs these players
+    private func checkAudioHubPlayers(_ input: MailRecipeInput) throws {
+        guard input.services.contains(.odio),
+              let player = ServiceRegistry.services(input.services.intersection(ServiceID.audioHubPlayers)).first
+        else { return }
+        throw ValidationError.inconsistentTopology(
+            L10nGeneration.errOverlapsAudioHub(input.language, service: player.displayName))
     }
 
     private func checkHomeOnlyServices(_ input: MailRecipeInput) throws {

@@ -38,6 +38,9 @@ struct VPNIslandStyle: Codable, Hashable, Sendable {
     enum CompactDetail: String, Codable, CaseIterable, Sendable {
         case timer, protocolName, traffic, nothing
 
+        /// The choices offered; a saved timer reads as nothing
+        static let offered: [CompactDetail] = [.protocolName, .traffic, .nothing]
+
         var title: LocalizedStringKey {
             switch self {
             case .timer: return "Connection time"
@@ -49,7 +52,7 @@ struct VPNIslandStyle: Codable, Hashable, Sendable {
     }
 
     var tint: Tint = .blue
-    var compactDetail: CompactDetail = .timer
+    var compactDetail: CompactDetail = .nothing
     var showsTimer = true
     var showsProtocol = true
     var showsServer = true

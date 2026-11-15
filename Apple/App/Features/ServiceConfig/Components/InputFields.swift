@@ -6,6 +6,8 @@ struct TechnicalField: View {
     let prompt: String
     @Binding var text: String
     var ownAddress = false
+    /// A name people read, spaces included
+    var spokenName = false
     @ObservedObject private var license = LicenseStore.shared
 
     var body: some View {
@@ -64,7 +66,7 @@ struct TechnicalField: View {
             .foregroundStyle(.primary)
             .autocorrectionDisabled()
             .textInputAutocapitalization(.never)
-            .keyboardType(.URL)
+            .keyboardType(spokenName ? .default : .URL)
         #endif
     }
 }

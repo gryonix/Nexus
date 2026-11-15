@@ -18,7 +18,7 @@ struct VPNClientsView: View {
         CardList {
             ServerVPNSection(viewModel: viewModel, selection: $selection)
         }
-        .navigationTitle("VPN devices")
+        .screenTitle("VPN devices")
         .raisedNavigationTitle()
         .refreshableWithShortcut {
             await viewModel.loadVPNClients(protocol: viewModel.vpnProtocol(preferring: selection))

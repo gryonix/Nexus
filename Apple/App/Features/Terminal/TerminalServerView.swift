@@ -22,7 +22,7 @@ struct TerminalServerView: View {
             TerminalLoginsContent(deployment: deployment, model: model)
         }
         .bottomBarClearance()
-        .navigationTitle("Terminal")
+        .screenTitle("Terminal")
         .raisedNavigationTitle()
     }
 }
@@ -39,6 +39,8 @@ struct TerminalLoginsContent: View {
     @State private var opening: TerminalProfile?
 
     var body: some View {
+        TerminalMachinesSection(deployment: deployment)
+
         Section {
             if model.profiles.isEmpty {
                 emptyRow
@@ -83,6 +85,14 @@ struct TerminalLoginsContent: View {
             }
         }
         .task { model.load() }
+        .onChange(of: model.profiles) { _, profiles in openPending(in: profiles) }
+    }
+
+    private func openPending(in profiles: [TerminalProfile]) {
+        guard let id = sessions.pendingOpen,
+              let profile = profiles.first(where: { $0.id == id }) else { return }
+        sessions.pendingOpen = nil
+        opening = profile
     }
 
     private var emptyRow: some View {
@@ -93,6 +103,15 @@ struct TerminalLoginsContent: View {
                 .foregroundStyle(.secondary)
         }
         .padding(.vertical, 2)
+    }
+
+    /// The secret's kind, and the machine when there are several
+    private func subtitle(of profile: TerminalProfile) -> String {
+        let kind = UIL10n.string(profile.kindDescription)
+        guard deployment.nodes.count > 1 else { return kind }
+        let node = deployment.nodes.first { $0.id == profile.nodeID } ?? deployment.nodes.first
+        guard let node, let machine = deployment.metricsMachineLabel(for: node.sshHost) else { return kind }
+        return "\(kind) · \(machine)"
     }
 
     @ViewBuilder
@@ -109,7 +128,7 @@ struct TerminalLoginsContent: View {
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text(verbatim: profile.username)
-                    Text(verbatim: profile.kindDescription)
+                    Text(verbatim: subtitle(of: profile))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

@@ -74,7 +74,7 @@ struct ModelKeysView: View {
                 InfoSectionHeader("How the keys are kept", note: "Encryption protects copies — a backup, a disk taken out of the machine. Anyone with root on this server can read the keys, because the gateway reads them too.")
             }
         }
-        .navigationTitle(Text("API keys"))
+        .screenTitle(Text("API keys"))
         .task { await load() }
     }
 

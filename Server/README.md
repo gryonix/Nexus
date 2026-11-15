@@ -39,3 +39,36 @@ installed version.
 Installed agents check for a signed release manifest and install newer versions
 themselves. The agent's source is also published as its own repository,
 [github.com/gryonix/nexus-agent](https://github.com/gryonix/nexus-agent).
+
+## VPN DNS and AdGuard Home
+
+VPN devices get `10.53.0.53` as their DNS. On the VPN server, nftables
+redirects that address, arriving on a Docker bridge, to the agent's relay on
+port 10053. The relay asks resolvers in the saved order. `local` means this
+deployment's AdGuard Home or Pi-hole: on the same machine through
+`127.0.0.1:53`, or, on a VPS that relays a home machine, through the home
+agent's bridge at `<home tunnel address>:10054`, which forwards to the home
+machine's loopback AdGuard Home. AdGuard Home's own port 53 stays on loopback,
+so `dig @10.8.0.2` on port 53 from the VPS times out by design. Test the
+path with `dig @10.8.0.2 -p 10054 example.com` instead.
+
+While `local` leads the order and a local resolver exists, every DNS query
+from the VPN containers (`vpnpanel` for WireGuard, `awgvpn`, `openvpn`, `xray`,
+`shadowsocks`) is redirected to the relay, whatever resolver the device asked.
+This covers every protocol the same way: a device configured with `1.1.1.1`,
+an app with a hard-coded resolver, and the DNS of the proxy protocols all end
+up in AdGuard Home's query log and under its block lists. Choosing another
+resolver as the devices' DNS turns the redirect off. The relay still falls back
+to the next resolver in the order when AdGuard Home does not answer; the
+journal says so once a minute (`DNS trouble in the last minute`). DNS over
+HTTPS or TLS from a device is not plain DNS and is not redirected.
+
+## Mailcow updates
+
+Mailcow updates through its own `update.sh`, run by the update wrapper
+(`/opt/gryonixnexus-update-ctl.sh`): `check` asks `update.sh --check`; `run`
+takes a backup through the backup wrapper, then runs
+`update.sh --force --skip-ping-check` with stdin closed, runs it again when it
+replaced itself, and waits for the stack to be healthy. Scheduled updates
+include Mailcow and skip it when there is nothing new. Installed wrappers are
+brought up to date by the agent at startup.

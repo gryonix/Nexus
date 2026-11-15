@@ -45,6 +45,35 @@ final class SystemUpdateTests: XCTestCase {
         XCTAssertEqual(SystemUpdate.swapCommand(sizeGB: nil), "sudo -n /opt/gryonixnexus-system-ctl.sh swap off")
     }
 
+    func testRebootScheduleIsReadAndSet() throws {
+        let status = try XCTUnwrap(SystemUpdateStatus.parse("state=idle\nreboot_schedule=weekly:7@04:30\nlog:\n"))
+        XCTAssertEqual(status.rebootSchedule, .weekly(weekday: 7, hour: 4, minute: 30))
+        XCTAssertNil(try XCTUnwrap(SystemUpdateStatus.parse(fresh)).rebootSchedule)
+        XCTAssertEqual(SystemUpdate.rebootScheduleCommand(.daily(hour: 3, minute: 5)),
+                       "sudo -n /opt/gryonixnexus-system-ctl.sh reboot-schedule daily@03:05")
+        XCTAssertEqual(SystemUpdate.rebootScheduleCommand(.off),
+                       "sudo -n /opt/gryonixnexus-system-ctl.sh reboot-schedule off")
+        XCTAssertEqual(SystemUpdate.rebootScheduleCommand(.weekly(weekday: 1, hour: 23, minute: 59)),
+                       "sudo -n /opt/gryonixnexus-system-ctl.sh reboot-schedule weekly:1@23:59")
+    }
+
+    func testHostNamesAreRfc1123Labels() {
+        for good in ["orion", "a", "web-01", "0abc", String(repeating: "a", count: 63)] {
+            XCTAssertTrue(HostNameRules.isValid(good), good)
+        }
+        for bad in ["", "-a", "a-", "Orion", "a.b", "a b", "a_b", "é", String(repeating: "a", count: 64)] {
+            XCTAssertFalse(HostNameRules.isValid(bad), bad)
+        }
+    }
+
+    func testRebootScheduleRefusesAnythingElse() {
+        for bad in ["", "daily", "daily@25:00", "weekly:8@01:00", "weekly:x@01:00", "daily@01:60;x", "every:1d@01:00"] {
+            XCTAssertNil(RebootSchedule(wrapperArgument: bad), bad)
+        }
+        XCTAssertEqual(RebootSchedule(wrapperArgument: "off"), .off)
+        XCTAssertEqual(RebootSchedule(wrapperArgument: "daily@00:00"), .daily(hour: 0, minute: 0))
+    }
+
     func testCommandsNameTheScriptAndItsArguments() {
         XCTAssertEqual(SystemUpdate.atStartCommand(.apps, on: true),
                        "sudo -n /opt/gryonixnexus-system-ctl.sh at-start apps on")

@@ -119,6 +119,8 @@ public struct ServerRequirements: Sendable, Hashable {
 /// How the service runs on the server
 public enum ServiceRuntime: Sendable, Hashable {
     case docker(composeProject: String)
+    /// Installed from packages and run by systemd, without docker
+    case systemd(unit: String)
 }
 
 /// A file the setup script writes for a docker service
@@ -174,15 +176,22 @@ public struct WebIngress: Sendable, Hashable {
     public let upstreamHTTPS: Bool
     public let publicPaths: [String]
     public let overwriteForwardedFor: Bool
+    /// Caddy snippet file with basic_auth, imported into the site
+    public let basicAuthSnippet: String?
+    /// Answers at a .local name on Caddy's own certificate
+    public let homeOnly: Bool
 
     public init(hostname: String, upstreamPort: Int, adminGuard: Bool = true,
                 upstreamHTTPS: Bool = false, publicPaths: [String] = [],
-                overwriteForwardedFor: Bool = false) {
+                overwriteForwardedFor: Bool = false, basicAuthSnippet: String? = nil,
+                homeOnly: Bool = false) {
         self.hostname = hostname
         self.upstreamPort = upstreamPort
         self.adminGuard = adminGuard
         self.upstreamHTTPS = upstreamHTTPS
         self.publicPaths = publicPaths
         self.overwriteForwardedFor = overwriteForwardedFor
+        self.basicAuthSnippet = basicAuthSnippet
+        self.homeOnly = homeOnly
     }
 }

@@ -1,5 +1,7 @@
 package com.skaymer.gryonixnexus.app.servers
 
+import com.skaymer.gryonixnexus.app.widgets.WidgetFeed
+
 import com.skaymer.gryonixnexus.app.licensing.LicenseGate
 import com.skaymer.gryonixnexus.app.shell.SettingsStore
 import com.skaymer.gryonixnexus.servercontrol.Deployment
@@ -21,6 +23,10 @@ class FleetRepository(
 ) {
     private val _deployments = MutableStateFlow<List<Deployment>>(emptyList())
     val deployments: StateFlow<List<Deployment>> = _deployments.asStateFlow()
+
+    private val _groupOrder = MutableStateFlow(ServerGroups.parse(settings.string(ServerGroups.ORDER_KEY)))
+    /** The order the strip shows groups in */
+    val groupOrder: StateFlow<List<String>> = _groupOrder.asStateFlow()
 
     /** Whether what is on screen is invented */
     val isDemo: Boolean
@@ -57,6 +63,7 @@ class FleetRepository(
 
     /** Takes the server off the list */
     fun remove(id: String) {
+        WidgetFeed.forget(id)
         val deployment = _deployments.value.firstOrNull { it.id == id } ?: return
         _deployments.value = _deployments.value.filterNot { it.id == id }
         if (isDemo) return
@@ -69,6 +76,13 @@ class FleetRepository(
         if (index < 0) return
         _deployments.value = _deployments.value.toMutableList().also { it[index] = deployment }
         if (!isDemo) store.upsert(deployment)
+    }
+
+    /** Adds services another device installed on the server */
+    fun addServices(id: String, found: Set<com.skaymer.gryonixnexus.catalog.ServiceID>) {
+        val current = _deployments.value.firstOrNull { it.id == id } ?: return
+        if (current.services.containsAll(found)) return
+        update(current.copy(services = current.services + found))
     }
 
     /** One server moved in the list */
@@ -104,6 +118,14 @@ class FleetRepository(
         if (!isDemo) store.upsert(updated)
     }
 
+    fun setIcon(id: String, iconSymbol: String?) {
+        val index = _deployments.value.indexOfFirst { it.id == id }
+        if (index < 0) return
+        val updated = _deployments.value[index].copy(iconSymbol = iconSymbol)
+        _deployments.value = _deployments.value.toMutableList().also { it[index] = updated }
+        if (!isDemo) store.upsert(updated)
+    }
+
     /** One server joining or leaving a group */
     fun setGroupMember(id: String, group: String, member: Boolean) {
         val index = _deployments.value.indexOfFirst { it.id == id }
@@ -123,7 +145,23 @@ class FleetRepository(
         }
     }
 
+    /** Moves a group one place left or right */
+    fun moveGroup(group: String, offset: Int) {
+        val among = ServerGroups.known(_deployments.value)
+        ServerGroups.moving(group, offset, among, _groupOrder.value)?.let(::saveOrder)
+    }
+
+    /** Groups from an imported file keep their order */
+    fun adoptGroupOrder(incoming: List<String>) =
+        saveOrder(ServerGroups.adopting(incoming, _groupOrder.value))
+
+    private fun saveOrder(order: List<String>) {
+        _groupOrder.value = order
+        settings.setString(ServerGroups.ORDER_KEY, ServerGroups.format(order))
+    }
+
     fun renameGroup(from: String, to: String) {
+        saveOrder(ServerGroups.renaming(from, to, _groupOrder.value))
         for (deployment in ServerGroups.members(from, _deployments.value)) {
             val index = _deployments.value.indexOfFirst { it.id == deployment.id }
             if (index < 0) continue
@@ -139,5 +177,8 @@ class FleetRepository(
     }
 
     /** Deleting a group deletes no servers */
-    fun deleteGroup(group: String) = setGroupMembership(group, emptySet())
+    fun deleteGroup(group: String) {
+        setGroupMembership(group, emptySet())
+        saveOrder(ServerGroups.removing(group, _groupOrder.value))
+    }
 }

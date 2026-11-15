@@ -1,4 +1,5 @@
 import gryonixNexusCore
+import ServerControl
 import ServiceCatalog
 import SwiftUI
 
@@ -10,6 +11,8 @@ struct InstallMethodSheet: View {
     let services: [any ManagedService]
     let scripts: [Artifact]
     var purpose = Purpose.install
+    /// Demo servers install without a license
+    var deployment: Deployment?
     let onDevice: () -> Void
     let onCancel: () -> Void
     @State private var asking: LicenseGate.Reason?
@@ -66,7 +69,7 @@ struct InstallMethodSheet: View {
                     }
                 }
             }
-            .navigationTitle(title)
+            .screenTitle(title)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel", action: onCancel)
@@ -80,7 +83,7 @@ struct InstallMethodSheet: View {
     }
 
     private func installHere() {
-        guard LicenseStore.shared.status.isActive else {
+        guard LicenseStore.shared.status.isActive || deployment.map(DemoFleet.covers) == true else {
             asking = LicenseGate.reason
             return
         }

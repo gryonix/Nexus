@@ -180,7 +180,7 @@ fun AlertFields(content: @Composable ColumnScope.() -> Unit) {
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .background(Gryonix.colors.groupedBackground),
+            .background(if (LocalOnSheet.current) Gryonix.colors.cardBackground else Gryonix.colors.groupedBackground),
     ) {
         CompositionLocalProvider(LocalRowDividerInset provides 12.dp) {
             Column(Modifier.fillMaxWidth(), content = content)

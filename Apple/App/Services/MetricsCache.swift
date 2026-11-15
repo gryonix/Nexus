@@ -14,9 +14,7 @@ final class MetricsCache: @unchecked Sendable {
         if let directory {
             root = directory
         } else {
-            let support = FileManager.default.urls(for: .applicationSupportDirectory,
-                                                   in: .userDomainMask).first!
-            root = support.appendingPathComponent("gryonixNexus", isDirectory: true)
+            root = AppSupportDirectory.base.appendingPathComponent("gryonixNexus", isDirectory: true)
         }
         url = root.appendingPathComponent("metrics-cache.json")
         entries = (try? Data(contentsOf: url))

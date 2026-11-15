@@ -1,4 +1,4 @@
-#if os(iOS)
+#if os(iOS) || os(tvOS)
 import SwiftUI
 
 /// Everything but the spotlights

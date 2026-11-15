@@ -89,7 +89,7 @@ final class SpeedTestViewModel: ObservableObject {
             history.add(record, deployment.id, host)
             objectWillChange.send()
         } catch {
-            errorMessage = (error as? LocalizedError)?.errorDescription ?? String(describing: error)
+            errorMessage = LinkDropText.reason(error)
         }
     }
 

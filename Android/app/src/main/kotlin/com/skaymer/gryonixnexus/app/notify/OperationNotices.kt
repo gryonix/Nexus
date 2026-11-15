@@ -47,6 +47,7 @@ object OperationNotices {
 
     fun install(context: Context) {
         this.context = context.applicationContext
+        OperationJournal.install(context)
     }
 
     /** The last readable line of streamed output */
@@ -72,9 +73,12 @@ object OperationNotices {
         text: String = "",
         kind: OperationKind = OperationKind.OTHER,
     ): OperationNotice {
+        if (context != null && !display().shows(kind)) OperationJournal.note("not shown: switched off in the app's settings", title)
         val app = context?.takeIf { display().shows(kind) } ?: return OperationNotice(null, 0, "", server)
+        OperationJournal.note("notification opened by the app on $server", title)
         val notice = OperationNotice(app, nextID.incrementAndGet(), title, server)
         busyServers.add(server)
+        latest[server] = notice
         notice.post(text, null, running = true)
         return notice
     }
@@ -83,6 +87,15 @@ object OperationNotices {
     internal val busyServers: MutableSet<String> = java.util.Collections.synchronizedSet(mutableSetOf())
 
     fun isShowing(server: String): Boolean = server in busyServers
+
+    /** The newest notification this device shows for a server */
+    private val latest: MutableMap<String, OperationNotice> = ConcurrentHashMap()
+
+    fun showing(server: String): OperationNotice? = latest[server]?.takeIf { isShowing(server) }
+
+    internal fun forget(server: String, notice: OperationNotice) {
+        latest.remove(server, notice)
+    }
 
     /** What "Try again" runs, by notification id */
     internal val retries: MutableMap<Int, () -> Unit> = java.util.concurrent.ConcurrentHashMap()
@@ -100,9 +113,39 @@ object OperationNotices {
     /** Notifications that are still running, by id */
     internal val running: MutableMap<Int, OperationNotice> = ConcurrentHashMap()
 
+    /** The last drawing of every running notification, oldest first */
+    private val ongoing = java.util.LinkedHashMap<Int, android.app.Notification>()
+
+    internal fun drew(id: Int, notification: android.app.Notification) {
+        val isNew = synchronized(ongoing) { ongoing.put(id, notification) == null }
+        if (isNew) context?.let(OperationKeepAlive::follow)
+    }
+
+    internal fun ended(id: Int) {
+        synchronized(ongoing) { ongoing.remove(id) }
+        OperationKeepAlive.release(id)
+    }
+
+    internal fun oldestOngoing(): Pair<Int, android.app.Notification>? =
+        synchronized(ongoing) { ongoing.entries.firstOrNull()?.let { it.key to it.value } }
+
     /** A tap on "Stop" of a running action */
     fun stop(notice: Int) {
         running[notice]?.stopTapped()
+    }
+
+    /** Tells why a stop did not happen */
+    internal fun stopRefused(title: String, server: String, reason: StopRefusalText.Reason) {
+        val context = context ?: return
+        val body = when (reason) {
+            StopRefusalText.Reason.CannotStop -> context.getString(R.string.notice_stop_refused)
+            StopRefusalText.Reason.NothingRunning -> context.getString(R.string.notice_stop_nothing)
+            StopRefusalText.Reason.ServerGone -> context.getString(R.string.alert_unknown_server)
+            is StopRefusalText.Reason.Failed -> context.getString(R.string.notice_stop_failed, reason.detail)
+        }
+        OperationJournal.note("stop refused: $body", title)
+        OperationNotice(context, nextID.incrementAndGet(), title, server)
+            .post(body, null, running = false, failed = true)
     }
 
     internal fun launch(block: suspend () -> Unit) {
@@ -146,6 +189,7 @@ class OperationNotice internal constructor(
     private var isStopping = false
     private var shownText = ""
     private var shownProgress: Double? = null
+    private val startedAt = System.currentTimeMillis()
     private val stopAsk = StopAsk()
 
     /** Offers "Stop" on this notification until it finishes */
@@ -175,17 +219,19 @@ class OperationNotice internal constructor(
                 OperationNotices.launchAfter(StopAsk.WINDOW_MILLIS) { redraw() }
             }
             StopAsk.Tap.STOP -> {
+                OperationJournal.note("stop tapped", title)
                 isStopping = true
                 redraw()
-                OperationNotices.launch { runCatching { handler() }.onFailure { stopFailed() } }
+                OperationNotices.launch { runCatching { handler() }.onFailure { stopFailed(it) } }
             }
         }
     }
 
     @Synchronized
-    private fun stopFailed() {
+    private fun stopFailed(error: Throwable) {
         isStopping = false
         redraw()
+        OperationNotices.stopRefused(title, server, StopRefusalText.reason(error))
     }
 
     @Synchronized
@@ -226,7 +272,10 @@ class OperationNotice internal constructor(
         OperationNotices.stops.remove(id)
         OperationNotices.running.remove(id)
         OperationNotices.busyServers.remove(server)
+        OperationNotices.forget(server, this)
         if (error != null && retry != null) OperationNotices.retries[id] = retry
+        OperationNotices.ended(id)
+        if (context != null) OperationJournal.note(if (error != null) "failed: $error" else "finished: $text", title)
         post(error ?: text, null, running = false, failed = error != null)
     }
 
@@ -250,8 +299,7 @@ class OperationNotice internal constructor(
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
             .setContentIntent(openApp(context))
         if (running) {
-            val percent = progress?.let { (it.coerceIn(0.0, 1.0) * 100).toInt() }
-            builder.setProgress(100, percent ?: 0, percent == null)
+            builder.setWhen(startedAt).setShowWhen(true).setUsesChronometer(true)
             if (id in OperationNotices.stops && !isStopping) {
                 builder.addAction(0, context.getString(R.string.notice_stop), stopIntent(context))
             }
@@ -263,7 +311,9 @@ class OperationNotice internal constructor(
         } else {
             builder.setTimeoutAfter(FINISHED_LINGER_MILLIS)
         }
-        NotificationManagerCompat.from(context).notify(id, builder.build())
+        val notification = builder.build()
+        NotificationManagerCompat.from(context).notify(id, notification)
+        if (running) OperationNotices.drew(id, notification)
     }
 
     private fun allowed(context: Context): Boolean =

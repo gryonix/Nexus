@@ -1,8 +1,10 @@
+import AgentClient
 import ServerControl
 import SwiftUI
 
 struct AgentSection: View {
     let version: String?
+    var health: Gryonixnexusd_V1_AgentHealth?
     let usesAgent: Bool
     /// The install/update command, already carrying this server's address
     let command: String
@@ -18,19 +20,12 @@ struct AgentSection: View {
         case installedUnknownVersion
         case unreachable(String)
     }
-    var showsRelay: Bool = false
-    var onConfigureRelay: () -> Void = {}
-    var showsDynamicDNS: Bool = false
-    var dynamicDNSIsOn: Bool = false
-    var onDynamicDNS: () -> Void = {}
-    var showsNotifications: Bool = false
-    var onNotifications: () -> Void = {}
+    /// Opens the devices paired with this server's agent
+    var onDevices: (() -> Void)?
     /// Removes the agent, keeping services and settings
     var onRemove: (() -> Void)?
     /// Builds the agent again from scratch, keeping its settings
     var onReinstall: (() -> Void)?
-    /// The machines this deployment is made of
-    var nodesDestination: AnyView?
 
     @AppStorage("agent.source") private var sourceChoice = AgentSource.app.rawValue
     @State private var confirmingRemoval = false
@@ -86,6 +81,9 @@ struct AgentSection: View {
                 Label("The agent is not installed on this server.", systemImage: "info.circle")
                     .foregroundStyle(.secondary)
             }
+            if usesAgent, let health {
+                AgentHealthRows(health: health)
+            }
             sourceRow
             CompactActionGroup([
                 CompactAction(isChecking ? "Checking…" : "Check the agent",
@@ -117,48 +115,17 @@ struct AgentSection: View {
                 Text(usesAgent
                      ? "Updating rebuilds it on the server from the sources this app carries. Removing it keeps the services, their data and its settings; the app then manages the server over SSH."
                      : "The app sends the agent's sources to the server and builds it there, in a throwaway container. The first build takes a few minutes. The command below does the same thing by hand.")
-                if showsRelay {
-                    Text("The relay forwards this deployment's ports into the tunnel. Configure it after installing or removing services, so its firewall matches what the local server now runs.")
-                }
-                if showsDynamicDNS {
-                    Text("On a connection whose address changes, the server updates its own DNS records on a timer — it keeps working while this app is closed.")
-                }
             }
         }
     }
 
     @ViewBuilder
     private var extraRows: some View {
-        if showsRelay {
+        if let onDevices {
             Button {
-                onConfigureRelay()
+                onDevices()
             } label: {
-                Label("Configure the relay", systemImage: "arrow.left.arrow.right")
-            }
-        }
-        if let nodesDestination {
-            NavigationLink {
-                nodesDestination
-            } label: {
-                Label("Servers", systemImage: "server.rack")
-            }
-        }
-        if showsDynamicDNS {
-            Button {
-                onDynamicDNS()
-            } label: {
-                LabeledContent {
-                    Text(dynamicDNSIsOn ? "On" : "Off").foregroundStyle(.secondary)
-                } label: {
-                    Label("Dynamic DNS", systemImage: "arrow.triangle.2.circlepath")
-                }
-            }
-        }
-        if showsNotifications {
-            Button {
-                onNotifications()
-            } label: {
-                Label("Notifications", systemImage: "bell.badge")
+                Label("Paired Devices", systemImage: "list.bullet.rectangle.portrait")
             }
         }
     }

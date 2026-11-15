@@ -6,14 +6,13 @@ import SwiftUI
 struct SystemUpdatePage: View {
     @ObservedObject var viewModel: DashboardViewModel
     @StateObject private var model: SystemUpdateModel
+    #if !os(tvOS)
+    @StateObject private var edits = PendingRowEdits()
+    #endif
 
     init(viewModel: DashboardViewModel) {
         self.viewModel = viewModel
-        _model = StateObject(wrappedValue: SystemUpdateModel(isDemo: DemoFleet.covers(viewModel.deployment),
-                                                             serverName: viewModel.deployment.name,
-                                                             session: { [viewModel] in
-            try await viewModel.commandSession()
-        }))
+        _model = StateObject(wrappedValue: SystemUpdateModel.make(for: viewModel))
     }
 
     private var hosts: [SSHHostID] { viewModel.deployment.nodes.map(\.sshHost) }
@@ -22,22 +21,30 @@ struct SystemUpdatePage: View {
         CardList {
             ForEach(hosts, id: \.self) { host in
                 Section {
-                    SystemUpdateRows(model: model, host: host, hosts: hosts)
+                    SystemUpdateRows(model: model, host: host, hosts: hosts,
+                                     reboot: { await viewModel.rebootHost(host) })
                 } header: {
                     if let label = viewModel.deployment.metricsMachineLabel(for: host) {
                         Text(verbatim: label)
                     }
                 } footer: {
+                    #if !os(tvOS)
                     Text("For a server that is not on all the time: it updates as it starts or before it shuts down. A restart counts as both. The apps are the ones chosen under Updates.")
+                    #endif
                 }
+                #if !os(tvOS)
                 Section {
-                    SystemScheduleRows(model: model, host: host)
+                    SystemScheduleRows(model: model, host: host, edits: edits)
                 }
+                #endif
             }
         }
-        .navigationTitle(Text("Server system"))
+        .screenTitle(Text("System update"))
         .raisedNavigationTitle()
         .task { await model.load(hosts) }
+        #if !os(tvOS)
+        .pendingRowEdits(edits)
+        #endif
     }
 }
 
@@ -46,6 +53,8 @@ private struct SystemUpdateRows: View {
     @ObservedObject var model: SystemUpdateModel
     let host: SSHHostID
     let hosts: [SSHHostID]
+    let reboot: () async -> Void
+    @State private var confirmingReboot = false
 
     private var status: SystemUpdateStatus? { model.statuses[host] }
 
@@ -56,19 +65,34 @@ private struct SystemUpdateRows: View {
             summary
             updateButton
             if let status, status.isRunning || status.exitCode.map({ $0 != 0 }) == true { SystemUpdateLog(lines: status.log) }
-            if status?.needsRestart == true {
-                Label("A restart finishes the update.", systemImage: "arrow.clockwise.circle")
-                    .foregroundStyle(.orange)
-            }
-            SwapControl(model: model, host: host, status: status)
+            if status?.needsRestart == true { restartRows }
+            #if !os(tvOS)
             toggle("Update the system at start", part: .system, isOn: status?.systemAtStart ?? false)
-            toggle("Update the apps at start", part: .apps, isOn: status?.appsAtStart ?? false)
             if status?.offersAtStop == true {
                 toggle("Update the system at shutdown", part: .system, atStop: true, isOn: status?.systemAtStop ?? false)
+            }
+            toggle("Update the apps at start", part: .apps, isOn: status?.appsAtStart ?? false)
+            if status?.offersAtStop == true {
                 toggle("Update the apps at shutdown", part: .apps, atStop: true, isOn: status?.appsAtStop ?? false)
             }
+            #endif
         }
         if let error = model.errors[host] { Text(verbatim: error).font(.caption).foregroundStyle(.red) }
+    }
+
+    /// The notice, and the switch that restarts the machine
+    @ViewBuilder private var restartRows: some View {
+        Label("A restart finishes the update.", systemImage: "arrow.clockwise.circle")
+            .foregroundStyle(.orange)
+        Toggle("Reboot to finish updating", isOn: Binding(get: { confirmingReboot },
+                                                          set: { if $0 { confirmingReboot = true } }))
+            .alert("Reboot this machine?", isPresented: $confirmingReboot) {
+                Button("Reboot", role: .destructive) { Task { await reboot() } }
+                    .dangerTint()
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("The machine will go offline for about a minute while it restarts.")
+            }
     }
 
     @ViewBuilder private var summary: some View {
@@ -113,9 +137,24 @@ private struct SystemUpdateRows: View {
 private struct SystemScheduleRows: View {
     @ObservedObject var model: SystemUpdateModel
     let host: SSHHostID
+    let edits: PendingRowEdits
     @State private var draft: CommandCatalog.Backups.Schedule?
 
     private var status: SystemUpdateStatus? { model.statuses[host] }
+
+    /// Tells the bar whether the schedule waits
+    private func offerEdit() {
+        let field = $draft
+        let edit = PendingRowEdits.Edit(
+            id: "update-schedule-\(host)", text: .schedule,
+            apply: { [model, host] in
+                if let asked = field.wrappedValue { await model.setSchedule(asked, host: host) }
+                field.wrappedValue = nil
+                return true
+            },
+            revert: { field.wrappedValue = nil })
+        edits.offer(edit, changed: PendingRules.waits(draft, saved: status?.schedule))
+    }
 
     var body: some View {
         if let saved = status?.schedule {
@@ -124,18 +163,9 @@ private struct SystemScheduleRows: View {
                 get: { current.isOn },
                 set: { draft = $0 ? ScheduleFields.defaultOn : .off }))
                 .disabled(model.busy.contains(host))
+                .onChange(of: draft) { offerEdit() }
             if current.isOn {
                 ScheduleFields(schedule: Binding(get: { draft ?? saved }, set: { draft = $0 }))
-            }
-            if let draft, draft != saved {
-                Button("Save schedule") {
-                    Task {
-                        await model.setSchedule(draft, host: host)
-                        self.draft = nil
-                    }
-                }
-                .rowActionButtonStyle()
-                .disabled(model.busy.contains(host))
             }
         } else if status != nil {
             Text("Update the agent on this server to update on a schedule.").foregroundStyle(.secondary)
@@ -155,36 +185,47 @@ private struct SystemUpdateLog: View {
     }
 }
 
-/// The machine's swap, and the app's swap file size
-private struct SwapControl: View {
+/// The machine's swap, chosen on a wheel
+struct SwapControl: View {
     @ObservedObject var model: SystemUpdateModel
     let host: SSHHostID
     let status: SystemUpdateStatus?
-    @State private var custom = false
+    let edits: PendingRowEdits
+    @State private var draft: Int?
+
+    private var savedGB: Int {
+        guard let bytes = status?.swapBytes, bytes > 0 else { return 0 }
+        return max(1, Int((Double(bytes) / 1_073_741_824).rounded()))
+    }
+
+    private var choices: [Int] {
+        let current = draft ?? savedGB
+        return SwapPlan.wheel.contains(current) ? SwapPlan.wheel : (SwapPlan.wheel + [current]).sorted()
+    }
 
     var body: some View {
-        AdaptiveRow("Swap") { _ in
-            Menu {
-                ForEach([1, 2, 4, 8], id: \.self) { size in
-                    Button(UIL10n.string("%@ GB", "\(size)")) { apply(size) }
-                }
-                Button("Other size…") { custom = true }
-                Button("Turn swap off", role: .destructive) { apply(nil) }
-                    .dangerTint()
-            } label: {
-                Text(verbatim: summary)
-            }
-            .disabled(status == nil || model.busy.contains(host))
-        }
-        .customSwapSize(isPresented: $custom) { apply($0) }
+        WheelRow(title: "Swap", choices: choices,
+                 selection: Binding(get: { draft ?? savedGB }, set: { draft = $0 }),
+                 disabled: status == nil || model.busy.contains(host), text: Self.label)
+            .onChange(of: draft) { offerEdit() }
     }
 
-    private var summary: String {
-        guard let status, status.swapBytes > 0 else { return UIL10n.string("None") }
-        return ByteCountFormatter.string(fromByteCount: status.swapBytes, countStyle: .memory)
+    private static func label(_ size: Int) -> Text {
+        size == 0 ? Text("None") : Text(verbatim: UIL10n.string("%@ GB", "\(size)")).monospacedDigit()
     }
 
-    private func apply(_ size: Int?) {
-        Task { await model.setSwap(sizeGB: size, host: host) }
+    /// Tells the bar whether the swap waits
+    private func offerEdit() {
+        let field = $draft
+        let edit = PendingRowEdits.Edit(
+            id: "swap-\(host)", text: .apply,
+            apply: { [model, host] in
+                let asked = field.wrappedValue ?? 0
+                await model.setSwap(sizeGB: asked == 0 ? nil : asked, host: host)
+                field.wrappedValue = nil
+                return true
+            },
+            revert: { field.wrappedValue = nil })
+        edits.offer(edit, changed: draft != nil && draft != savedGB)
     }
 }

@@ -280,6 +280,7 @@ public struct SeafileService: ManagedService {
                 plan: .archive(ArchiveBackupPlan(
                     composeProject: Self.composeProject,
                     dataPath: data,
+                    dataPart: .files,
                     databases: [
                         BackupDatabase(engine: .mysql, service: "db",
                                        fileName: "ccnet_db.sql", databaseName: "ccnet_db"),

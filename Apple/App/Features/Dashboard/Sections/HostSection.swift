@@ -142,18 +142,18 @@ struct HostSection: View {
                 if historyInline {
                     MetricsHistoryDisclosure(deployment: history.deployment, host: history.host)
                 } else {
-                    NavigationLink(value: history) {
+                    ServerPageLink(value: history) {
                         Label("Metrics history", systemImage: "chart.xyaxis.line")
                     }
                 }
-                NavigationLink(value: EnergyTarget(deployment: history.deployment, host: history.host,
+                ServerPageLink(value: EnergyTarget(deployment: history.deployment, host: history.host,
                                                    cores: metrics.value?.cpuCores)) {
                     Label("Energy", systemImage: "bolt")
                 }
-                NavigationLink(value: SpeedTestTarget(deployment: history.deployment, host: history.host)) {
+                ServerPageLink(value: SpeedTestTarget(deployment: history.deployment, host: history.host)) {
                     Label("Speed test", systemImage: "speedometer")
                 }
-                NavigationLink(value: TopProcessesTarget(deployment: history.deployment, host: history.host)) {
+                ServerPageLink(value: TopProcessesTarget(deployment: history.deployment, host: history.host)) {
                     Label("Top processes", systemImage: "list.number")
                 }
             }
@@ -189,7 +189,7 @@ struct HostSection: View {
     private func historyLink<Content: View>(_ metric: HistoryMetric,
                                             @ViewBuilder content: () -> Content) -> some View {
         if let history {
-            NavigationLink(value: history.with(metric: metric)) { content() }
+            ServerPageLink(value: history.with(metric: metric)) { content() }
         } else {
             content()
         }
@@ -262,7 +262,7 @@ struct HostMetricsHeaderRow: View {
         }
 
         if let historyTarget {
-            NavigationLink(value: historyTarget.with(metric: .cpu)) { block }
+            ServerPageLink(value: historyTarget.with(metric: .cpu)) { block }
                 .buttonStyle(.plain)
         } else {
             block

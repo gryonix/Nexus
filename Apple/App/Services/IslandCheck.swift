@@ -1,8 +1,8 @@
-#if os(iOS) && DEBUG
+#if os(iOS)
 import ServerControl
 import UIKit
 
-/// A sample operation card, only in debug builds
+/// A sample operation card for checking the island
 @MainActor
 enum IslandCheck {
     static let steps = 6

@@ -120,6 +120,16 @@ public struct AgentInstallOperations: Sendable {
         return AgentInstallPlan(plan)
     }
 
+    public func check(_ services: [ServiceID]) async throws -> [InstallFinding] {
+        let ids = services.compactMap { AgentServiceMapping.agentID(for: $0) }
+        let found = try await client.checkInstall(ids)
+        return found.compactMap { item in
+            guard let service = AgentServiceMapping.serviceIDs(forAgentIDs: [item.service]).first else { return nil }
+            return InstallFinding(service: service, isBlocking: item.severity == .blocked, code: item.code,
+                                  args: item.args, message: item.message)
+        }
+    }
+
     /// A plan by id; empty id means newest
     public func plan(_ id: String = "") async throws -> AgentInstallPlan {
         AgentInstallPlan(try await client.installPlan(id: id))
@@ -254,5 +264,25 @@ extension AgentInstallPlan.State {
         case .skipped: self = .skipped
         default: self = .pending
         }
+    }
+}
+
+/// One thing a machine lacks for one service
+public struct InstallFinding: Sendable, Equatable {
+    public let service: ServiceID
+    /// The service will not install; otherwise it installs with less
+    public let isBlocking: Bool
+    /// "needs_newer_os", "package_unavailable", "reduced_on_older_os", "no_sound_card"
+    public let code: String
+    public let args: [String]
+    /// The agent's own English wording
+    public let message: String
+
+    public init(service: ServiceID, isBlocking: Bool, code: String, args: [String], message: String) {
+        self.service = service
+        self.isBlocking = isBlocking
+        self.code = code
+        self.args = args
+        self.message = message
     }
 }

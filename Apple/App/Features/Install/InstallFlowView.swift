@@ -30,9 +30,9 @@ struct InstallFlowView: View {
         #if os(macOS)
         .formStyle(.grouped)
         #endif
-        .navigationTitle("Installation")
+        .screenTitle("Installation")
         .raisedNavigationTitle()
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {
@@ -508,7 +508,7 @@ struct InstallFlowView: View {
         #if os(macOS)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(string, forType: .string)
-        #else
+        #elseif os(iOS)
         UIPasteboard.general.string = string
         #endif
     }

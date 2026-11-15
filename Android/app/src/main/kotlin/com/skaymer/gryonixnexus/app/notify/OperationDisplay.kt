@@ -28,7 +28,7 @@ enum class OperationKind {
             DetachedJobs.Kind.BACKUP -> BACKUP
             DetachedJobs.Kind.RESTORE -> RESTORE
             DetachedJobs.Kind.UNINSTALL -> REMOVAL
-            DetachedJobs.Kind.CONTROL -> OTHER
+            DetachedJobs.Kind.CONTROL, DetachedJobs.Kind.MEASURE -> OTHER
         }
     }
 }

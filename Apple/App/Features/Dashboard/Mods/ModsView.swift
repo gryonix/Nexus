@@ -21,6 +21,7 @@ struct ModsView: View {
     @State private var importing = false
     @State private var uploading = false
     @State private var failure: String?
+    @StateObject private var edits = PendingRowEdits()
 
     private var settings: ServiceSettings { viewModel.deployment.serviceSettings }
     private var flavour: String { settings.minecraftJavaFlavour }
@@ -38,7 +39,10 @@ struct ModsView: View {
             }
             filesSection
         }
-        .navigationTitle(callsThemPlugins ? Text("Plugins") : Text("Mods"))
+        .screenTitle(callsThemPlugins ? Text("Plugins") : Text("Mods"))
+        .onChange(of: picked) { offerEdit() }
+        .onChange(of: applied) { offerEdit() }
+        .pendingRowEdits(edits)
         .task {
             picked = AgentModOperations.entries(in: settings.minecraftJavaMods)
             applied = picked
@@ -111,13 +115,6 @@ struct ModsView: View {
                     }
                 }
             }
-            if picked != applied {
-                Button {
-                    Task { await apply() }
-                } label: {
-                    Label("Apply to the server", systemImage: "arrow.down.circle")
-                }
-            }
         } header: {
             Text("Picked")
         } footer: {
@@ -137,7 +134,7 @@ struct ModsView: View {
             HStack {
                 TextField("Search", text: $query, prompt: Text("map, backpack, sodium…"))
                     .onSubmit { Task { await runSearch() } }
-                    #if os(iOS)
+                    #if os(iOS) || os(tvOS)
                     .textInputAutocapitalization(.never)
                     #endif
                     .autocorrectionDisabled()
@@ -298,6 +295,19 @@ struct ModsView: View {
         case .refused(let message):
             failure = message
         }
+    }
+
+    /// Tells the bar whether the list waits
+    private func offerEdit() {
+        let (list, kept) = ($picked, applied)
+        let edit = PendingRowEdits.Edit(
+            id: "mods", text: .mods,
+            apply: {
+                await apply()
+                return true
+            },
+            revert: { list.wrappedValue = kept })
+        edits.offer(edit, changed: picked != applied)
     }
 
     private func apply() async {

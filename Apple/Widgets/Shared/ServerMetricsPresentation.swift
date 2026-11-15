@@ -30,6 +30,7 @@ struct ServerChoiceQuery: EntityQuery {
     }
 }
 
+#if !os(tvOS)
 struct ServerSelectionConfiguration: WidgetConfigurationIntent {
     static var title: LocalizedStringResource { "Server" }
     static var description: IntentDescription { "Which server to show." }
@@ -40,6 +41,7 @@ struct ServerSelectionConfiguration: WidgetConfigurationIntent {
     init() {}
     init(server: ServerChoice?) { self.server = server }
 }
+#endif
 
 enum ServerMetricsPresentation {
     /// A percentage as the widget prints it

@@ -12,6 +12,7 @@ struct TerminalLoginSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var username = ""
     @State private var nodeID: UUID?
+    @State private var keepAliveWithTmux = false
     @State private var draft = SSHSecretDraft()
 
     var body: some View {
@@ -36,11 +37,17 @@ struct TerminalLoginSheet: View {
                 }
 
                 SSHSecretSection(draft: $draft, appKeyIsInstalled: true)
+
+                Section {
+                    Toggle("Keep the shell alive with tmux", isOn: $keepAliveWithTmux)
+                } footer: {
+                    Text("Runs the shell inside tmux, so it survives a dropped connection. Needs tmux on the server.")
+                }
             }
             #if os(macOS)
             .formStyle(.grouped)
             #endif
-            .navigationTitle(editing == nil ? "New login" : "Edit login")
+            .screenTitle(editing == nil ? "New login" : "Edit login")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -69,6 +76,7 @@ struct TerminalLoginSheet: View {
         guard let editing else { return }
         username = editing.username
         nodeID = editing.nodeID
+        keepAliveWithTmux = editing.keepAliveWithTmux
         draft = SSHSecretDraft(editing: editing.secret)
     }
 
@@ -76,7 +84,8 @@ struct TerminalLoginSheet: View {
         let name = username.trimmingCharacters(in: .whitespaces)
         guard let secret = draft.secret(keeping: editing?.secret) else { return }
         onSave(TerminalProfile(id: editing?.id ?? UUID(), username: name,
-                               secret: secret, nodeID: nodeID))
+                               secret: secret, nodeID: nodeID,
+                               keepAliveWithTmux: keepAliveWithTmux))
         dismiss()
     }
 

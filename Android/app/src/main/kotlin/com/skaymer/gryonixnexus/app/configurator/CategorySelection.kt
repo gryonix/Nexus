@@ -71,10 +71,19 @@ object CategorySelection {
         ServiceID.GITLAB -> NoteKey.GITLAB
         ServiceID.ADGUARD_HOME -> NoteKey.ADGUARD
         ServiceID.PIHOLE -> NoteKey.PIHOLE
+        ServiceID.SHAIRPORT_SYNC -> NoteKey.SHAIRPORT
+        ServiceID.UXPLAY -> NoteKey.UXPLAY
+        ServiceID.ODIO -> NoteKey.ODIO
+        ServiceID.SNAPSERVER -> NoteKey.SNAPSERVER
+        ServiceID.SNAPCLIENT -> NoteKey.SNAPCLIENT
+        ServiceID.UPMPDCLI -> NoteKey.DLNA
+        ServiceID.BLUEALSA -> NoteKey.BLUETOOTH
+        ServiceID.RASPOTIFY -> NoteKey.SPOTIFY
+        ServiceID.MYMPD -> NoteKey.MYMPD
         else -> null
     }
 
     enum class WarningKey { GITLAB_MEMORY, OLLAMA_NO_UI }
 
-    enum class NoteKey { GITLAB, ADGUARD, PIHOLE }
+    enum class NoteKey { GITLAB, ADGUARD, PIHOLE, SHAIRPORT, UXPLAY, ODIO, SNAPSERVER, SNAPCLIENT, DLNA, BLUETOOTH, SPOTIFY, MYMPD }
 }

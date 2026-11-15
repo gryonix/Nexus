@@ -5,6 +5,7 @@ import ServerControl
 /// Top-level app shell: server dashboard + config generator + settings
 struct RootTabView: View {
     @StateObject private var tabs = TabBarSettings.shared
+    @ObservedObject private var modules = ModuleSettings.shared
     @StateObject private var navigator = AppNavigator.shared
     @StateObject private var agentUpdate = AgentUpdateOffer.shared
     @Environment(\.scenePhase) private var scenePhase
@@ -12,7 +13,9 @@ struct RootTabView: View {
     @State private var selection: AppTab?
     @State private var moreIsActive = false
     @StateObject private var overflow = ShellOverflow.shared
-    @StateObject private var tunnel = TunnelController.shared
+    /// Status changes only, not every traffic tick
+    @ObservedObject private var tunnelMark = TunnelStatusMark.shared
+    private let tunnelController = TunnelController.shared
     @State private var showingWelcome = false
     @State private var welcomeChoseConfigure = false
     @StateObject private var tour = AppTour.shared
@@ -47,6 +50,8 @@ struct RootTabView: View {
         shell
             #if os(iOS)
             .tabBarLongPressMenu()
+            .onGeometryChange(for: Bool.self) { SideTabRail.applies(to: SideTabRail.windowSize ?? $0.size) } action: { wideLayout = $0 }
+            .environment(\.wideLayout, wideLayout)
             #endif
             .brandPill()
             .sheet(item: $operations.presented) { operation in
@@ -82,6 +87,7 @@ struct RootTabView: View {
         ("GRYONIXNEXUS_DEMO_OPEN_APPEARANCE", .settings),
         ("GRYONIXNEXUS_DEMO_OPEN_SETTINGS", .settings),
         ("GRYONIXNEXUS_DEMO_OPEN_PROXIES", .settings),
+        ("GRYONIXNEXUS_DEMO_OPEN_CARDS", .settings),
         ("GRYONIXNEXUS_DEMO_OPEN_WIDGETS", .settings),
     ]
 
@@ -90,6 +96,7 @@ struct RootTabView: View {
         ("GRYONIXNEXUS_DEMO_OPEN_TERMINAL", .terminal),
         ("GRYONIXNEXUS_DEMO_OPEN_VPN", .vpn),
         ("GRYONIXNEXUS_DEMO_OPEN_CONFIGURATOR", .configurator),
+        ("GRYONIXNEXUS_DEMO_OPEN_AI_CHAT", .ai),
     ]
 
     private func applyDebugStartTab() -> Bool {
@@ -147,6 +154,7 @@ struct RootTabView: View {
                 selection = tab
             }
             .onChange(of: selection) { _, tab in
+                if tab == .servers { AppNavigator.shared.noteServersTabOpened() }
                 guard let tab, overflowTabs.contains(tab) else { return }
                 overflow.current = tab
                 moreIsActive = true
@@ -301,6 +309,8 @@ struct RootTabView: View {
 
     /// Bumped when a section is reselected on the custom bar
     @State private var reselectCounters: [AppTab: Int] = [:]
+    /// Room for a page beside the server
+    @State private var wideLayout = false
 
     @ViewBuilder
     private var shell: some View {
@@ -313,7 +323,7 @@ struct RootTabView: View {
                     Tab(value: ShellSelection.tab(tab)) {
                         content(for: tab)
                     } label: {
-                        Label { Text(tab.title) } icon: { tab.barIcon(tunnelActive: tunnel.status.isActive) }
+                        Label { Text(tab.title) } icon: { tab.barIcon(tunnelActive: tunnelMark.status.isActive) }
                     }
                 }
                 if !overflowTabs.isEmpty {
@@ -332,7 +342,7 @@ struct RootTabView: View {
                     content(for: tab)
                         .tabItem {
                             Label { Text(tab.title) } icon: {
-                                tab.barIcon(tunnelActive: tunnel.status.isActive)
+                                tab.barIcon(tunnelActive: tunnelMark.status.isActive)
                             }
                         }
                         .tag(tab)
@@ -343,14 +353,14 @@ struct RootTabView: View {
         }
         #else
         MacSidebarShell(tabs: tabs, visibleTabs: visibleTabs, selection: current,
-                        tunnelActive: tunnel.status.isActive)
+                        tunnelActive: tunnelMark.status.isActive)
         #endif
     }
 
     #if os(iOS)
     private var customShell: some View {
         GeometryReader { proxy in
-            let side = SideTabRail.applies(to: proxy.size)
+            let side = SideTabRail.applies(to: SideTabRail.windowSize ?? proxy.size)
             customPages(bottomBar: !side)
                 .overlay(alignment: .bottomTrailing) {
                     if side { sideRail(in: proxy) }
@@ -363,7 +373,7 @@ struct RootTabView: View {
         let column = proxy.safeAreaInsets.trailing
         let width = SideTabRail.width(column: column)
         return SideTabRail(tabs: visibleTabs, selection: current,
-                           tunnelActive: tunnel.status.isActive,
+                           tunnelActive: tunnelMark.status.isActive,
                            selectedTint: CustomTabBar.selectedTint(accentRaw: accentRaw, iconRaw: iconRaw),
                            width: width,
                            onReselect: { tab in reselectCounters[tab, default: 0] += 1 })
@@ -388,7 +398,7 @@ struct RootTabView: View {
                     .padding(.horizontal, ActivityBanner.classicBarInset)
                 if showsBar {
                     CustomTabBar(tabs: visibleTabs, selection: current,
-                                 tunnelActive: tunnel.status.isActive,
+                                 tunnelActive: tunnelMark.status.isActive,
                                  onReselect: { tab in reselectCounters[tab, default: 0] += 1 })
                         .transition(.move(edge: .bottom))
                 }
@@ -417,7 +427,8 @@ struct RootTabView: View {
             case .containers: ContainersSection().licenseLocked(exceptDemo: true)
             case .metrics: MetricsDashboardView().licenseLocked(exceptDemo: true)
             case .vpn: VPNSectionView().licenseLocked(exceptDemo: true)
-            case .terminal: TerminalSection().licenseLocked()
+            case .terminal: TerminalSection().licenseLocked(exceptDemo: true)
+            case .ai: AITabView()
             case .configurator: AppRootView().licenseLocked(exceptDemo: true)
             case .settings: AppSettingsView()
             }
@@ -548,7 +559,8 @@ private struct MacSidebarShell: View {
                 case .containers: ContainersSection().licenseLocked(exceptDemo: true)
                 case .metrics: MetricsDashboardView().licenseLocked(exceptDemo: true)
                 case .vpn: VPNSectionView().licenseLocked(exceptDemo: true)
-                case .terminal: TerminalSection().licenseLocked()
+                case .terminal: TerminalSection().licenseLocked(exceptDemo: true)
+                case .ai: AITabView()
                 case .configurator: AppRootView().licenseLocked(exceptDemo: true)
                 case .settings: AppSettingsView()
                 }

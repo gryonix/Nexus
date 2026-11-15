@@ -1,6 +1,7 @@
 import ServerControl
+import ServiceCatalog
 import SwiftUI
-#if os(iOS)
+#if os(iOS) || os(tvOS)
 import UIKit
 #endif
 
@@ -9,6 +10,7 @@ struct AppSettingsView: View {
     @State private var path = NavigationPath()
     @ObservedObject private var navigator = AppNavigator.shared
     @Environment(\.openURL) private var openURL
+    @ObservedObject private var modules = ModuleSettings.shared
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -35,14 +37,26 @@ struct AppSettingsView: View {
                 Label("Appearance", systemImage: "paintbrush")
             }
             NavigationLink {
-                TabBarSettingsView()
-            } label: {
-                Label("Sections", systemImage: "square.grid.2x2")
-            }
-            NavigationLink {
                 SecuritySettingsView()
             } label: {
                 Label("Security", systemImage: "lock.shield")
+            }
+            NavigationLink {
+                ModulesSettingsView()
+            } label: {
+                Label("Modules", systemImage: "puzzlepiece.extension")
+            }
+            if modules.isOn(.scripts) {
+                NavigationLink {
+                    ScriptsView()
+                } label: {
+                    Label("Scripts", systemImage: "terminal")
+                }
+            }
+            NavigationLink {
+                CloudSyncSettingsView()
+            } label: {
+                Label("iCloud sync", systemImage: "icloud")
             }
             NavigationLink {
                 NotificationSettingsView()
@@ -51,9 +65,17 @@ struct AppSettingsView: View {
             }
             #if os(iOS)
             NavigationLink {
+                AppleTVSettingsView()
+            } label: {
+                Label("Apple TV", systemImage: "appletv")
+            }
+            #endif
+            #if os(iOS)
+            NavigationLink {
                 LiveActivitySettingsView()
             } label: {
-                Label("Live Activity & Dynamic Island", systemImage: "platter.filled.top.iphone")
+                Label(DynamicIsland.settingsTitle,
+                      systemImage: DynamicIsland.isOnThisDevice ? "platter.filled.top.iphone" : "ipad")
             }
             #endif
         }
@@ -78,6 +100,7 @@ struct AppSettingsView: View {
     private var platformSections: some View {
         #if os(macOS)
         MenuBarSettingsSection()
+        LaunchSettingsSection()
         #endif
 
         #if os(macOS)
@@ -94,7 +117,7 @@ struct AppSettingsView: View {
         }
         #endif
 
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         Section {
             Button {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -145,7 +168,7 @@ struct AppSettingsView: View {
             .frame(minWidth: 420, minHeight: 300)
             #endif
             .bottomBarClearance()
-            .navigationTitle("Settings")
+            .screenTitle("Settings")
             .sectionToolbar(.settings)
             .navigationDestination(for: SettingsPage.self) { page in
                 switch page {
@@ -153,7 +176,12 @@ struct AppSettingsView: View {
                 case .proxies: ProxySettingsView().licenseLocked()
                 case .sections: TabBarSettingsView()
                 #if DEBUG
+                case .cards: AppearanceCardsView()
+                #if os(tvOS)
+                case .widgetGallery: EmptyView()
+                #else
                 case .widgetGallery: WidgetGalleryView()
+                #endif
                 #endif
                 }
             }
@@ -167,6 +195,9 @@ struct AppSettingsView: View {
             .task {
                 if ProcessInfo.processInfo.environment["GRYONIXNEXUS_DEMO_OPEN_APPEARANCE"] != nil {
                     path.append(SettingsPage.appearance)
+                }
+                if ProcessInfo.processInfo.environment["GRYONIXNEXUS_DEMO_OPEN_CARDS"] != nil {
+                    path.append(SettingsPage.cards)
                 }
                 if ProcessInfo.processInfo.environment["GRYONIXNEXUS_DEMO_OPEN_PROXIES"] != nil {
                     path.append(SettingsPage.proxies)
@@ -188,6 +219,7 @@ struct AppSettingsView: View {
         case proxies
         case sections
         #if DEBUG
+        case cards
         /// Every widget, drawn from this device's own snapshot
         case widgetGallery
         #endif
@@ -199,6 +231,8 @@ struct AppearanceSettingsView: View {
     private var accentRaw = AppAccentSettings.storedChoice().rawValue
     @AppStorage(MetricsDisplaySettings.cardColumnsKey)
     private var cardColumnsRaw = ServerCardColumns.one.rawValue
+    @AppStorage(ServerProblemCards.shownKey) private var problemSummary = true
+    @AppStorage(ServerProblemCards.hiddenKey) private var hiddenTiles = ""
     @ObservedObject private var tabs = TabBarSettings.shared
     @ObservedObject private var metrics = MetricsPreferences.shared
 
@@ -212,7 +246,15 @@ struct AppearanceSettingsView: View {
                 } label: {
                     pageRow("App", systemImage: "app.badge", value: Text(accent.title))
                 }
-                #if os(iOS)
+            }
+            Section {
+                NavigationLink {
+                    TabBarSettingsView()
+                } label: {
+                    pageRow("Sections", systemImage: "square.grid.2x2",
+                            value: Text(verbatim: "\(tabs.order.filter { !tabs.hidden.contains($0) }.count)/\(tabs.order.count)"))
+                }
+                #if os(iOS) || os(tvOS)
                 NavigationLink {
                     AppearanceBarsView()
                 } label: {
@@ -220,6 +262,15 @@ struct AppearanceSettingsView: View {
                             value: Text(tabs.barStyle.title))
                 }
                 #endif
+            }
+            Section {
+                NavigationLink {
+                    AppearanceProblemSummaryView()
+                } label: {
+                    pageRow("Problem summary", systemImage: "square.grid.4x3.fill",
+                            value: Text(verbatim: AppearanceProblemSummaryView.summary(
+                                shown: problemSummary, hiddenRaw: hiddenTiles)))
+                }
                 NavigationLink {
                     AppearanceCardsView()
                 } label: {
@@ -228,17 +279,17 @@ struct AppearanceSettingsView: View {
                                 .cardColumns(from: cardColumnsRaw).cardSize.localizedName))
                 }
                 NavigationLink {
-                    AppearanceChartsView()
-                } label: {
-                    pageRow("Metrics and charts", systemImage: "chart.xyaxis.line",
-                            value: Text(verbatim: "\(metrics.offeredRanges.count)/\(HistoryRange.allCases.count) · \(metrics.offeredMetrics.count)/\(HistoryMetric.allCases.count)"))
-                }
-                NavigationLink {
                     AppearanceServerScreenView()
                 } label: {
                     pageRow("Server screen", systemImage: "square.stack.3d.up",
                             value: Text(ServiceGroupingChoice(
                                 override: tabs.groupServicesByCategoryOverride).title))
+                }
+                NavigationLink {
+                    AppearanceChartsView()
+                } label: {
+                    pageRow("Metrics and charts", systemImage: "chart.xyaxis.line",
+                            value: Text(verbatim: "\(metrics.offeredRanges.count)/\(HistoryRange.allCases.count) · \(metrics.offeredMetrics.count)/\(HistoryMetric.allCases.count)"))
                 }
             }
         }
@@ -247,7 +298,7 @@ struct AppearanceSettingsView: View {
         .formRowButtons()
         #endif
         .bottomBarClearance()
-        .navigationTitle("Appearance")
+        .screenTitle("Appearance")
         .raisedNavigationTitle()
     }
 
@@ -288,12 +339,12 @@ struct AppearanceAppView: View {
         .formRowButtons()
         #endif
         .bottomBarClearance()
-        .navigationTitle("App")
+        .screenTitle("App")
         .raisedNavigationTitle()
     }
 }
 
-#if os(iOS)
+#if os(iOS) || os(tvOS)
 struct AppearanceBarsView: View {
     @ObservedObject private var tabs = TabBarSettings.shared
 
@@ -330,7 +381,7 @@ struct AppearanceBarsView: View {
             }
         }
         .bottomBarClearance()
-        .navigationTitle("Bars")
+        .screenTitle("Bars")
         .raisedNavigationTitle()
     }
 }
@@ -362,7 +413,7 @@ struct AppearanceCardsView: View {
         .formRowButtons()
         #endif
         .bottomBarClearance()
-        .navigationTitle("Server cards")
+        .screenTitle("Server cards")
         .raisedNavigationTitle()
     }
 
@@ -393,10 +444,17 @@ struct AppearanceChartsView: View {
     private var historyInline = false
     @AppStorage(MetricsDisplaySettings.historyAutoScaleKey)
     private var historyAutoScale = true
+    @AppStorage(MetricsDisplaySettings.collectOnOpenKey)
+    private var collectOnOpen = true
     @ObservedObject private var metrics = MetricsPreferences.shared
 
     var body: some View {
         Form {
+            Section {
+                Toggle("Collect metrics when the app opens", isOn: $collectOnOpen)
+            } footer: {
+                Text("When off, servers are contacted only when you pull to refresh.")
+            }
             Section {
                 WrappingPicker("Metrics history", selection: $historyInline) {
                     Text("Separate screen").tag(false)
@@ -436,7 +494,7 @@ struct AppearanceChartsView: View {
         .formRowButtons()
         #endif
         .bottomBarClearance()
-        .navigationTitle("Metrics and charts")
+        .screenTitle("Metrics and charts")
         .raisedNavigationTitle()
     }
 }
@@ -462,7 +520,7 @@ struct AppearanceServerScreenView: View {
         .formRowButtons()
         #endif
         .bottomBarClearance()
-        .navigationTitle("Server screen")
+        .screenTitle("Server screen")
         .raisedNavigationTitle()
     }
 }
@@ -517,79 +575,24 @@ extension AppearanceServerScreenView {
 struct ConnectionSettingsSection: View {
     @AppStorage(ConnectionSettings.silenceKey) private var silence = ConnectionSettings.defaultSilence
     @AppStorage(ConnectionSettings.reconnectKey) private var reconnect = ConnectionSettings.defaultReconnect
-    @State private var editingSilence = false
-    @State private var editingReconnect = false
 
     var body: some View {
         Section {
-            WrappingPicker("No connection after", selection: choice($silence, editing: $editingSilence)) {
-                options(ConnectionSettings.silences, current: silence)
-            }
-            WrappingPicker("Reconnect after", selection: choice($reconnect, editing: $editingReconnect)) {
-                options(ConnectionSettings.reconnects, current: reconnect)
-            }
+            WheelRow(title: "No connection after", choices: choices(ConnectionSettings.silenceWheel, current: silence),
+                     selection: $silence, text: Self.label)
+            WheelRow(title: "Reconnect after", choices: choices(ConnectionSettings.reconnectWheel, current: reconnect),
+                     selection: $reconnect, text: Self.label)
         } header: {
             InfoSectionHeader("Connection", note: "A card says No connection once its server has not answered for this long. After the longer wait the app opens a new connection; on a slow mobile network, longer waits are gentler on the server.")
         }
-        .customSeconds("No connection after", isPresented: $editingSilence,
-                       range: ConnectionSettings.silenceRange) { silence = $0 }
-        .customSeconds("Reconnect after", isPresented: $editingReconnect,
-                       range: ConnectionSettings.reconnectRange) { reconnect = $0 }
     }
 
-    /// Other time opens the seconds field
-    private func choice(_ value: Binding<Int>, editing: Binding<Bool>) -> Binding<Int> {
-        Binding(get: { value.wrappedValue },
-                set: { picked in
-                    if picked == Self.otherTag { editing.wrappedValue = true } else { value.wrappedValue = picked }
-                })
+    /// The wheel's waits, the stored one among them
+    private func choices(_ offered: [Int], current: Int) -> [Int] {
+        offered.contains(current) ? offered : (offered + [current]).sorted()
     }
 
-    @ViewBuilder
-    private func options(_ presets: [Int], current: Int) -> some View {
-        ForEach(presets.contains(current) ? presets : presets + [current], id: \.self) { seconds in
-            if seconds == 0 {
-                Text("Never").tag(seconds)
-            } else {
-                Text(verbatim: ConnectionSettings.title(seconds)).tag(seconds)
-            }
-        }
-        Text("Other time…").tag(Self.otherTag)
-    }
-
-    private static let otherTag = -1
-}
-
-/// Asks for a wait in seconds within a range
-struct CustomSeconds: ViewModifier {
-    let title: LocalizedStringKey
-    @Binding var isPresented: Bool
-    let range: ClosedRange<Int>
-    let onSet: (Int) -> Void
-    @State private var text = ""
-
-    func body(content: Content) -> some View {
-        content.alert(title, isPresented: $isPresented) {
-            TextField("Seconds", text: $text)
-                #if os(iOS)
-                .keyboardType(.numberPad)
-                #endif
-            Button("Set") {
-                if let seconds = Int(text.trimmingCharacters(in: .whitespaces)), range.contains(seconds) {
-                    onSet(seconds)
-                }
-                text = ""
-            }
-            Button("Cancel", role: .cancel) { text = "" }
-        } message: {
-            Text("From \(range.lowerBound) to \(range.upperBound) seconds.")
-        }
-    }
-}
-
-extension View {
-    func customSeconds(_ title: LocalizedStringKey, isPresented: Binding<Bool>,
-                       range: ClosedRange<Int>, onSet: @escaping (Int) -> Void) -> some View {
-        modifier(CustomSeconds(title: title, isPresented: isPresented, range: range, onSet: onSet))
+    private static func label(_ seconds: Int) -> Text {
+        seconds == 0 ? Text("Never") : Text(verbatim: ConnectionSettings.title(seconds))
     }
 }

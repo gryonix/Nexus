@@ -5,6 +5,7 @@ options:
   deploymentTarget:
     iOS: "17.0"
     macOS: "14.0"
+    tvOS: "18.0"
   createIntermediateGroups: true
 packages:
   gryonixNexusPackage:
@@ -98,6 +99,8 @@ targets:
         # otherwise, and the server answered "already installed".
         basedOnDependencyAnalysis: false
     dependencies:
+      # Linked so the App Intents metadata, and its translations, are built.
+      - sdk: AppIntents.framework
       - package: SwiftTerm
         product: SwiftTerm
       # macOS only, and `destinationFilters` is the key that actually does it
@@ -128,6 +131,10 @@ targets:
         product: VPNProfile
       - package: gryonixNexusPackage
         product: VPNTunnel
+      - package: gryonixNexusPackage
+        product: TVLink
+      - package: gryonixNexusPackage
+        product: AIAssistant
       # Embedded, which is what makes the widgets, the Control Centre toggle and
       # the Live Activity exist at all. It is a real target rather than a note
       # for later — without an App Group it reads an empty container and SAYS
@@ -162,6 +169,8 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleName: Nexus
+        # A server's quiet summary push wakes the app to redraw its widgets.
+        UIBackgroundModes: [remote-notification]
         ITSAppUsesNonExemptEncryption: false
         LSApplicationCategoryType: public.app-category.utilities
         GXMacTunnel: $(GX_MAC_TUNNEL)
@@ -182,9 +191,15 @@ targets:
         # Sparkle needs to reach its appcast host, which is an outbound HTTPS
         # connection the app otherwise never makes. Nothing else changes.
         SUEnableAutomaticChecks: true
+        # Mac: starts without a Dock icon; the saved choice adds it at launch.
+        LSUIElement: true
         # Without this key LocalAuthentication silently denies Face ID on a
         # real device — the biometric gates never prompted.
         NSFaceIDUsageDescription: gryonixNexus uses Face ID to protect your saved passwords and server exports.
+        # Reading the QR code another device shows to send servers.
+        NSCameraUsageDescription: gryonixNexus uses the camera to read the QR code another device shows when it sends you servers.
+        # Moving servers between devices that share no Wi-Fi.
+        NSBluetoothAlwaysUsageDescription: gryonixNexus uses Bluetooth to move servers between your devices when they are not on the same Wi-Fi.
         # Local Network privacy (iOS 14+, macOS 15+). EVERY connection this app
         # makes to a machine on the same LAN goes through it: a home server at
         # 192.168.x.x, a `.local` name resolved over mDNS, an LXD lab VM — the
@@ -201,6 +216,7 @@ targets:
         # The first-launch probe that triggers the local network prompt.
         NSBonjourServices:
           - _gryonixnexus._tcp
+          - _gryonixnexus-tv._tcp
         # `gryonixnexus://` — how a widget, the Control Center button and the
         # Mac's menu-bar panel ask the app to open something (`AppLink`, in
         # VPNTunnel). Without this key the system does not merely ignore the
@@ -304,8 +320,8 @@ targets:
         # exclusion is an SDK-scoped build setting, which Xcode applies to
         # resources as well as to sources.
         EXCLUDED_SOURCE_FILE_NAMES[sdk=macosx*]: AppLaunch.storyboard
-        MARKETING_VERSION: "26.10"
-        CURRENT_PROJECT_VERSION: "261020.2"
+        MARKETING_VERSION: "26.11"
+        CURRENT_PROJECT_VERSION: "261116"
         SWIFT_VERSION: "5.9"
         ENABLE_PREVIEWS: YES
         # Without this the app follows the user's macOS system accent, so a
@@ -362,6 +378,112 @@ targets:
       configs:
         Release:
           GX_MAC_TUNNEL: system-extension
+  # The Apple TV app: the phone's screens for the remote, no keyboard anywhere
+  gryonixNexusTV:
+    type: application
+    platform: tvOS
+    sources:
+      - TV
+      - path: App
+        excludes:
+          - "gryonixNexusApp.swift"
+          - "Info.plist"
+          - "AppLaunch.storyboard"
+          - "*.icon"
+          - "MenuBar/**"
+          - "Features/Terminal/CreateShellUserSheet.swift"
+          - "Features/Terminal/TerminalController.swift"
+          - "Features/Terminal/TerminalDirectHost.swift"
+          - "Features/Terminal/TerminalDirectHostSheet.swift"
+          - "Features/Terminal/TerminalDirectHostView.swift"
+          - "Features/Terminal/TerminalEndpointBuilder.swift"
+          - "Features/Terminal/TerminalHostView.swift"
+          - "Features/Terminal/TerminalLoginSheet.swift"
+          - "Features/Terminal/TerminalMachineUsers.swift"
+          - "Features/Terminal/TerminalMachinesSection.swift"
+          - "Features/Terminal/TerminalScreen.swift"
+          - "Features/Terminal/TerminalSection.swift"
+          - "Features/Terminal/TerminalServerView.swift"
+          - "Features/Terminal/TerminalSessions.swift"
+          - "Navigation/RootTabView.swift"
+          - "Features/Onboarding/PermissionsOnboardingView.swift"
+      - path: Widgets/Shared
+        excludes:
+          - "TunnelActivityAttributes.swift"
+          - "OperationActivityAttributes.swift"
+          - "VPNStatusWidgetView.swift"
+          - "ServerMetricsWidgetView.swift"
+          - "FleetWidgetViews.swift"
+          - "WidgetSnapshot.swift"
+          - "VPNIslandViews.swift"
+          - "VPNLockScreenCard.swift"
+          - "IslandCompact.swift"
+      - Shared/BrandMarks.xcassets
+    preBuildScripts:
+      - name: Pack the agent sources
+        script: "\"$SRCROOT/../Tools/pack-agent-sources.sh\" \"$SRCROOT/App/Resources/agent-src.tar.gz\""
+        basedOnDependencyAnalysis: false
+    dependencies:
+      - package: gryonixNexusPackage
+        product: ServiceCatalog
+      - package: gryonixNexusPackage
+        product: gryonixNexusCore
+      - package: gryonixNexusPackage
+        product: MailRecipe
+      - package: gryonixNexusPackage
+        product: ServerControl
+      - package: gryonixNexusPackage
+        product: ServerControlSSH
+      - package: gryonixNexusPackage
+        product: AgentClient
+      - package: gryonixNexusPackage
+        product: AgentClientSSH
+      - package: gryonixNexusPackage
+        product: AgentControl
+      - package: gryonixNexusPackage
+        product: VPNProfile
+      - package: gryonixNexusPackage
+        product: VPNTunnel
+      - package: gryonixNexusPackage
+        product: TVLink
+      - target: gryonixNexusTunnel
+      - target: gryonixNexusProxyTunnel
+    entitlements:
+      path: TV/gryonixNexusTV.entitlements
+      properties:
+        com.apple.developer.networking.networkextension: [packet-tunnel-provider]
+        com.apple.security.application-groups: [group.com.skaymer.gryonixnexus]
+    info:
+      path: TV/Info.plist
+      properties:
+        CFBundleDisplayName: Nexus
+        CFBundleName: Nexus
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        ITSAppUsesNonExemptEncryption: false
+        UILaunchScreen: {}
+        UIUserInterfaceStyle: Automatic
+        NSLocalNetworkUsageDescription: Nexus connects over SSH to servers on your local network and asks your iPhone whether your license is active.
+        NSCameraUsageDescription: gryonixNexus uses the camera to read the QR code another device shows when it sends you servers.
+        NSBluetoothAlwaysUsageDescription: gryonixNexus uses Bluetooth to move servers between your devices when they are not on the same Wi-Fi.
+        NSBonjourServices: [_gryonixnexus._tcp, _gryonixnexus-tv._tcp]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.skaymer.gryonixnexus
+        PRODUCT_NAME: gryonixNexus
+        PRODUCT_MODULE_NAME: gryonixNexus
+        MARKETING_VERSION: "26.11"
+        CURRENT_PROJECT_VERSION: "261116"
+        SWIFT_VERSION: "5.9"
+        TVOS_DEPLOYMENT_TARGET: "18.0"
+        EXCLUDED_ARCHS[sdk=appletvsimulator*]: x86_64
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ASSETCATALOG_COMPILER_APPICON_NAME: "App Icon & Top Shelf Image"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: Z4PMRLY8L2
+        CODE_SIGN_IDENTITY: "Apple Development"
+        GENERATE_INFOPLIST_FILE: NO
+
   # The widgets, the Control Centre toggle and the Live Activity.
   #
   # ONE extension for both platforms: WidgetKit builds from the same sources on
@@ -396,6 +518,7 @@ targets:
       properties:
         com.apple.security.application-groups: [group.com.skaymer.gryonixnexus]
     dependencies:
+      - sdk: AppIntents.framework
       # VPNTunnel and NOTHING else, which is the point: the extension can read
       # the snapshot and cannot open an SSH session, because the targets that
       # know how are not linked into it. A widget that tried would render an
@@ -419,8 +542,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.skaymer.gryonixnexus.widgets
         CODE_SIGN_ENTITLEMENTS[sdk=macosx*]: Widgets/Extension/gryonixNexusWidgets-macOS.entitlements
         ENABLE_HARDENED_RUNTIME[sdk=macosx*]: YES
-        MARKETING_VERSION: "26.10"
-        CURRENT_PROJECT_VERSION: "261020.2"
+        MARKETING_VERSION: "26.11"
+        CURRENT_PROJECT_VERSION: "261116"
         SWIFT_VERSION: "5.9"
         # Must match the app's, or the two are built against different SDK
         # floors and the extension silently fails to load on the older one.
@@ -470,6 +593,8 @@ targets:
         script: "set -euo pipefail\nDEST=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\"\nmkdir -p \"$DEST\"\ncp \"$SRCROOT/App/Resources/Localizable.xcstrings\" \"$DEST/Localizable-catalog.json\""
         inputFiles:
           - $(SRCROOT)/App/Resources/Localizable.xcstrings
+        outputFiles:
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Localizable-catalog.json
     dependencies:
       - target: gryonixNexus
     settings:
@@ -481,7 +606,7 @@ targets:
   # The packet-tunnel extension: on-device datapath for all protocols
   gryonixNexusTunnel:
     type: app-extension
-    supportedDestinations: [iOS, macOS]
+    supportedDestinations: [iOS, macOS, tvOS]
     sources:
       - path: TunnelExtension
         excludes: [SystemExtension, ProxyInfo.plist]
@@ -531,6 +656,8 @@ targets:
         CFBundleDisplayName: Nexus Tunnel
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # App Store upload for tvOS requires it
+        UIRequiredDeviceCapabilities: [arm64]
         NSExtension:
           NSExtensionPointIdentifier: com.apple.networkextension.packet-tunnel
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PacketTunnelProvider
@@ -543,11 +670,13 @@ targets:
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: Z4PMRLY8L2
         CODE_SIGN_IDENTITY: "Apple Development"
-        MARKETING_VERSION: "26.10"
-        CURRENT_PROJECT_VERSION: "261020.2"
+        MARKETING_VERSION: "26.11"
+        CURRENT_PROJECT_VERSION: "261116"
         SWIFT_VERSION: "5.9"
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         MACOSX_DEPLOYMENT_TARGET: "14.0"
+        TVOS_DEPLOYMENT_TARGET: "18.0"
+        EXCLUDED_ARCHS[sdk=appletvsimulator*]: x86_64
         ASSETCATALOG_COMPILER_APPICON_NAME: ""
         # Two search paths, one per runtime, both per platform. The package's
         # own manifest points its `-L` at `Sources/WireGuardKitGo/out`, which
@@ -599,8 +728,8 @@ targets:
         CODE_SIGN_IDENTITY: "Apple Development"
         ENABLE_HARDENED_RUNTIME: YES
         SKIP_INSTALL: YES
-        MARKETING_VERSION: "26.10"
-        CURRENT_PROJECT_VERSION: "261020.2"
+        MARKETING_VERSION: "26.11"
+        CURRENT_PROJECT_VERSION: "261116"
         SWIFT_VERSION: "5.9"
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         LIBRARY_SEARCH_PATHS:
@@ -611,7 +740,7 @@ targets:
   # Shadowsocks and VLESS: Xray, the Shadowsocks client and tun2socks, no WireGuard
   gryonixNexusProxyTunnel:
     type: app-extension
-    supportedDestinations: [iOS, macOS]
+    supportedDestinations: [iOS, macOS, tvOS]
     sources:
       - path: TunnelExtension
         excludes: [SystemExtension, Info.plist]
@@ -629,6 +758,8 @@ targets:
         CFBundleDisplayName: Nexus Proxy Tunnel
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # App Store upload for tvOS requires it
+        UIRequiredDeviceCapabilities: [arm64]
         NSExtension:
           NSExtensionPointIdentifier: com.apple.networkextension.packet-tunnel
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PacketTunnelProvider
@@ -640,11 +771,13 @@ targets:
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: Z4PMRLY8L2
         CODE_SIGN_IDENTITY: "Apple Development"
-        MARKETING_VERSION: "26.10"
-        CURRENT_PROJECT_VERSION: "261020.2"
+        MARKETING_VERSION: "26.11"
+        CURRENT_PROJECT_VERSION: "261116"
         SWIFT_VERSION: "5.9"
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         MACOSX_DEPLOYMENT_TARGET: "14.0"
+        TVOS_DEPLOYMENT_TARGET: "18.0"
+        EXCLUDED_ARCHS[sdk=appletvsimulator*]: x86_64
         ASSETCATALOG_COMPILER_APPICON_NAME: ""
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) GRYONIX_PROXY_TUNNEL"
         LIBRARY_SEARCH_PATHS:
@@ -687,8 +820,8 @@ targets:
         CODE_SIGN_IDENTITY: "Apple Development"
         ENABLE_HARDENED_RUNTIME: YES
         SKIP_INSTALL: YES
-        MARKETING_VERSION: "26.10"
-        CURRENT_PROJECT_VERSION: "261020.2"
+        MARKETING_VERSION: "26.11"
+        CURRENT_PROJECT_VERSION: "261116"
         SWIFT_VERSION: "5.9"
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) GRYONIX_PROXY_TUNNEL"
@@ -735,6 +868,16 @@ targets:
 # A shared scheme pinned here — Xcode's auto-created scheme does not survive
 # `xcodegen generate`, which breaks `xcodebuild -scheme gryonixNexus`.
 schemes:
+  gryonixNexusTV:
+    build:
+      targets:
+        gryonixNexusTV: all
+    run:
+      config: Debug
+      environmentVariables:
+        GRYONIXNEXUS_TV: "1"
+    archive:
+      config: Release
   # The tunnel extension alone, with its own tests
   gryonixNexusTunnel:
     build:
@@ -756,6 +899,8 @@ schemes:
       config: Debug
     test:
       config: Debug
+      environmentVariables:
+        GRYONIXNEXUS_DEBUG_MEMORY_KEYCHAIN: "1"
       targets:
         - gryonixNexusAppTests
     archive:

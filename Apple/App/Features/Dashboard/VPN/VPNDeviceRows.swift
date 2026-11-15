@@ -47,8 +47,7 @@ struct VPNDeviceRows: View {
             } label: {
                 Label("Configuration", systemImage: "qrcode")
             }
-            .glassIconButtonStyle()
-            .labelStyle(.iconOnly)
+            .deviceRowButtonStyle()
             ConfirmedRemoveButton(
                 title: "Remove this device?",
                 message: Text("\(device.name) stops connecting immediately. Its configuration cannot be restored — a replacement gets new keys.")
@@ -56,9 +55,20 @@ struct VPNDeviceRows: View {
                 onRemove(device)
             }
             .dangerTint()
-            .glassIconButtonStyle()
-            .labelStyle(.iconOnly)
+            .deviceRowButtonStyle()
         }
+    }
+}
+
+private extension View {
+    /// Icon circles on the phone, labelled buttons for the remote
+    @ViewBuilder func deviceRowButtonStyle() -> some View {
+        #if os(tvOS)
+        buttonStyle(.bordered)
+        #else
+        glassIconButtonStyle()
+            .labelStyle(.iconOnly)
+        #endif
     }
 }
 

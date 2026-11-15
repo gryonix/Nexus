@@ -831,6 +831,20 @@ public enum L10nServices {
         ])
     }
 
+    public static func headscaleRootPage(_ l: AppLanguage) -> String {
+        l.pick([
+            .en: "This is the Headscale server your devices connect to. It has no web page: add and manage devices in the Nexus app, in the Mesh section of the server.",
+            .de: "Dies ist der Headscale-Server, mit dem sich Ihre Geräte verbinden. Er hat keine Webseite: Geräte fügen Sie in der Nexus-App im Bereich Mesh des Servers hinzu und verwalten sie dort.",
+            .fr: "Ceci est le serveur Headscale auquel vos appareils se connectent. Il n'a pas de page web : ajoutez et gérez les appareils dans l'app Nexus, section Mesh du serveur.",
+            .es: "Este es el servidor Headscale al que se conectan tus dispositivos. No tiene página web: añade y gestiona los dispositivos en la app Nexus, en la sección Mesh del servidor.",
+            .ru: "Это сервер Headscale, к которому подключаются ваши устройства. Веб-страницы у него нет: устройства добавляются и управляются в приложении Nexus, в разделе Mesh сервера.",
+            .uk: "Це сервер Headscale, до якого підключаються ваші пристрої. Вебсторінки в нього немає: пристрої додаються й керуються в застосунку Nexus, у розділі Mesh сервера.",
+            .it: "Questo è il server Headscale a cui si collegano i tuoi dispositivi. Non ha una pagina web: aggiungi e gestisci i dispositivi nell'app Nexus, nella sezione Mesh del server.",
+            .ja: "これはデバイスが接続する Headscale サーバーです。Web ページはありません。デバイスの追加と管理は Nexus アプリのサーバーの Mesh セクションで行います。",
+            .zh: "这是设备连接的 Headscale 服务器。它没有网页：请在 Nexus 应用中服务器的 Mesh 部分添加和管理设备。"
+        ])
+    }
+
     public static func headscaleCreateUserNote(_ l: AppLanguage) -> String {
         l.pick([
             .en: "Create a user and a join key on the server",
@@ -2041,6 +2055,90 @@ public enum L10nServices {
             .it: "Questa macchina non ha lo strumento ubuntu-drivers, quindi il driver non e stato installato automaticamente — installalo tu stesso, poi esegui di nuovo questa installazione.",
             .ja: "このマシンには ubuntu-drivers ツールがないため、ドライバーは自動インストールされませんでした。自分でインストールしてから、このインストールを再実行してください。",
             .zh: "本机没有 ubuntu-drivers 工具，因此未自动安装驱动 — 请自行安装后再次运行本次安装。"
+        ])
+    }
+
+    public static func airplaySpeakerHint(_ l: AppLanguage) -> String {
+        l.pick([
+            .en: "Pick it in the AirPlay menu on your iPhone, iPad or Mac.",
+            .de: "Wählen Sie ihn im AirPlay-Menü Ihres iPhones, iPads oder Macs aus.",
+            .fr: "Choisissez-le dans le menu AirPlay de votre iPhone, iPad ou Mac.",
+            .es: "Elíjalo en el menú AirPlay de su iPhone, iPad o Mac.",
+            .ru: "Выберите его в меню AirPlay на iPhone, iPad или Mac.",
+            .uk: "Виберіть його в меню AirPlay на iPhone, iPad або Mac.",
+            .it: "Scegli l'altoparlante nel menu AirPlay di iPhone, iPad o Mac.",
+            .ja: "iPhone、iPad、Mac の AirPlay メニューから選んでください。",
+            .zh: "请在 iPhone、iPad 或 Mac 的 AirPlay 菜单中选择它。"
+        ])
+    }
+
+    public static func packagedAudioReady(_ l: AppLanguage) -> String {
+        l.pick([
+            .en: "installed; phones and computers on your home network find it on their own.",
+            .de: "installiert; Telefone und Computer in Ihrem Heimnetz finden es von selbst.",
+            .fr: "installé ; les téléphones et ordinateurs de votre réseau domestique le trouvent d'eux-mêmes.",
+            .es: "instalado; los teléfonos y ordenadores de su red doméstica lo encuentran solos.",
+            .ru: "установлено; телефоны и компьютеры в домашней сети находят его сами.",
+            .uk: "встановлено; телефони й комп'ютери в домашній мережі знаходять його самі.",
+            .it: "installato; telefoni e computer della rete di casa lo trovano da soli.",
+            .ja: "インストールしました。家庭内ネットワークのスマートフォンやパソコンが自動で見つけます。",
+            .zh: "已安装；家庭网络中的手机和电脑会自动找到它。"
+        ])
+    }
+
+    public static func airplayScreenHint(_ l: AppLanguage) -> String {
+        l.pick([
+            .en: "Pick it in the AirPlay menu on your iPhone, iPad or Mac, under Screen Mirroring.",
+            .de: "Wählen Sie ihn im AirPlay-Menü Ihres iPhones, iPads oder Macs unter Bildschirmsynchronisierung aus.",
+            .fr: "Choisissez-le dans le menu AirPlay de votre iPhone, iPad ou Mac, sous Recopie de l'écran.",
+            .es: "Elíjalo en el menú AirPlay de su iPhone, iPad o Mac, en Duplicar pantalla.",
+            .ru: "Выберите его в меню AirPlay на iPhone, iPad или Mac, в разделе «Повтор экрана».",
+            .uk: "Виберіть його в меню AirPlay на iPhone, iPad або Mac, у розділі «Дзеркалення екрана».",
+            .it: "Sceglilo nel menu AirPlay di iPhone, iPad o Mac, sotto Duplica schermo.",
+            .ja: "iPhone、iPad、Mac の AirPlay メニューの「画面ミラーリング」から選んでください。",
+            .zh: "请在 iPhone、iPad 或 Mac 的 AirPlay 菜单的“屏幕镜像”中选择它。"
+        ])
+    }
+
+    public static func airplayScreenDrmNote(_ l: AppLanguage) -> String {
+        l.pick([
+            .en: "DRM-protected video (Netflix and similar) cannot be shown — that is an Apple restriction.",
+            .de: "Kopiergeschützte Videos (Netflix und Ähnliches) können nicht angezeigt werden — das ist eine Einschränkung von Apple.",
+            .fr: "Les vidéos protégées par DRM (Netflix et similaires) ne peuvent pas être affichées — c'est une restriction d'Apple.",
+            .es: "El vídeo protegido con DRM (Netflix y similares) no se puede mostrar: es una restricción de Apple.",
+            .ru: "Видео с защитой DRM (Netflix и подобные) показать нельзя — это ограничение Apple.",
+            .uk: "Відео із захистом DRM (Netflix та подібні) показати не можна — це обмеження Apple.",
+            .it: "I video protetti da DRM (Netflix e simili) non possono essere mostrati: è una restrizione di Apple.",
+            .ja: "DRM で保護された動画（Netflix など）は表示できません。これは Apple の制限です。",
+            .zh: "受 DRM 保护的视频（Netflix 等）无法显示——这是 Apple 的限制。"
+        ])
+    }
+
+    public static func odioInstallerChecksum(_ l: AppLanguage) -> String {
+        l.pick([
+            .en: "the odio installer does not match its pinned checksum",
+            .de: "Das odio-Installationsprogramm stimmt nicht mit seiner festgelegten Prüfsumme überein",
+            .fr: "le programme d'installation d'odio ne correspond pas à sa somme de contrôle fixée",
+            .es: "el instalador de odio no coincide con su suma de comprobación fijada",
+            .ru: "установщик odio не совпадает с закреплённой контрольной суммой",
+            .uk: "інсталятор odio не збігається із закріпленою контрольною сумою",
+            .it: "il programma di installazione di odio non corrisponde al checksum fissato",
+            .ja: "odio のインストーラーが固定されたチェックサムと一致しません",
+            .zh: "odio 安装程序与固定的校验和不一致"
+        ])
+    }
+
+    public static func odioLeftovers(_ l: AppLanguage, packages: String, account: String) -> String {
+        l.pick([
+            .en: "left in place: the packages the installer added (\(packages)) and the user \(account). Remove them with apt and userdel if you no longer need them.",
+            .de: "bleibt bestehen: die vom Installer hinzugefügten Pakete (\(packages)) und der Benutzer \(account). Entfernen Sie sie bei Bedarf mit apt und userdel.",
+            .fr: "laissés en place : les paquets ajoutés par l'installateur (\(packages)) et l'utilisateur \(account). Supprimez-les avec apt et userdel si vous n'en avez plus besoin.",
+            .es: "se dejan instalados: los paquetes que añadió el instalador (\(packages)) y el usuario \(account). Elimínelos con apt y userdel si ya no los necesita.",
+            .ru: "остаются на месте: пакеты, добавленные установщиком (\(packages)), и пользователь \(account). Удалите их через apt и userdel, если они больше не нужны.",
+            .uk: "залишаються на місці: пакети, додані інсталятором (\(packages)), і користувач \(account). Видаліть їх через apt і userdel, якщо вони більше не потрібні.",
+            .it: "lasciati al loro posto: i pacchetti aggiunti dal programma di installazione (\(packages)) e l'utente \(account). Rimuovili con apt e userdel se non ti servono più.",
+            .ja: "残るもの：インストーラーが追加したパッケージ（\(packages)）とユーザー \(account)。不要なら apt と userdel で削除してください。",
+            .zh: "保留不动：安装程序添加的软件包（\(packages)）和用户 \(account)。如不再需要，请用 apt 和 userdel 删除。"
         ])
     }
 

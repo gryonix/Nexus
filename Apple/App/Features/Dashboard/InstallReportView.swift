@@ -46,7 +46,7 @@ struct InstallReportView: View {
                 }
             }
         }
-        .navigationTitle(Text("Login & Passwords"))
+        .screenTitle(Text("Login & Passwords"))
         .raisedNavigationTitle()
         .toolbar {
             if !accounts.isEmpty {
@@ -158,7 +158,7 @@ struct InstallReportView: View {
                     } else {
                         TextField("", text: text)
                             .autocorrectionDisabled()
-                            #if os(iOS)
+                            #if os(iOS) || os(tvOS)
                             .textInputAutocapitalization(.never)
                             #endif
                     }

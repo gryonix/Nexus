@@ -127,14 +127,44 @@ class HistoryMetricTests {
         assertEquals(1, HistoryMetric.series(setOf(HistoryMetric.LOAD), points).size)
     }
 
-    /** The ceiling is labelled in the METRIC's unit */
+    @Test
+    fun `memory gains a swap series only when the window has swap`() {
+        fun point(swapTotal: Long?) = MetricsHistoryPoint(
+            date = Instant.parse("2026-08-27T12:00:00Z"), cpuPercent = 1.0,
+            memUsedBytes = 512, memTotalBytes = 1024, diskUsedBytes = 1, diskTotalBytes = 2,
+            netReceivedPerSecond = null, netSentPerSecond = null,
+            diskReadPerSecond = null, diskWrittenPerSecond = null,
+            load1 = 0.5, temperatureCelsius = null,
+            swapUsedBytes = swapTotal?.div(4), swapTotalBytes = swapTotal,
+        )
+        val memory = setOf(HistoryMetric.MEMORY)
+        assertEquals(listOf("mem"), HistoryMetric.series(memory, listOf(point(null))).map { it.key })
+        assertEquals(listOf("mem"), HistoryMetric.series(memory, listOf(point(0))).map { it.key })
+        val withSwap = HistoryMetric.series(memory, listOf(point(400)))
+        assertEquals(listOf("mem", "swap"), withSwap.map { it.key })
+        assertEquals(25.0, withSwap[1].values.single().value)
+    }
+
+    /** Each grid line is labelled in the METRIC's unit */
     @Test
     fun `the axis says what the numbers are`() {
-        assertEquals("0 – 100 %", HistoryMetric.axisLabel(setOf(HistoryMetric.CPU, HistoryMetric.MEMORY), 100.0))
-        assertEquals("0 – 26.9 K/s", HistoryMetric.axisLabel(setOf(HistoryMetric.NETWORK), 27_562.0))
-        assertEquals("0 – 26.9 K/s", HistoryMetric.axisLabel(setOf(HistoryMetric.DISK_IO), 27_562.0))
-        assertEquals("0 – 45°C", HistoryMetric.axisLabel(setOf(HistoryMetric.TEMPERATURE), 45.0))
-        assertEquals("0 – 2.4", HistoryMetric.axisLabel(setOf(HistoryMetric.LOAD), 2.4))
+        assertEquals("40%", HistoryMetric.tickLabel(setOf(HistoryMetric.CPU, HistoryMetric.MEMORY), 40.2))
+        assertEquals("26.9 K/s", HistoryMetric.tickLabel(setOf(HistoryMetric.NETWORK), 27_562.0))
+        assertEquals("26.9 K/s", HistoryMetric.tickLabel(setOf(HistoryMetric.DISK_IO), 27_562.0))
+        assertEquals("45°C", HistoryMetric.tickLabel(setOf(HistoryMetric.TEMPERATURE), 45.0))
+        assertEquals("2.4", HistoryMetric.tickLabel(setOf(HistoryMetric.LOAD), 2.4))
+    }
+
+    @Test
+    fun `a panel names averages, peaks and totals`() {
+        val start = java.time.Instant.ofEpochSecond(0)
+        fun line(key: String, vararg values: Double) = HistorySeries(key, 0, values.mapIndexed { index, value ->
+            HistorySeries.Sample(start.plusSeconds(index * 60L), value)
+        })
+        val words = { id: Int -> if (id == com.skaymer.gryonixnexus.R.string.metrics_avg) "avg" else if (id == com.skaymer.gryonixnexus.R.string.metrics_peak) "peak" else "x" }
+        assertEquals("avg 20 % · peak 30 %", MetricPanelSummary.text(listOf(HistoryMetric.CPU), listOf(line("cpu", 10.0, 30.0)), 60.0, words))
+        assertEquals("x 1.2 K · x 600 B", MetricPanelSummary.text(listOf(HistoryMetric.NETWORK), listOf(line("rx", 10.0, 10.0), line("tx", 5.0, 5.0)), 60.0, words))
+        assertEquals("—", MetricPanelSummary.text(listOf(HistoryMetric.LOAD), emptyList(), 60.0, words))
     }
 
     /** A missing value is left OUT, not plotted as zero */

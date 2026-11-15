@@ -31,6 +31,18 @@ class AgentClient(private val transport: AgentTransport) {
     suspend fun listSerialDevices(): SerialDeviceList =
         unary("/gryonixnexusd.v1.Control/ListSerialDevices", ListSerialDevicesRequest(), SerialDeviceList.ADAPTER)
 
+    suspend fun getSystemSettings(): SystemSettings =
+        unary("/gryonixnexusd.v1.Control/GetSystemSettings", GetSystemSettingsRequest(), SystemSettings.ADAPTER)
+
+    suspend fun setTimeZone(timeZone: String): SystemSettings =
+        unary("/gryonixnexusd.v1.Control/SetTimeZone", SetTimeZoneRequest(time_zone = timeZone), SystemSettings.ADAPTER)
+
+    suspend fun setHostName(hostName: String): SystemSettings =
+        unary("/gryonixnexusd.v1.Control/SetHostName", SetHostNameRequest(host_name = hostName), SystemSettings.ADAPTER)
+
+    suspend fun setTimeSync(enabled: Boolean): SystemSettings =
+        unary("/gryonixnexusd.v1.Control/SetTimeSync", SetTimeSyncRequest(enabled = enabled), SystemSettings.ADAPTER)
+
     suspend fun listBackups(serviceID: String): BackupList =
         unary("/gryonixnexusd.v1.Backup/ListBackups", ListBackupsRequest(service_id = serviceID), BackupList.ADAPTER)
 
@@ -69,6 +81,9 @@ class AgentClient(private val transport: AgentTransport) {
 
     suspend fun setBackupDrives(drives: BackupDrives): BackupSchedulePolicy =
         unary("/gryonixnexusd.v1.Backup/SetBackupDrives", SetBackupDrivesRequest(drives = drives), BackupSchedulePolicy.ADAPTER)
+
+    suspend fun setBackupParts(parts: BackupPartChoice): BackupSchedulePolicy =
+        unary("/gryonixnexusd.v1.Backup/SetBackupParts", SetBackupPartsRequest(parts = parts), BackupSchedulePolicy.ADAPTER)
 
     /** Stages a drive archive where a restore reads it */
     suspend fun fetchDriveBackup(serviceID: String, path: String): BackupArchive =
@@ -138,6 +153,27 @@ class AgentClient(private val transport: AgentTransport) {
     suspend fun containerGroupBackups(key: String): ContainerBackupList =
         unary("/gryonixnexusd.v1.Containers/ListContainerGroupBackups", ListContainerGroupBackupsRequest(key = key), ContainerBackupList.ADAPTER)
 
+    suspend fun listImages(): ImageInventory =
+        unary("/gryonixnexusd.v1.Containers/ListImages", ListImagesRequest(), ImageInventory.ADAPTER)
+
+    suspend fun listVolumes(): VolumeInventory =
+        unary("/gryonixnexusd.v1.Containers/ListVolumes", ListVolumesRequest(), VolumeInventory.ADAPTER)
+
+    suspend fun removeImage(reference: String): DockerRemovalResult =
+        unary("/gryonixnexusd.v1.Containers/RemoveImage", RemoveImageRequest(reference = reference), DockerRemovalResult.ADAPTER)
+
+    suspend fun removeVolume(name: String): DockerRemovalResult =
+        unary("/gryonixnexusd.v1.Containers/RemoveVolume", RemoveVolumeRequest(name = name), DockerRemovalResult.ADAPTER)
+
+    suspend fun listNetworks(): NetworkInventory =
+        unary("/gryonixnexusd.v1.Containers/ListNetworks", ListNetworksRequest(), NetworkInventory.ADAPTER)
+
+    suspend fun removeNetwork(name: String): DockerRemovalResult =
+        unary("/gryonixnexusd.v1.Containers/RemoveNetwork", RemoveNetworkRequest(name = name), DockerRemovalResult.ADAPTER)
+
+    suspend fun pruneUnused(images: Boolean, volumes: Boolean): PruneUnusedResult =
+        unary("/gryonixnexusd.v1.Containers/PruneUnused", PruneUnusedRequest(images = images, volumes = volumes), PruneUnusedResult.ADAPTER)
+
     suspend fun checkUpdates(): UpdateCheckResult =
         unary("/gryonixnexusd.v1.Update/CheckUpdates", CheckUpdatesRequest(), UpdateCheckResult.ADAPTER)
 
@@ -168,8 +204,103 @@ class AgentClient(private val transport: AgentTransport) {
     suspend fun getLockdown(): LockdownState =
         unary("/gryonixnexusd.v1.Lockdown/GetLockdown", GetLockdownRequest(), LockdownState.ADAPTER)
 
-    suspend fun setLockdown(mode: LockdownMode, hosts: List<String> = emptyList()): LockdownState =
-        unary("/gryonixnexusd.v1.Lockdown/SetLockdown", SetLockdownRequest(mode = mode, hosts = hosts), LockdownState.ADAPTER)
+    suspend fun setLockdown(
+        mode: LockdownMode,
+        hosts: List<String> = emptyList(),
+        denyVPN: List<String>? = null,
+    ): LockdownState = unary(
+        "/gryonixnexusd.v1.Lockdown/SetLockdown",
+        SetLockdownRequest(
+            mode = mode,
+            hosts = hosts,
+            deny_vpn_hosts = denyVPN.orEmpty(),
+            set_deny_vpn_hosts = denyVPN != null,
+        ),
+        LockdownState.ADAPTER,
+    )
+
+    /** Which of these ports answer on the server's public address */
+    suspend fun probePublicPorts(host: String, ports: List<Int>): ProbePublicPortsResponse = unary(
+        "/gryonixnexusd.v1.Exposure/ProbePublicPorts",
+        ProbePublicPortsRequest(host = host, ports = ports),
+        ProbePublicPortsResponse.ADAPTER,
+    )
+
+    /** Caddy's local root certificate, PEM */
+    suspend fun getLocalRootCA(): String = unary(
+        "/gryonixnexusd.v1.Exposure/GetLocalRootCA",
+        GetLocalRootCARequest(),
+        GetLocalRootCAResponse.ADAPTER,
+    ).pem
+
+    /** Module ids this server keeps on */
+    suspend fun getAppModules(): List<String> =
+        unary("/gryonixnexusd.v1.AppModules/GetAppModules", GetAppModulesRequest(), AppModuleSet.ADAPTER).on
+
+    suspend fun setAppModules(on: List<String>): List<String> =
+        unary("/gryonixnexusd.v1.AppModules/SetAppModules", AppModuleSet(on = on), AppModuleSet.ADAPTER).on
+
+    /** Names given to services, by service id */
+    suspend fun getServiceNames(): Map<String, String> = unary(
+        "/gryonixnexusd.v1.ServiceNames/GetServiceNames", GetServiceNamesRequest(), ServiceNameSet.ADAPTER,
+    ).names
+
+    /** Names one service; empty puts the catalog name back */
+    suspend fun setServiceName(serviceID: String, name: String): Map<String, String> = unary(
+        "/gryonixnexusd.v1.ServiceNames/SetServiceName",
+        SetServiceNameRequest(service_id = serviceID, name = name),
+        ServiceNameSet.ADAPTER,
+    ).names
+
+    /** The machine's sound outputs, default first */
+    suspend fun listAudioOutputs(): List<AudioOutput> = unary(
+        "/gryonixnexusd.v1.Audio/ListAudioOutputs",
+        ListAudioOutputsRequest(),
+        ListAudioOutputsResponse.ADAPTER,
+    ).outputs
+
+    /** Sites with a .local name, by host */
+    suspend fun getLocalAliases(): Map<String, String> = unary(
+        "/gryonixnexusd.v1.Exposure/GetLocalAliases", GetLocalAliasesRequest(), LocalAliasesState.ADAPTER,
+    ).aliases.associate { it.host to it.alias }
+
+    /** Adds or removes one site's .local name */
+    suspend fun setLocalAlias(host: String, on: Boolean): Map<String, String> = unary(
+        "/gryonixnexusd.v1.Exposure/SetLocalAlias", SetLocalAliasRequest(host = host, on = on), LocalAliasesState.ADAPTER,
+    ).aliases.associate { it.host to it.alias }
+
+    /** Keeps these ports to private addresses; empty clears */
+    suspend fun setHomeOnlyPorts(ports: List<Pair<String, Int>>) {
+        unary(
+            "/gryonixnexusd.v1.Exposure/SetHomeOnlyPorts",
+            SetHomeOnlyPortsRequest(ports = ports.map { (proto, port) -> HomeOnlyPort(proto = proto, port = port) }),
+            SetHomeOnlyPortsResponse.ADAPTER,
+        )
+    }
+
+    /** The read-only MCP door's state */
+    suspend fun getMcpAccess(): McpAccessState =
+        unary("/gryonixnexusd.v1.McpAccess/GetMcpAccess", GetMcpAccessRequest(), McpAccessState.ADAPTER)
+
+    /** Opens the MCP door for this key, or closes it */
+    suspend fun setMcpAccess(enabled: Boolean, publicKey: String = ""): McpAccessState = unary(
+        "/gryonixnexusd.v1.McpAccess/SetMcpAccess",
+        SetMcpAccessRequest(enabled = enabled, public_key = publicKey),
+        McpAccessState.ADAPTER,
+    )
+
+    /** One allowed call to the audio hub's local API */
+    suspend fun odioCall(method: String, path: String, body: String = ""): OdioCallResponse = unary(
+        "/gryonixnexusd.v1.Audio/OdioCall",
+        OdioCallRequest(method = method, path = path, body = body),
+        OdioCallResponse.ADAPTER,
+    )
+
+    suspend fun getOpenAPI(): OpenAPIState =
+        unary("/gryonixnexusd.v1.Lockdown/GetOpenAPI", GetOpenAPIRequest(), OpenAPIState.ADAPTER)
+
+    suspend fun setOpenAPI(serviceID: String, paths: List<String>): OpenAPIState =
+        unary("/gryonixnexusd.v1.Lockdown/SetOpenAPI", SetOpenAPIRequest(service_id = serviceID, paths = paths), OpenAPIState.ADAPTER)
 
     suspend fun getSecurityStatus(): SecurityStatus =
         unary("/gryonixnexusd.v1.Security/GetSecurityStatus", GetSecurityStatusRequest(), SecurityStatus.ADAPTER)
@@ -179,6 +310,9 @@ class AgentClient(private val transport: AgentTransport) {
 
     suspend fun listSSHUsers(loginUser: String, appPublicKey: String): SshUsers =
         unary("/gryonixnexusd.v1.Security/ListSshUsers", ListSshUsersRequest(login_user = loginUser, app_public_key = appPublicKey), SshUsers.ADAPTER)
+
+    suspend fun authorizeAppKey(user: String, loginUser: String, appPublicKey: String): SshUsers =
+        unary("/gryonixnexusd.v1.Security/AuthorizeAppKey", AuthorizeAppKeyRequest(user = user, login_user = loginUser, app_public_key = appPublicKey), SshUsers.ADAPTER)
 
     suspend fun setSSHKeyOnlyUsers(everyone: Boolean, users: List<String>, loginUser: String, appPublicKey: String): SshUsers =
         unary("/gryonixnexusd.v1.Security/SetSshKeyOnlyUsers", SetSshKeyOnlyUsersRequest(everyone = everyone, users = users, login_user = loginUser, app_public_key = appPublicKey), SshUsers.ADAPTER)
@@ -301,6 +435,12 @@ class AgentClient(private val transport: AgentTransport) {
 
     suspend fun setVPNClientDNS(name: String, clientID: String, dns: List<String>): List<VpnClient> =
         unary("/gryonixnexusd.v1.Vpn/SetVpnClientDns", SetVpnClientDnsRequest(protocol = name, client_id = clientID, dns = dns), VpnClientList.ADAPTER).clients
+
+    suspend fun setAmneziaKernel(enabled: Boolean): VpnSpeedFacts =
+        unary("/gryonixnexusd.v1.Vpn/SetAmneziaKernel", SetAmneziaKernelRequest(enabled = enabled), VpnSpeedFacts.ADAPTER)
+
+    suspend fun vpnSpeedFacts(): VpnSpeedFacts =
+        unary("/gryonixnexusd.v1.Vpn/GetVpnSpeedFacts", GetVpnSpeedFactsRequest(), VpnSpeedFacts.ADAPTER)
 
     suspend fun vpnDefaultDNS(): VpnDns =
         unary("/gryonixnexusd.v1.Vpn/GetVpnDns", GetVpnDnsRequest(), VpnDns.ADAPTER)
@@ -569,6 +709,13 @@ class AgentClient(private val transport: AgentTransport) {
         StartInstallPlanRequest(services = services, purpose = purpose),
         InstallPlan.ADAPTER,
     )
+
+    /** What this machine lacks for the services, before any install */
+    suspend fun checkInstall(services: List<String>): List<InstallFinding> = unary(
+        "/gryonixnexusd.v1.Install/CheckInstall",
+        CheckInstallRequest(services = services),
+        CheckInstallResult.ADAPTER,
+    ).findings
 
     /** A plan by id; empty id means newest */
     suspend fun installPlan(id: String = ""): InstallPlan = unary(

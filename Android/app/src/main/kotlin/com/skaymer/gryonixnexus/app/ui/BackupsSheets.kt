@@ -1,6 +1,8 @@
 package com.skaymer.gryonixnexus.app.ui
 
 import android.widget.Toast
+import com.skaymer.gryonixnexus.app.servers.PendingRules
+import com.skaymer.gryonixnexus.app.ui.design.ApplyPendingBar
 import com.skaymer.gryonixnexus.app.ui.design.RunLog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -29,7 +31,15 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.automirrored.outlined.ListAlt
+import androidx.compose.material.icons.outlined.Checklist
+import androidx.compose.material.icons.outlined.CloudUpload
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.SettingsBackupRestore
+import androidx.compose.material.icons.outlined.Sync
+import androidx.compose.material.icons.outlined.Usb
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ExpandMore
 import com.skaymer.gryonixnexus.app.ui.design.ActionRow
 import com.skaymer.gryonixnexus.app.ui.design.ConfirmAlert
@@ -54,9 +64,11 @@ import com.skaymer.gryonixnexus.app.ui.design.CheckRow
 import com.skaymer.gryonixnexus.app.ui.design.IOSAlert
 import com.skaymer.gryonixnexus.app.ui.design.Metrics
 import com.skaymer.gryonixnexus.R
+import com.skaymer.gryonixnexus.app.ui.design.FormSheet
 import com.skaymer.gryonixnexus.app.ui.design.ValueRow
 import com.skaymer.gryonixnexus.agentcontrol.PreRestoreCopy
 import com.skaymer.gryonixnexus.app.servers.BackupRun
+import com.skaymer.gryonixnexus.app.servers.BackupPartsModel
 import com.skaymer.gryonixnexus.app.servers.BackupsViewModel
 import com.skaymer.gryonixnexus.app.servers.MetricsFormat
 import com.skaymer.gryonixnexus.catalog.ManagedService
@@ -91,6 +103,7 @@ fun BackupsCard(
         value = if (state.hasLoadedSchedule) state.schedule.schedule.sentence() else null,
         onClick = onOpen,
         showDivider = showDivider,
+        leading = { HubIcon(Icons.Outlined.SettingsBackupRestore) },
     )
 }
 
@@ -102,364 +115,199 @@ fun BackupsDialog(
     onClose: () -> Unit,
 ) {
     val state by backups.state.collectAsState()
+    val allState by backups.all.collectAsState()
+    val partsModel = remember(deployment.id) { backups.parts() }
     LaunchedEffect(deployment.id) {
         backups.loadSchedule(deployment)
         backups.loadDestination(deployment)
+        backups.loadAll(deployment)
+        partsModel.load(deployment)
     }
-    var showingDestination by remember(deployment.id) { mutableStateOf(false) }
-    var showingDrives by remember(deployment.id) { mutableStateOf(false) }
-    var showingAll by remember(deployment.id) { mutableStateOf(false) }
-    var showingBackupNow by remember(deployment.id) { mutableStateOf(false) }
-    val allState by backups.all.collectAsState()
-    LaunchedEffect(deployment.id) { backups.loadAll(deployment) }
-    val drivesModel = remember(deployment.id) { backups.drives() }
-
+    var page by remember(deployment.id) { mutableStateOf<BackupsPage?>(null) }
+    var restoring by remember { mutableStateOf<ManagedService?>(null) }
     val capable = remember(deployment) { BackupsViewModel.backupCapableServices(deployment) }
-    val restorable = remember(deployment) {
-        BackupsViewModel.restorableServices(deployment).map { it.id }.toSet()
+    val restorable = remember(deployment) { BackupsViewModel.restorableServices(deployment) }
+
+    IOSSheet(title = stringResource(R.string.backups), onClose = onClose, closeLabel = stringResource(R.string.close)) {
+        BackupNumbers(allState)
+        BackupActions(
+            canBackUp = capable.isNotEmpty(),
+            canRestore = restorable.isNotEmpty(),
+            onOpen = { page = it },
+        )
+        BackupSettings(deployment, state, partsModel, onOpen = { page = it })
     }
+    BackupsPageSheet(page, deployment, backups, fleet, partsModel, restorable,
+        onRestore = { restoring = it }, onClose = { page = null })
+    restoring?.let { service ->
+        RestorePickerDialog(deployment = deployment, backups = backups, service = service, onClose = { restoring = null })
+    }
+}
+
+/** Pages the backups hub opens */
+private enum class BackupsPage { ALL, NOW, RESTORE, SCHEDULE, PARTS, DESTINATION, DRIVES }
+
+@Composable
+private fun BackupActions(canBackUp: Boolean, canRestore: Boolean, onOpen: (BackupsPage) -> Unit) {
+    val accent = Gryonix.colors.accent
+    GroupedSection {
+        ValueRow(
+            title = stringResource(R.string.backups_all),
+            value = null,
+            onClick = { onOpen(BackupsPage.ALL) },
+            showDivider = canBackUp || canRestore,
+            leading = { HubIcon(Icons.AutoMirrored.Outlined.ListAlt, accent) },
+        )
+        if (canBackUp) {
+            ActionRow(
+                text = stringResource(R.string.containers_backup_now),
+                onClick = { onOpen(BackupsPage.NOW) },
+                showDivider = canRestore,
+                leading = { HubIcon(Icons.Outlined.Sync, accent) },
+            )
+        }
+        if (canRestore) {
+            ActionRow(
+                text = stringResource(R.string.backups_restore),
+                onClick = { onOpen(BackupsPage.RESTORE) },
+                showDivider = false,
+                leading = { HubIcon(Icons.Outlined.History, accent) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun BackupSettings(
+    deployment: Deployment,
+    state: com.skaymer.gryonixnexus.app.servers.BackupsState,
+    partsModel: BackupPartsModel,
+    onOpen: (BackupsPage) -> Unit,
+) {
+    val parts by partsModel.state.collectAsState()
+    val accent = Gryonix.colors.accent
+    GroupedSection {
+        ValueRow(
+            title = stringResource(R.string.backups_schedule),
+            value = if (state.hasLoadedSchedule) state.schedule.schedule.sentence() else null,
+            onClick = { onOpen(BackupsPage.SCHEDULE) },
+            leading = { HubIcon(Icons.Outlined.Schedule, accent) },
+        )
+        ValueRow(
+            title = stringResource(R.string.backup_parts_title),
+            value = backupPartsSummary(parts.parts.choice.regular),
+            onClick = { onOpen(BackupsPage.PARTS) },
+            leading = { HubIcon(Icons.Outlined.Checklist, accent) },
+        )
+        ValueRow(
+            title = stringResource(R.string.backup_destination_row),
+            value = destinationSummary(state.destination),
+            onClick = { onOpen(BackupsPage.DESTINATION) },
+            showDivider = deployment.hasPhysicalAccess,
+            leading = { HubIcon(Icons.Outlined.CloudUpload, accent) },
+        )
+        if (deployment.hasPhysicalAccess) {
+            ValueRow(
+                title = stringResource(R.string.drive_title),
+                value = null,
+                onClick = { onOpen(BackupsPage.DRIVES) },
+                showDivider = false,
+                leading = { HubIcon(Icons.Outlined.Usb, accent) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun BackupsPageSheet(
+    page: BackupsPage?,
+    deployment: Deployment,
+    backups: BackupsViewModel,
+    fleet: List<Deployment>,
+    partsModel: BackupPartsModel,
+    restorable: List<ManagedService>,
+    onRestore: (ManagedService) -> Unit,
+    onClose: () -> Unit,
+) {
+    when (page) {
+        BackupsPage.ALL -> AllBackupsDialog(deployment, backups, fleet, onClose)
+        BackupsPage.NOW -> BackupNowDialog(deployment, backups, onClose)
+        BackupsPage.RESTORE -> RestoreServiceChooser(restorable, onPick = { onClose(); onRestore(it) }, onClose = onClose)
+        BackupsPage.SCHEDULE -> BackupScheduleSheet(deployment, backups, onClose)
+        BackupsPage.PARTS -> BackupPartsSheet(deployment, partsModel, BackupPartsScope.REGULAR, onClose)
+        BackupsPage.DESTINATION -> BackupDestinationSheet(deployment = deployment, fleet = fleet, backups = backups, onClose = onClose)
+        BackupsPage.DRIVES -> BackupDrivesSheet(deployment, remember(deployment.id) { backups.drives() }, onClose)
+        null -> Unit
+    }
+}
+
+/** Which service to restore */
+@Composable
+private fun RestoreServiceChooser(services: List<ManagedService>, onPick: (ManagedService) -> Unit, onClose: () -> Unit) {
+    IOSSheet(title = stringResource(R.string.backups_restore), onClose = onClose, closeLabel = stringResource(R.string.close)) {
+        GroupedSection {
+            services.forEachIndexed { index, service ->
+                ValueRow(
+                    title = service.displayName,
+                    value = null,
+                    onClick = { onPick(service) },
+                    showDivider = index < services.lastIndex,
+                )
+            }
+        }
+    }
+}
+
+/** The server's backup timer, saved on its own page */
+@Composable
+private fun BackupScheduleSheet(deployment: Deployment, backups: BackupsViewModel, onClose: () -> Unit) {
+    val state by backups.state.collectAsState()
+    val capable = remember(deployment) { BackupsViewModel.backupCapableServices(deployment) }
     var draft by remember(state.schedule) { mutableStateOf(state.schedule) }
     var passphrase by remember(deployment.id) { mutableStateOf("") }
-    var expanded by remember(deployment.id) { mutableStateOf<ServiceID?>(null) }
-    var backingUp by remember { mutableStateOf<ManagedService?>(null) }
-    var restoring by remember { mutableStateOf<ManagedService?>(null) }
-    var deleting by remember { mutableStateOf<Pair<ServiceID, BackupEntry>?>(null) }
-    var deletingCopy by remember { mutableStateOf<Pair<ServiceID, PreRestoreCopy>?>(null) }
-    var savingFor by remember { mutableStateOf<Pair<ServiceID, BackupEntry>?>(null) }
-    var restoringFromFile by remember { mutableStateOf<ManagedService?>(null) }
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-
-    val saveTo = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/gzip"),
-    ) { uri ->
-        val target = savingFor
-        savingFor = null
-        if (uri == null || target == null) return@rememberLauncherForActivityResult
-        backups.download(deployment, target.first, target.second) { bytes, _ ->
-            scope.launch(Dispatchers.IO) {
-                val wrote = runCatching {
-                    context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) } != null
-                }.getOrDefault(false)
-                if (!wrote) withContext(Dispatchers.Main) { Toast.makeText(context, R.string.dkim_export_failed, Toast.LENGTH_LONG).show() }
-            }
-        }
-    }
-
-    val readFrom = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        val service = restoringFromFile
-        restoringFromFile = null
-        if (uri == null || service == null) return@rememberLauncherForActivityResult
-        scope.launch {
-            val bytes = withContext(Dispatchers.IO) {
-                runCatching { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }
-                    .getOrNull()
-            } ?: return@launch
-            val name = DocumentFileName.of(context, uri)
-            backups.restoreFromDevice(deployment, service.id, bytes, name, passphrase.ifEmpty { null })
-        }
-    }
-
     IOSSheet(
-        title = stringResource(R.string.backups),
+        title = stringResource(R.string.backups_schedule),
         onClose = onClose,
         closeLabel = stringResource(R.string.close),
-        action = SheetAction(
-            title = stringResource(R.string.updates_save),
-            enabled = BackupsViewModel.canSaveSchedule(
-                deployment = deployment,
-                draft = draft,
-                saved = state.schedule,
-                typedPassphrase = passphrase,
-                isSaving = state.isSaving,
-            ),
-            onSelect = {
-                backups.saveSchedule(deployment, draft, passphrase.ifEmpty { null })
-                // Never kept around after it has been sent.
-                passphrase = ""
-            },
-        ),
-    ) {
-        BackupNumbers(allState, onOpenAll = { showingAll = true })
-        if (capable.isNotEmpty()) {
-            GroupedSection {
-                ActionRow(
-                    text = stringResource(R.string.containers_backup_now),
-                    onClick = { showingBackupNow = true },
-                    showDivider = false,
-                )
-            }
-        }
-
-        capable.forEach { service ->
-            ServiceBackups(
-                service = service,
-                state = state.services[service.id],
-                isOpen = expanded == service.id,
-                canRestore = service.id in restorable,
-                onToggle = {
-                    expanded = if (expanded == service.id) null else service.id
-                    if (expanded == service.id && state.services[service.id] == null) {
-                        backups.list(deployment, service.id)
-                    }
+        bottomBar = {
+            ApplyPendingBar(
+                visible = PendingRules.backupSchedule(
+                    canSave = BackupsViewModel.canSaveSchedule(
+                        deployment = deployment,
+                        draft = draft,
+                        saved = state.schedule,
+                        typedPassphrase = passphrase,
+                        isSaving = state.isSaving,
+                    ),
+                    changed = draft != state.schedule,
+                    typedPassphrase = passphrase,
+                ),
+                apply = stringResource(R.string.updates_save),
+                cancel = stringResource(R.string.pending_changes_cancel),
+                onApply = {
+                    backups.saveSchedule(deployment, draft, passphrase.ifEmpty { null })
+                    passphrase = ""
                 },
-                onBackUp = { backingUp = service },
-                onRestore = { restoring = service },
-                onDelete = { deleting = service.id to it },
-                onSave = { entry ->
-                    savingFor = service.id to entry
-                    saveTo.launch(entry.displayName)
-                },
-                onRestoreFromFile = {
-                    restoringFromFile = service
-                    readFrom.launch(arrayOf("*/*"))
-                },
-                transfer = state.services[service.id]?.transfer,
+                onRevert = { draft = state.schedule; passphrase = "" },
             )
-            if (expanded == service.id) {
-                OldCopiesSection(
-                    copies = state.oldCopies[service.id].orEmpty(),
-                    onDelete = { deletingCopy = service.id to it },
-                )
-            }
-        }
-
+        },
+    ) {
         ScheduleEditor(
             deployment = deployment,
             draft = draft,
-            services = capable.map { it.id to it.displayName },
+            services = serviceTitles(deployment.id).let { title -> capable.map { it.id to title(it) } },
             passphrase = passphrase,
-            hasStoredPassphrase =
-                BackupsViewModel.hasStoredPassphrase(deployment, state.schedule),
+            hasStoredPassphrase = BackupsViewModel.hasStoredPassphrase(deployment, state.schedule),
             onChange = { draft = it },
             onPassphrase = { passphrase = it },
             error = state.scheduleError,
         )
-
-        GroupedSection {
-            ValueRow(
-                title = stringResource(R.string.backup_destination_row),
-                value = destinationSummary(state.destination),
-                onClick = { showingDestination = true },
-                showDivider = deployment.hasPhysicalAccess,
-            )
-            if (deployment.hasPhysicalAccess) {
-                ValueRow(
-                    title = stringResource(R.string.drive_title),
-                    value = null,
-                    onClick = { showingDrives = true },
-                    showDivider = false,
-                )
-            }
-        }
-    }
-
-    if (showingDrives) {
-        BackupDrivesSheet(deployment, drivesModel) { showingDrives = false }
-    }
-
-    if (showingAll) {
-        AllBackupsDialog(deployment, backups, fleet) { showingAll = false }
-    }
-
-    if (showingBackupNow) {
-        BackupNowDialog(deployment, backups) { showingBackupNow = false }
-    }
-
-    if (showingDestination) {
-        BackupDestinationSheet(
-            deployment = deployment,
-            fleet = fleet,
-            backups = backups,
-            onClose = { showingDestination = false },
-        )
-    }
-
-    backingUp?.let { service ->
-        BackupConfirmDialog(
-            deployment = deployment,
-            backups = backups,
-            service = service,
-            onClose = { backingUp = null },
-        )
-    }
-    restoring?.let { service ->
-        RestorePickerDialog(
-            deployment = deployment,
-            backups = backups,
-            service = service,
-            onClose = { restoring = null },
-        )
-    }
-    deletingCopy?.let { (id, copy) ->
-        ConfirmAlert(
-            title = stringResource(R.string.backups_old_copy_delete_title),
-            message = stringResource(R.string.backups_old_copy_delete_message, copy.name),
-            confirm = stringResource(R.string.backups_delete),
-            cancel = stringResource(R.string.containers_cancel),
-            destructive = true,
-            onConfirm = {
-                backups.deleteOldCopy(deployment, id, copy)
-                deletingCopy = null
-            },
-            onCancel = { deletingCopy = null },
-        )
-    }
-    deleting?.let { (id, entry) ->
-        ConfirmAlert(
-            title = stringResource(R.string.backups_delete),
-            message = deletionMessage(listOf(entry)),
-            confirm = stringResource(R.string.backups_delete),
-            cancel = stringResource(R.string.containers_cancel),
-            destructive = true,
-            onConfirm = {
-                backups.delete(deployment, id, entry)
-                deleting = null
-            },
-            onCancel = { deleting = null },
-        )
     }
 }
 
+/** One service's backup: size check and passphrase */
 @Composable
-private fun ServiceBackups(
-    service: ManagedService,
-    state: com.skaymer.gryonixnexus.app.servers.ServiceBackupsState?,
-    isOpen: Boolean,
-    canRestore: Boolean,
-    onToggle: () -> Unit,
-    onBackUp: () -> Unit,
-    onRestore: () -> Unit,
-    onDelete: (BackupEntry) -> Unit,
-    onSave: (BackupEntry) -> Unit,
-    /** Restore from a file brought in from the device */
-    onRestoreFromFile: () -> Unit,
-    transfer: com.skaymer.gryonixnexus.app.servers.Transfer?,
-) {
-    val colors = Gryonix.colors
-    GroupedSection(header = service.displayName) {
-        GroupedRow(
-            onClick = onToggle,
-            trailing = {
-                Icon(
-                    if (isOpen) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                    contentDescription = null,
-                    tint = colors.accent,
-                    modifier = Modifier.size(20.dp),
-                )
-            },
-        ) {
-            Text(
-                stringResource(R.string.backups),
-                style = MaterialTheme.typography.bodyLarge,
-                color = colors.label,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        ActionRow(text = stringResource(R.string.backups_run), onClick = onBackUp)
-        if (canRestore) {
-            ActionRow(text = stringResource(R.string.backups_restore), onClick = onRestore)
-            ActionRow(
-                text = stringResource(R.string.backups_restore_from_file),
-                onClick = onRestoreFromFile,
-                showDivider = transfer != null || isOpen,
-            )
-        }
-        transfer?.let { moving ->
-            GroupedRow(
-                showDivider = isOpen,
-                leading = {
-                    CircularProgressIndicator(
-                        Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                        color = colors.tertiaryLabel,
-                    )
-                },
-            ) {
-                Text(
-                    stringResource(
-                        if (moving.isSending) {
-                            R.string.backups_sending
-                        } else {
-                            R.string.backups_receiving
-                        },
-                        moving.fileName,
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.secondaryLabel,
-                )
-            }
-        }
-
-        if (!isOpen) return@GroupedSection
-
-        when {
-            state == null || state.isLoading -> GroupedRow(
-                showDivider = false,
-                leading = {
-                    CircularProgressIndicator(
-                        Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                        color = colors.tertiaryLabel,
-                    )
-                },
-            ) {
-                Text(
-                    stringResource(R.string.backups_loading),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.secondaryLabel,
-                )
-            }
-            state.errorMessage != null -> GroupedRow(showDivider = false) {
-                Text(
-                    state.errorMessage!!,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.danger,
-                )
-            }
-            state.saysThereAreNone -> GroupedRow(showDivider = false) {
-                Text(
-                    stringResource(R.string.backups_none),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.secondaryLabel,
-                )
-            }
-            else -> state.entries.forEach { entry ->
-                GroupedRow(
-                    showDivider = entry != state.entries.last(),
-                    trailing = {
-                        if (entry.drive == null) {
-                            PlainButton(
-                                text = stringResource(R.string.backups_save_to_device),
-                                onClick = { onSave(entry) },
-                            )
-                        }
-                        IconButton(
-                            onClick = { onDelete(entry) },
-                            modifier = Modifier.size(28.dp),
-                        ) {
-                            Icon(
-                                Icons.Filled.Delete,
-                                contentDescription = stringResource(R.string.backups_delete),
-                                tint = colors.danger,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
-                    },
-                ) {
-                    val detail = stringResource(R.string.backups_entry_detail, entry.sizeText, entry.dateText)
-                    val onDrive = entry.drive?.let { stringResource(R.string.drive_copy_on, it) }
-                    RowLabel(entry.displayName, listOfNotNull(detail, onDrive).joinToString(" · "))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun BackupConfirmDialog(
+internal fun BackupConfirmDialog(
     deployment: Deployment,
     backups: BackupsViewModel,
     service: ManagedService,
@@ -480,8 +328,8 @@ private fun BackupConfirmDialog(
 
     val armed = estimate?.isLoading == false &&
         BackupsViewModel.passphraseIsUsable(passphrase, confirmation)
-    IOSAlert(
-        title = service.displayName,
+    FormSheet(
+        title = serviceTitles(deployment.id)(service),
         onDismiss = onClose,
         message = when {
             doesNotFit -> stringResource(R.string.backups_will_not_fit)
@@ -589,7 +437,7 @@ private fun BackupConfirmDialog(
 
 /** Which archive to put back */
 @Composable
-private fun RestorePickerDialog(
+internal fun RestorePickerDialog(
     deployment: Deployment,
     backups: BackupsViewModel,
     service: ManagedService,
@@ -602,6 +450,7 @@ private fun RestorePickerDialog(
     var chosen by remember(service.id) { mutableStateOf<BackupEntry?>(null) }
     var place by remember(service.id) { mutableStateOf(BackupFilter.Place.ANY) }
     var passphrase by remember(service.id) { mutableStateOf("") }
+    var deletingCopy by remember(service.id) { mutableStateOf<PreRestoreCopy?>(null) }
     val path = chosen?.let { BackupsViewModel.path(service, deployment.serviceContext, it) }
     val needsPassphrase = path != null && BackupsViewModel.restoreNeedsPassphrase(
         service, deployment.serviceContext, path
@@ -609,7 +458,7 @@ private fun RestorePickerDialog(
 
     val armed = chosen != null && (!needsPassphrase || passphrase.isNotEmpty())
     IOSSheet(
-        title = stringResource(R.string.backups_restoring, service.displayName),
+        title = stringResource(R.string.backups_restoring, serviceTitles(deployment.id)(service)),
         onClose = onClose,
         closeLabel = stringResource(R.string.containers_cancel),
         action = SheetAction(
@@ -698,6 +547,55 @@ private fun RestorePickerDialog(
                 )
             }
         }
+        RestoreFromFileSection(deployment, backups, service, passphrase, onStarted = onClose)
+        OldCopiesSection(
+            copies = state.oldCopies[service.id].orEmpty(),
+            onDelete = { deletingCopy = it },
+        )
+    }
+    deletingCopy?.let { copy ->
+        ConfirmAlert(
+            title = stringResource(R.string.backups_old_copy_delete_title),
+            message = stringResource(R.string.backups_old_copy_delete_message, copy.name),
+            confirm = stringResource(R.string.backups_delete),
+            cancel = stringResource(R.string.containers_cancel),
+            destructive = true,
+            onConfirm = {
+                backups.deleteOldCopy(deployment, service.id, copy)
+                deletingCopy = null
+            },
+            onCancel = { deletingCopy = null },
+        )
+    }
+}
+
+/** Restores from an archive picked on this phone */
+@Composable
+private fun RestoreFromFileSection(
+    deployment: Deployment,
+    backups: BackupsViewModel,
+    service: ManagedService,
+    passphrase: String,
+    onStarted: () -> Unit,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val readFrom = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val bytes = withContext(Dispatchers.IO) {
+                runCatching { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+            } ?: return@launch
+            backups.restoreFromDevice(deployment, service.id, bytes, DocumentFileName.of(context, uri), passphrase.ifEmpty { null })
+            onStarted()
+        }
+    }
+    GroupedSection {
+        ActionRow(
+            text = stringResource(R.string.backups_restore_from_file),
+            onClick = { readFrom.launch(arrayOf("*/*")) },
+            showDivider = false,
+        )
     }
 }
 
@@ -842,6 +740,7 @@ fun BackupRunDialog(backups: BackupsViewModel) {
                     textAlign = TextAlign.Center,
                 )
             }
+            AiExplainFailure(stringResource(R.string.backups_failed, run.errorMessage.orEmpty()), run.errorMessage, run.log)
             RunLog(run.log)
         }
     }

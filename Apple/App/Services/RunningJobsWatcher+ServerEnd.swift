@@ -45,8 +45,9 @@ extension RunningJobsWatcher {
         }
     }
 
+    /// The server's job, or nil after fifteen seconds
     @available(macOS 15.0, *)
-    private static func job(_ jobID: String, of deployment: Deployment) async -> AgentJob? {
+    static func job(_ jobID: String, of deployment: Deployment) async -> AgentJob? {
         await withTaskGroup(of: AgentJob?.self) { group in
             group.addTask {
                 guard let session = try? await AgentConnection.open(deployment: deployment, shared: true) else {

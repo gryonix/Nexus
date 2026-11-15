@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,7 +39,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.size
 import com.skaymer.gryonixnexus.app.ui.design.ActionRow
-import com.skaymer.gryonixnexus.app.ui.design.ConfirmAlert
+import com.skaymer.gryonixnexus.app.ui.design.PullToRefresh
+import com.skaymer.gryonixnexus.app.ui.design.AlertAction
+import com.skaymer.gryonixnexus.app.ui.design.IOSAlert
 import com.skaymer.gryonixnexus.app.ui.design.GroupedSection
 import com.skaymer.gryonixnexus.app.ui.design.Gryonix
 import com.skaymer.gryonixnexus.app.ui.design.cardSurface
@@ -48,8 +49,13 @@ import com.skaymer.gryonixnexus.R
 import com.skaymer.gryonixnexus.app.security.GatedAction
 import com.skaymer.gryonixnexus.app.security.rememberGuard
 import com.skaymer.gryonixnexus.app.secrets.SecretStore
+import com.skaymer.gryonixnexus.app.servers.DemoDeployments
 import com.skaymer.gryonixnexus.app.servers.DeploymentTransferService
 import com.skaymer.gryonixnexus.app.servers.FleetMetrics
+import com.skaymer.gryonixnexus.servercontrol.ServerListOrdering
+import com.skaymer.gryonixnexus.servercontrol.ServerProblem
+import com.skaymer.gryonixnexus.servercontrol.ServerProblems
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.skaymer.gryonixnexus.app.servers.FleetRepository
 import com.skaymer.gryonixnexus.app.servers.HostMetricsState
 import com.skaymer.gryonixnexus.app.servers.WakeOnLANViewModel
@@ -84,6 +90,8 @@ fun ServersSection(
     onAddServer: () -> Unit,
     /** Wakes a sleeping home machine from its card */
     onWake: (Deployment) -> Unit = {},
+    onlyServerOpened: () -> Boolean = { true },
+    markOnlyServerOpened: () -> Unit = {},
 ) {
     val revision by store.revision.collectAsState()
     val deployments by fleet.deployments.collectAsState()
@@ -105,10 +113,42 @@ fun ServersSection(
     var accessFor by remember { mutableStateOf<Deployment?>(null) }
     var reordering by remember { mutableStateOf(false) }
     var choosingExports by remember { mutableStateOf(false) }
+    var choosingForQr by remember { mutableStateOf(false) }
+    var quickSending by remember { mutableStateOf<List<Deployment>?>(null) }
+    var quickReceiving by remember { mutableStateOf(false) }
+    var askingImportWay by remember { mutableStateOf(false) }
+    var askingExportWay by remember { mutableStateOf(false) }
 
-    val transferUi = rememberServerTransfer(transfer, known = { fleet.deployments.value }, onImported = { fleet.reload() })
-    val shown = remember(deployments, group) {
+    val transferUi = rememberServerTransfer(
+        transfer,
+        known = { fleet.deployments.value },
+        onImported = { fleet.reload() },
+        onGroups = fleet::adoptGroupOrder,
+    )
+    val offline by metrics.offline.collectAsState()
+    var problemFilter by remember { mutableStateOf<ServerProblem?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val facts = remember(deployments, offline) { healthFacts(context, deployments, metrics, offline) }
+    val inGroup = remember(deployments, group) {
         group?.let { name -> ServerGroups.members(name, deployments) } ?: deployments
+    }
+    val groupFacts = remember(inGroup, facts) {
+        val ids = inGroup.map { it.id }.toSet()
+        facts.filter { it.id in ids }
+    }
+    val settingsRevision by store.revision.collectAsState()
+    val showSummary = remember(settingsRevision) { store.boolean(PROBLEM_SUMMARY_KEY) ?: true }
+    val summaryTiles = remember(settingsRevision) { visibleProblemTiles(store.string(PROBLEM_SUMMARY_HIDDEN_KEY)) }
+    val shown = remember(inGroup, offline, problemFilter, facts) {
+        val wanted = problemFilter?.let { ServerProblems.ids(it, facts) }
+        val filtered = if (wanted == null) inGroup else inGroup.filter { it.id in wanted }
+        ServerListOrdering.ordered(filtered) { it.id in offline }
+    }
+    LaunchedEffect(deployments.size) {
+        if (!onlyServerOpened() && deployments.size == 1) {
+            markOnlyServerOpened()
+            onOpen(deployments.first().id)
+        }
     }
     val rows = remember(shown, fallback) { ServerCardLayout.rows(shown, fallback) }
 
@@ -116,12 +156,19 @@ fun ServersSection(
     LaunchedEffect(bar.pending) {
         when (bar.pending) {
             FleetBarCommands.Command.ADD_SERVER -> onAddServer()
-            FleetBarCommands.Command.IMPORT -> transferUi.import()
-            FleetBarCommands.Command.EXPORT_SEVERAL -> choosingExports = true
+            FleetBarCommands.Command.IMPORT -> askingImportWay = true
+            FleetBarCommands.Command.EXPORT_SEVERAL -> askingExportWay = true
             FleetBarCommands.Command.REORDER -> reordering = true
             null -> Unit
         }
         if (bar.pending != null) bar.taken()
+    }
+
+    if (quickReceiving) {
+        QuickTransferReceiveSheet(deliver = transferUi::offerAll) {
+            quickReceiving = false
+            transferUi.askNextReplacement()
+        }
     }
 
     if (deployments.isEmpty()) {
@@ -137,12 +184,35 @@ fun ServersSection(
             fleet = fleet,
             onReorder = { reordering = true },
             onExportSeveral = { choosingExports = true },
+            onExportGroups = { groups ->
+                guard(GatedAction.EXPORT, exportSeveralReason) {
+                    val members = ServerGroups.membersOfAny(groups, deployments)
+                        .filterNot { DemoDeployments.isDemoID(it.id) }
+                    if (members.isNotEmpty()) transferUi.exportGroups(groups, members)
+                }
+            },
+            onImport = { askingImportWay = true },
         )
+        PullToRefresh(onRefresh = {
+            fleet.reload()
+            metrics.reconnectAll(fleet.deployments.value)
+        }) {
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp)
         ) {
+            item(key = "problem-cards") {
+                if (showSummary) {
+                    ServerProblemCards(ServerProblems.counts(groupFacts), summaryTiles, problemFilter) { problemFilter = it }
+                }
+                problemFilter?.let { chosen ->
+                    val title = stringResource(title(chosen))
+                    AiExplainButton(context = {
+                        com.skaymer.gryonixnexus.app.ai.AiExplain.problem(chosen, facts, fleet.deployments.value, title)
+                    })
+                }
+            }
             items(rows, key = { row -> row.first().id }) { row ->
                 Row(
                     modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
@@ -161,6 +231,7 @@ fun ServersSection(
                             onSize = { fleet.setCardSize(deployment.id, it) },
                             onIndicator = { fleet.setIndicatorStyle(deployment.id, it) },
                             onTint = { fleet.setTint(deployment.id, it) },
+                            onIcon = { fleet.setIcon(deployment.id, it) },
                             onForget = { onForget(deployment.id) },
                             onExport = {
                                 guard(GatedAction.EXPORT, deployment.name) {
@@ -186,20 +257,57 @@ fun ServersSection(
                 }
             }
         }
+        }
     }
 
     warning?.let { deployment ->
-        ConfirmAlert(
+        TransferWayAlert(
             title = stringResource(R.string.export_server),
             message = stringResource(R.string.export_server_warning),
-            confirm = stringResource(R.string.export_server_confirm),
-            cancel = stringResource(R.string.group_cancel),
             destructive = true,
-            onConfirm = {
+            onFile = {
                 warning = null
                 transferUi.exportOne(deployment)
             },
+            onQr = {
+                warning = null
+                guard(GatedAction.EXPORT, exportSeveralReason) { quickSending = listOf(deployment) }
+            },
             onCancel = { warning = null },
+        )
+    }
+
+    if (askingImportWay) {
+        TransferWayAlert(
+            title = stringResource(R.string.transfer_import),
+            onFile = {
+                askingImportWay = false
+                transferUi.import()
+            },
+            onQr = {
+                askingImportWay = false
+                quickReceiving = true
+            },
+            onCancel = { askingImportWay = false },
+        )
+    }
+
+    if (askingExportWay) {
+        TransferWayAlert(
+            title = stringResource(R.string.transfer_export),
+            onFile = {
+                askingExportWay = false
+                choosingExports = true
+            },
+            onQr = {
+                askingExportWay = false
+                if (deployments.size == 1) {
+                    guard(GatedAction.EXPORT, exportSeveralReason) { quickSending = deployments }
+                } else {
+                    choosingForQr = true
+                }
+            },
+            onCancel = { askingExportWay = false },
         )
     }
 
@@ -233,6 +341,21 @@ fun ServersSection(
         )
     }
 
+    QuickTransferSendDialogs(
+        deployments = deployments,
+        transfer = transfer,
+        choosing = choosingForQr,
+        sending = quickSending,
+        onChosen = { chosen ->
+            choosingForQr = false
+            if (chosen.isNotEmpty()) guard(GatedAction.EXPORT, exportSeveralReason) { quickSending = chosen }
+        },
+        onClose = {
+            choosingForQr = false
+            quickSending = null
+        },
+    )
+
     ServerTransferDialogs(transferUi)
 }
 
@@ -248,6 +371,7 @@ private fun ServerCard(
     onSize: (ServerCardSize?) -> Unit,
     onIndicator: (MetricsIndicatorStyle?) -> Unit,
     onTint: (String?) -> Unit,
+    onIcon: (String?) -> Unit,
     onForget: () -> Unit,
     onExport: () -> Unit,
     onConnection: () -> Unit,
@@ -268,57 +392,10 @@ private fun ServerCard(
                     onLongClick = { menu = true }
                 )
         ) {
-        Row(Modifier.fillMaxHeight()) {
-            Column(Modifier.weight(1f).padding(12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        deployment.name,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Gryonix.colors.label,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                    IconButton(onClick = { menu = true }, modifier = Modifier.size(28.dp)) {
-                        Icon(
-                            Icons.Filled.MoreVert,
-                            contentDescription = stringResource(R.string.card_menu),
-                            tint = Gryonix.colors.tertiaryLabel,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
-                }
-                Text(
-                    deployment.domain.ifEmpty { deployment.entry.host },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Gryonix.colors.secondaryLabel,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (!compact) {
-                    Text(
-                        "${deployment.entry.user}@${deployment.entry.host}:${deployment.entry.port}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Gryonix.colors.tertiaryLabel,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                val readings by metrics.card(deployment.id).collectAsState()
+            val readings by metrics.card(deployment.id).collectAsState()
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 CardReadings(deployment, readings, style = style, compact = compact, onWake = onWake, wakeAfter = wakeAfter)
-
-                val services = deployment.services.size
-                val machines = deployment.nodes.size
-                Text(
-                    pluralStringResource(R.plurals.services_count, services, services) +
-                        if (machines > 1) {
-                            "  ·  " + pluralStringResource(R.plurals.machines_count, machines, machines)
-                        } else "",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Gryonix.colors.tertiaryLabel,
-                )
             }
-        }
         }
         ServerCardMenu(
             expanded = menu,
@@ -326,10 +403,13 @@ private fun ServerCard(
             size = deployment.cardSize,
             style = deployment.metricsIndicatorStyle,
             tint = deployment.tintName,
+            icon = deployment.iconSymbol,
             onDismiss = { menu = false },
             onSize = onSize,
             onIndicator = onIndicator,
             onTint = onTint,
+            onIcon = onIcon,
+            deployment = deployment,
             onForget = onForget,
             onExport = onExport,
             onConnection = onConnection,
@@ -357,23 +437,32 @@ private fun CardReadings(
             delay(10_000)
         }
     }
-    machines.forEach { node ->
-        if (machines.size > 1) {
-            Text(
-                node.name.ifEmpty { node.endpoint.host },
-                style = MaterialTheme.typography.labelSmall,
-                color = Gryonix.colors.secondaryLabel,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+    val tint = ServerTint.of(deployment.tintName).composeColor() ?: Gryonix.colors.accent
+    if (machines.size > 1) {
+        CombinedCardHeader(deployment, readings[machines.first().sshHost]?.snapshot?.osID, tint)
+    }
+    machines.forEachIndexed { index, node ->
+        if (index > 0) MachineDivider()
+        val state = readings[node.sshHost] ?: HostMetricsState()
+        val block: @Composable (Boolean) -> Unit = { gaugesOnly ->
+            MetricsBlock(
+                state = state,
+                style = style,
+                detailed = false,
+                compact = compact,
+                onWake = onWake.takeIf { node.sshHost == wakeTarget },
+                wakeGate = WakeGate(wakeAfter, onNetwork),
             )
         }
-        MetricsBlock(
-            state = readings[node.sshHost] ?: HostMetricsState(),
-            style = style,
-            detailed = !compact,
+        MachineCardBlock(
+            deployment = deployment,
+            host = node.sshHost,
+            state = state,
+            tint = tint,
+            embedded = machines.size > 1,
             compact = compact,
-            onWake = onWake.takeIf { node.sshHost == wakeTarget },
-            wakeGate = WakeGate(wakeAfter, onNetwork),
+            otherGauges = if (style == MetricsIndicatorStyle.BARS) null else ({ block(true) }),
+            offline = { block(false) },
         )
     }
 }
@@ -395,4 +484,26 @@ private fun EmptyFleet() {
             style = MaterialTheme.typography.bodyMedium
         )
     }
+}
+
+/** Import and export offer a file or a QR code */
+@Composable
+private fun TransferWayAlert(
+    title: String,
+    onFile: () -> Unit,
+    onQr: () -> Unit,
+    onCancel: () -> Unit,
+    message: String? = null,
+    destructive: Boolean = false,
+) {
+    IOSAlert(
+        title = title,
+        message = message,
+        onDismiss = onCancel,
+        actions = listOf(
+            AlertAction(stringResource(R.string.transfer_way_file), destructive = destructive, onSelect = onFile),
+            AlertAction(stringResource(R.string.transfer_way_qr), destructive = destructive, onSelect = onQr),
+            AlertAction(stringResource(R.string.group_cancel), onSelect = onCancel),
+        ),
+    )
 }

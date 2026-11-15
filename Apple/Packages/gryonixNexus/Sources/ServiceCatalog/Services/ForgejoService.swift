@@ -243,6 +243,7 @@ public struct ForgejoService: ManagedService {
                 plan: .archive(ArchiveBackupPlan(
                     composeProject: Self.composeProject,
                     dataPath: "\(path)/data",
+                    dataPart: .files,
                     databases: [BackupDatabase(engine: .postgres, service: "db",
                                                fileName: "forgejo.sql")],
                     quiesceServices: ["server"],

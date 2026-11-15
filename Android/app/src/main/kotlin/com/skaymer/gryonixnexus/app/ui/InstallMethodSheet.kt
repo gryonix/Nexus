@@ -1,5 +1,6 @@
 package com.skaymer.gryonixnexus.app.ui
 
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,6 +26,11 @@ fun InstallMethodSheet(
     deviceText: String = stringResource(R.string.install_method_device),
     onDevice: () -> Unit,
     onCancel: () -> Unit,
+    /** Whether the install may start; demo servers skip the license */
+    allowed: () -> Boolean = { LicensePrompt.allow() },
+    installEnabled: Boolean = true,
+    /** Settings shown above the install choice */
+    settings: @Composable ColumnScope.() -> Unit = {},
 ) {
     var opened by remember { mutableStateOf<Artifact?>(null) }
     val clipboard = LocalClipboardManager.current
@@ -33,13 +39,15 @@ fun InstallMethodSheet(
         onClose = onCancel,
         closeLabel = stringResource(R.string.group_cancel),
     ) {
+        settings()
         GroupedSection(
             header = services.joinToString(", ") { it.displayName },
             footer = stringResource(R.string.install_method_device_note),
         ) {
             ActionRow(
                 text = deviceText,
-                onClick = { if (LicensePrompt.allow()) onDevice() },
+                onClick = { if (installEnabled && allowed()) onDevice() },
+                enabled = installEnabled,
                 showDivider = false,
             )
         }

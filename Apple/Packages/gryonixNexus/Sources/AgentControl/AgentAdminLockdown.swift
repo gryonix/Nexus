@@ -20,14 +20,18 @@ public struct AgentAdminLockdown: AdminLockdownManaging {
     }
 
     public func set(hosts: [String]) async throws -> AdminLockdownState {
+        try await set(hosts: hosts, denyVPN: nil)
+    }
+
+    public func set(hosts: [String], denyVPN: [String]?) async throws -> AdminLockdownState {
         if hosts.isEmpty { return try await set(false) }
-        let invalid = hosts.filter { !CommandCatalog.AdminLockdown.isValidHost($0) }
+        let invalid = (hosts + (denyVPN ?? [])).filter { !CommandCatalog.AdminLockdown.isValidHost($0) }
         guard invalid.isEmpty else {
             throw ServerControlError.commandFailed(
                 command: "lockdown", exitCode: nil,
                 stderr: "These names cannot be guarded: \(invalid.joined(separator: ", ")). Nothing was changed.")
         }
-        return try await mapping { Self.state(from: try await client.setLockdown(mode: .only, hosts: hosts)) }
+        return try await mapping { Self.state(from: try await client.setLockdown(mode: .only, hosts: hosts, denyVPN: denyVPN)) }
     }
 
     // MARK: - Helpers

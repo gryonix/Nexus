@@ -23,6 +23,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -30,15 +33,15 @@ import androidx.compose.ui.unit.Dp
 import com.skaymer.gryonixnexus.app.shell.Haptics
 import androidx.compose.ui.unit.dp
 
-/** The numbers the iPhone's grouped screens are laid out on */
+/** Layout metrics for grouped screens */
 object Metrics {
     val listInset = 16.dp
     /** Inside a row, from its own edge to its text */
     val rowInset = 16.dp
     /** The shortest a tappable row is allowed to be */
-    val rowHeight = 44.dp
+    val rowHeight = 56.dp
     /** A grouped block's corner */
-    val blockCorner = 10.dp
+    val blockCorner = 16.dp
     /** A card's corner — `GlassCardSurface.defaultCornerRadius` on the other side */
     val cardCorner = 16.dp
     /** Between one block and the next */
@@ -142,13 +145,13 @@ fun GroupedSection(
 @Composable
 fun SectionHeader(text: String, modifier: Modifier = Modifier) {
     Text(
-        text.uppercase(),
-        style = MaterialTheme.typography.bodySmall,
+        text,
+        style = MaterialTheme.typography.titleMedium,
         color = Gryonix.colors.secondaryLabel,
         modifier = modifier.padding(
             start = Metrics.listInset + 4.dp,
             end = Metrics.listInset + 4.dp,
-            bottom = 6.dp,
+            bottom = 8.dp,
         ),
     )
 }
@@ -181,6 +184,8 @@ fun GroupedRow(
     val colors = Gryonix.colors
     val inset = LocalRowDividerInset.current
     val haptics = LocalHaptics.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    var leadWidth by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0.dp) }
     Column(modifier.fillMaxWidth()) {
         Row(
             Modifier
@@ -196,12 +201,14 @@ fun GroupedRow(
                     } else Modifier
                 )
                 .defaultMinSize(minHeight = Metrics.rowHeight)
-                .padding(horizontal = Metrics.rowInset, vertical = 11.dp),
+                .padding(horizontal = Metrics.rowInset, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             if (leading != null) {
-                CompositionLocalProvider(LocalContentColor provides colors.accent) { leading() }
+                Box(Modifier.onSizeChanged { leadWidth = with(density) { it.width.toDp() } }) {
+                    CompositionLocalProvider(LocalContentColor provides colors.accent) { leading() }
+                }
             }
             content()
             if (trailing != null) {
@@ -210,7 +217,7 @@ fun GroupedRow(
                 }
             }
         }
-        if (showDivider) Separator(startInset = inset)
+        if (showDivider) Separator(startInset = if (leading != null) inset + leadWidth + 10.dp else inset)
     }
 }
 
@@ -220,7 +227,7 @@ fun Separator(modifier: Modifier = Modifier, startInset: Dp = 0.dp) {
     Box(
         modifier
             .fillMaxWidth()
-            .padding(start = startInset)
+            .padding(start = startInset, end = if (startInset > 0.dp) Metrics.rowInset else 0.dp)
             .height(0.5.dp)
             .background(Gryonix.colors.separator),
     )

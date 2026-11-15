@@ -27,14 +27,11 @@ final class LiveProcessCardTests: XCTestCase {
     }
 
     /// The fraction the bar is drawn from
-    func testTheInstallReportsAFractionThatStartsAtZeroAndIsDrawable() {
+    func testTheInstallReportsAFractionThatStartsAtZero() {
         let model = InstallViewModel(deployment: deployment(), bundle: bundle())
         let fraction = model.overallProgress
         XCTAssertEqual(fraction, 0, accuracy: 0.0001,
                        "an install that has not begun is not part-way through")
-        XCTAssertNotNil(OperationPresentation.barValue(
-            .init(progressText: "", isFinished: false, progress: fraction)),
-                        "the value the install produces is not one the card will draw")
     }
 
     func testAFailedInstallCanSayWhatWentWrong() {

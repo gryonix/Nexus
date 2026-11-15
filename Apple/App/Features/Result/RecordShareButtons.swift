@@ -43,6 +43,7 @@ struct RecordShareButtons: View {
             Label("Copy records", systemImage: "doc.on.doc")
         }
         .rowActionButtonStyle()
+        #if !os(tvOS)
         if let zoneFile, let url = Self.artifactURL(zoneFile) {
             ShareLink(item: url) {
                 Label("Import file (zone)", systemImage: "square.and.arrow.up")
@@ -53,6 +54,7 @@ struct RecordShareButtons: View {
                 Label("Import file (CSV)", systemImage: "tablecells")
             }
         }
+        #endif
     }
 
     static func artifactURL(_ artifact: Artifact) -> URL? {
@@ -68,7 +70,7 @@ struct RecordShareButtons: View {
     private func copyToClipboard(_ string: String) {
         #if os(iOS)
         UIPasteboard.general.string = string
-        #else
+        #elseif os(macOS)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(string, forType: .string)
         #endif

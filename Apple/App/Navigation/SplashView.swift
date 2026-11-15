@@ -57,7 +57,7 @@ struct SplashGate<Content: View>: View {
             }
         }
         .task {
-            #if os(iOS)
+            #if os(iOS) || os(tvOS)
             AppIconSettings.reconcileWithSystem()
             #else
             AppIconSettings.applyDockIcon()

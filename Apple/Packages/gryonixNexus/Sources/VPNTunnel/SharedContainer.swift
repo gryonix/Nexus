@@ -54,13 +54,16 @@ public enum SharedContainer {
 
     private static var resolvedGroupURL: URL? {
         guard let appGroupIdentifier else { return nil }
-        return FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier)
+        return AppGroup.writableURL(appGroupIdentifier)
     }
 
     private static var applicationSupport: URL {
-        let support = FileManager.default.urls(for: .applicationSupportDirectory,
-                                               in: .userDomainMask).first
+        #if os(tvOS)
+        let kind = FileManager.SearchPathDirectory.cachesDirectory
+        #else
+        let kind = FileManager.SearchPathDirectory.applicationSupportDirectory
+        #endif
+        let support = FileManager.default.urls(for: kind, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
         return support.appendingPathComponent("gryonixNexus", isDirectory: true)
     }

@@ -59,8 +59,10 @@ final class RunningJobsWatcher {
         }
         let operations = AgentJobOperations(client: session.client)
         guard let jobs = try? await operations.jobs(runningOnly: true) else { return }
+        guard !RunningOperationsRegistry.shared.awaitsJob(on: deployment.id) else { return }
         for job in jobs where Self.isShownAlone(job) && !attached.contains(job.id)
-            && !LiveActivityJobs.shared.isFollowing(job.id) {
+            && !LiveActivityJobs.shared.isFollowing(job.id)
+            && !RunningOperationsRegistry.shared.holds(jobID: job.id) {
             attach(job, of: deployment, using: operations)
         }
     }
@@ -77,7 +79,7 @@ final class RunningJobsWatcher {
             guard let jobs = try? await DetachedJobs.list(
                 on: host, runner: runner,
                 timeout: deployment.timeouts.duration(for: .quick)) else { continue }
-            for job in jobs where job.isRunning && !attached.contains(job.id) {
+            for job in jobs where job.isRunning && job.kind != .measure && !attached.contains(job.id) {
                 attachDetached(job, of: deployment, on: host, runner: runner)
             }
         }
@@ -125,6 +127,7 @@ final class RunningJobsWatcher {
         case .restore: return UIL10n.string("Restoring %@", subject)
         case .uninstall: return UIL10n.string("Removing %@", subject)
         case .control: return UIL10n.string("Working on %@", subject)
+        case .measure: return UIL10n.string("Speed test")
         }
     }
 
@@ -170,7 +173,7 @@ final class RunningJobsWatcher {
         }
     }
 
-    private func attach(_ job: AgentJob, of deployment: Deployment,
+    func attach(_ job: AgentJob, of deployment: Deployment,
                         using operations: AgentJobOperations) {
         attached.insert(job.id)
         let state = LongOperationState(title: Self.title(for: job, on: deployment),
@@ -179,7 +182,8 @@ final class RunningJobsWatcher {
             state.reattachDeployment = deployment
         }
         RunningOperationsRegistry.shared.adopt(state, serverName: deployment.name,
-                                               deployment: deployment, jobID: job.id)
+                                               deployment: deployment, jobID: job.id,
+                                               kind: LiveActivityJobs.kind(of: job.kind))
         follow(job, state: state, using: operations, of: deployment)
     }
 

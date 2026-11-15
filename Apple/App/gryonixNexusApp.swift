@@ -1,3 +1,4 @@
+import AgentClient
 import SwiftUI
 import VPNTunnel
 
@@ -10,7 +11,8 @@ struct gryonixNexusApp: App {
     @NSApplicationDelegateAdaptor(PushAppDelegate.self) private var pushDelegate
     #endif
     #if os(macOS)
-    @ObservedObject private var tunnel = TunnelController.shared
+    /// Status changes only, so the scenes skip traffic ticks
+    @ObservedObject private var tunnelMark = TunnelStatusMark.shared
     @State private var menuBarItemShown = MenuBarSettings.shared.showsItem
     #endif
 
@@ -19,10 +21,13 @@ struct gryonixNexusApp: App {
         PermissionsOnboardingModifier.resetIfAsked()
         #if os(iOS)
         FrameProbe.startIfAsked()
+        IconDriftProbe.startIfAsked()
         #endif
         #endif
         ConfiguratorStore.shared.clearDrafts()
         ServerSessionWarmup.start()
+        DemoServer.forgetInWidgets()
+        ServerControlIntents.openServer = { AppNavigator.shared.openServer($0) }
         #if os(iOS)
         OperationIntents.retry = { id in RunningOperationsRegistry.shared.retry(cardOf: id) }
         OperationIntents.stop = { id in await OperationStopper.shared.tapped(id) }
@@ -42,39 +47,14 @@ struct gryonixNexusApp: App {
             #if os(macOS)
             .formStyle(.grouped)
             #endif
-            .onChange(of: scenePhase) { _, phase in
-                RunningJobsWatcher.shared.isAppActive = phase == .active
-                if phase == .background { MetricPanelStore.shared.flush() }
-                if phase == .active { Task { await RunningJobsWatcher.shared.sweep() } }
-                if phase == .active { Task { await NotifyFleetSync.shared.refreshTokenIfAllowed() } }
-                if phase == .active { Task { await LicenseStore.shared.refreshIfDue() } }
-            }
+            .onChange(of: scenePhase) { _, phase in handle(phase) }
             .task { OperationActivities.shared.endOrphans() }
             .task { PurchaseStore.shared.start() }
             .licensePromptHost()
             #if DEBUG
             .task { if DemoVPNSession.isAsked { await DemoVPNSession.start() } }
             .task { await LiveActivityProbe.runBurst() }
-            .task {
-                guard LiveActivityProbe.isEnabled else { return }
-                let run = LongOperationState(title: UIL10n.string("Updating %@", "Nextcloud"),
-                                             progressText: "Pulling images…")
-                RunningOperationsRegistry.shared.start(run, serverName: "probe.example.com")
-                for step in 1...4 {
-                    try? await Task.sleep(for: .seconds(3))
-                    run.progressText = "step \(step) of 4"
-                    run.progress = Double(step) / 4
-                    OperationActivities.shared.noteSystemState()
-                }
-                try? await Task.sleep(for: .seconds(3))
-                if ProcessInfo.processInfo.environment["GRYONIXNEXUS_DEMO_LIVE_FAIL"] != nil {
-                    run.retry = {}
-                    run.errorMessage = "No space left on /var"
-                } else {
-                    run.progressText = "Updated."
-                }
-                run.isFinished = true
-            }
+            .task { await probeOperationCard() }
             #endif
             .onOpenURL { url in
                 if url.isFileURL, url.pathExtension == DeploymentTransferService.fileExtension {
@@ -104,11 +84,59 @@ struct gryonixNexusApp: App {
 
         #if os(macOS)
         MenuBarExtra(isInserted: $menuBarItemShown) {
-            MenuBarVPNView(tunnel: tunnel)
+            MenuBarVPNView(tunnel: TunnelController.shared)
         } label: {
-            TunnelPresentation.menuBarMark(tunnel.status, size: 18)
+            TunnelPresentation.menuBarMark(tunnelMark.status, size: 18)
         }
         .menuBarExtraStyle(.window)
         #endif
     }
+
+    private func handle(_ phase: ScenePhase) {
+        RunningJobsWatcher.shared.isAppActive = phase == .active
+        if phase == .background { MetricPanelStore.shared.flush() }
+        #if os(iOS)
+        if phase == .background { IslandAwayCheck.leaving() }
+        if phase == .active { IslandAwayCheck.back() }
+        #endif
+        if phase == .active { Task { await RunningJobsWatcher.shared.sweep() } }
+        if phase == .active { Task { await NotifyFleetSync.shared.refreshTokenIfAllowed() } }
+        if phase == .active { Task { await LicenseStore.shared.refreshIfDue() } }
+        if phase == .active { CloudSync.shared.scheduleSync(after: 0) }
+        #if os(iOS)
+        if phase == .active { Task { await AppleTVLink.shared.vouchAll() } }
+        #endif
+    }
+
+    #if DEBUG
+    /// Gives the demo failure a refusal reason
+    private static func rememberDemoRefusal(message: String) {
+        guard let spec = ProcessInfo.processInfo.environment["GRYONIXNEXUS_DEMO_LIVE_FAIL_REASON"] else { return }
+        let parts = spec.split(separator: "|").map(String.init)
+        guard let reason = parts.first else { return }
+        AgentRefusals.shared.remember(AgentRefusal(reason: reason, args: Array(parts.dropFirst()), message: message))
+    }
+
+    private func probeOperationCard() async {
+        guard LiveActivityProbe.isEnabled else { return }
+        let run = LongOperationState(title: UIL10n.string("Updating %@", "Nextcloud"),
+                                     progressText: "Pulling images…")
+        RunningOperationsRegistry.shared.start(run, serverName: "probe.example.com")
+        for step in 1...4 {
+            try? await Task.sleep(for: .seconds(3))
+            run.progressText = "step \(step) of 4"
+            run.progress = Double(step) / 4
+            OperationActivities.shared.noteSystemState()
+        }
+        try? await Task.sleep(for: .seconds(3))
+        if ProcessInfo.processInfo.environment["GRYONIXNEXUS_DEMO_LIVE_FAIL"] != nil {
+            run.retry = {}
+            Self.rememberDemoRefusal(message: "No space left on /var")
+            run.errorMessage = "No space left on /var"
+        } else {
+            run.progressText = "Updated."
+        }
+        run.isFinished = true
+    }
+    #endif
 }

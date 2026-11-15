@@ -25,8 +25,13 @@ struct ServerListView: View {
     @State private var reordering = false
     @State private var deploymentToEdit: Deployment?
     @State private var deploymentToDelete: Deployment?
+    @State private var confirmedRemoval: Deployment?
     @State private var selectedPage: ServerPage = .all
+    @State private var problemFilter: ServerProblem?
+    @State private var openedOnlyServer = false
     @State private var navigationPath = NavigationPath()
+    @StateObject private var sidePane = SidePaneModel()
+    @Environment(\.wideLayout) private var wideLayout
     @ObservedObject private var tour = AppTour.shared
     @State private var tourOpenedServer = false
     @State private var listWidth: CGFloat?
@@ -44,18 +49,38 @@ struct ServerListView: View {
     @State private var showingShareSheet = false
     @State private var exportingSeveral = false
     @State private var chosenForExport: [Deployment] = []
+    @State private var choosingForQR = false
+    @State private var chosenForQR: [Deployment] = []
+    @State private var quickSend: QuickTransferTarget?
+    @State private var receivingByQR = false
+    /// Import and export offer a file or a QR code
+    @State private var askingImportWay = false
+    @State private var askingExportWay = false
     @State private var importing = false
     @StateObject private var transfer = ServerTransferModel()
     @State private var renamingGroup: String?
-    @State private var groupNameField = ""
     /// A group being made from the strip's own menu
     @State private var namingNewGroup = false
     @State private var groupToFill: String?
+    /// The strip's group order, one name per line
+    @AppStorage(ServerGroups.orderKey) private var groupOrderRaw = ""
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
-            fleetScreen
+        SidePaneSplit(model: sidePane, wide: wideLayout) {
+            NavigationStack(path: $navigationPath) {
+                fleetScreen
+            }
+        } pane: { entry in
+            NavigationStack {
+                screenDestinations(entry.content)
+                    #if os(iOS) || os(tvOS)
+                    .navigationBarTitleDisplayMode(.inline)
+                    #endif
+            }
+            .id(entry.id)
         }
+        .onChange(of: navigationPath.count) { sidePane.close() }
+        .onReceive(navigator.$serversTabOpened.dropFirst()) { _ in openOnlyServer() }
         .popToRootOnReselect(.servers) { navigationPath = NavigationPath() }
     }
 
@@ -77,6 +102,7 @@ struct ServerListView: View {
         .onChange(of: tour.step) { _, step in follow(step?.place) }
         .task {
             viewModel.load()
+            openOnlyServerOnce()
             if let id = navigator.openServerID { openRequestedServer(id) }
             #if DEBUG
             if ProcessInfo.processInfo.environment["GRYONIXNEXUS_DEMO_OPEN_ADD"] != nil {
@@ -135,31 +161,25 @@ struct ServerListView: View {
         .sheet(isPresented: $reordering) {
             ServerReorderView(viewModel: viewModel)
         }
+        .modifier(quickTransferSheets)
         .sheet(item: Binding(get: { groupToFill.map(GroupTarget.init) },
                              set: { groupToFill = $0?.name })) { target in
             GroupMembershipView(group: target.name, deployments: viewModel.deployments) {
                 setMembership($0, of: target.name)
             }
         }
-        .alert("Rename group", isPresented: Binding(
-            get: { renamingGroup != nil },
-            set: { if !$0 { renamingGroup = nil } })) {
-            TextField("Group", text: $groupNameField)
-            Button("Rename") {
-                if let old = renamingGroup, let name = ServerGroups.clean(groupNameField) {
-                    rename(group: old, to: name)
-                }
-                renamingGroup = nil
+        .sheet(item: Binding(get: { renamingGroup.map(GroupTarget.init) },
+                             set: { renamingGroup = $0?.name })) { target in
+            NameEditSheet(title: "Rename group", fieldTitle: "Group", initial: target.name,
+                          valid: { ServerGroups.clean($0) != nil }) { name in
+                if let name = ServerGroups.clean(name) { rename(group: target.name, to: name) }
             }
-            Button("Cancel", role: .cancel) { renamingGroup = nil }
         }
-        .alert("New group", isPresented: $namingNewGroup) {
-            TextField("Group", text: $groupNameField)
-            Button("Next") {
-                if let name = ServerGroups.clean(groupNameField) { groupToFill = name }
-                namingNewGroup = false
+        .sheet(isPresented: $namingNewGroup) {
+            NameEditSheet(title: "New group", fieldTitle: "Group", initial: "",
+                          valid: { ServerGroups.clean($0) != nil }) { name in
+                if let name = ServerGroups.clean(name) { groupToFill = name }
             }
-            Button("Cancel", role: .cancel) { namingNewGroup = false }
         }
         .sheet(isPresented: $addingServer) {
             ServerFormView(mode: .add) { deployment in
@@ -172,6 +192,26 @@ struct ServerListView: View {
         })
     }
 
+    private func openOnlyServerOnce() {
+        guard !openedOnlyServer else { return }
+        openedOnlyServer = true
+        openOnlyServer()
+    }
+
+    private func openOnlyServer() {
+        viewModel.load()
+        guard navigationPath.isEmpty, viewModel.deployments.count == 1,
+              let only = viewModel.deployments.first else { return }
+        navigationPath.append(only)
+    }
+
+    /// Removes the server once its sheet has gone
+    private func removeConfirmed() {
+        guard let deployment = confirmedRemoval else { return }
+        confirmedRemoval = nil
+        viewModel.delete(deployment)
+    }
+
     private func screenDestinations(_ base: some View) -> some View {
         base
         .navigationDestination(for: Deployment.self) { deployment in
@@ -181,25 +221,12 @@ struct ServerListView: View {
                 viewModel.delete(deleted)
             })
         }
-        .navigationDestination(for: MetricsHistoryTarget.self) { target in
-            MetricsHistoryView(deployment: target.deployment, host: target.host,
-                               initialMetric: target.metric)
-        }
-        .navigationDestination(for: EnergyTarget.self) { target in
-            EnergyView(target: target)
-        }
-        .navigationDestination(for: StorageTarget.self) { target in
-            StorageView(target: target)
-        }
-        .navigationDestination(for: CacheDiskTarget.self) { target in
-            CacheDiskView(target: target)
-        }
-        .navigationDestination(for: SpeedTestTarget.self) { target in
-            SpeedTestView(target: target)
-        }
-        .navigationDestination(for: TopProcessesTarget.self) { target in
-            TopProcessesView(target: target)
-        }
+        .navigationDestination(for: MetricsHistoryTarget.self) { ServerPageDestination(value: $0) }
+        .navigationDestination(for: EnergyTarget.self) { ServerPageDestination(value: $0) }
+        .navigationDestination(for: StorageTarget.self) { ServerPageDestination(value: $0) }
+        .navigationDestination(for: CacheDiskTarget.self) { ServerPageDestination(value: $0) }
+        .navigationDestination(for: SpeedTestTarget.self) { ServerPageDestination(value: $0) }
+        .navigationDestination(for: TopProcessesTarget.self) { ServerPageDestination(value: $0) }
         #if DEBUG
         .navigationDestination(for: MeshDevicesTarget.self) { target in
             MeshDevicesView(viewModel: DashboardViewModel(deployment: target.deployment))
@@ -212,30 +239,35 @@ struct ServerListView: View {
 
     private func serverAlerts(_ base: some View) -> some View {
         base
-            .alert("Remove this server from the app?",
-                   isPresented: $deploymentToDelete.isPresent(),
-                   presenting: deploymentToDelete) { deployment in
-                Button("Remove", role: .destructive) {
-                    deploymentToDelete = nil
-                    DispatchQueue.main.async { viewModel.delete(deployment) }
-                }
-                .dangerTint()
-                Button("Cancel", role: .cancel) { deploymentToDelete = nil }
-            } message: { _ in
-                Text("The server keeps running and its data is untouched — only the card, the app's SSH key and this server's pinned host keys are removed. To also clean up or wipe the machine, open the server and use “Erase server” at the bottom of its management screen.")
+            .sheet(item: $deploymentToDelete, onDismiss: removeConfirmed) { deployment in
+                ServerRemovalSheet(deployment: deployment) { confirmedRemoval = deployment }
             }
             .alert("Export this server?",
                    isPresented: $deploymentPendingExport.isPresent(),
                    presenting: deploymentPendingExport) { deployment in
-                Button("Export", role: .destructive) {
+                Button("File", role: .destructive) {
                     let toExport = deployment
                     deploymentPendingExport = nil
                     Task { await startExport(of: toExport) }
                 }
                 .dangerTint()
+                Button("QR code", role: .destructive) {
+                    let toSend = deployment
+                    deploymentPendingExport = nil
+                    Task { await startQuickSend([toSend]) }
+                }
+                .dangerTint()
                 Button("Cancel", role: .cancel) { deploymentPendingExport = nil }
             } message: { _ in
                 Text("The file carries everything about this server: its configuration, the SSH key, tunnel keys and passwords. The other device can manage, reinstall and repair it exactly as this one does — so share the file only with a device you trust.")
+            }
+            .confirmationDialog("Import server", isPresented: $askingImportWay, titleVisibility: .visible) {
+                Button("File") { importing = true }
+                Button("QR code") { receivingByQR = true }
+            }
+            .confirmationDialog("Export servers", isPresented: $askingExportWay, titleVisibility: .visible) {
+                Button("File") { exportingSeveral = true }
+                Button("QR code") { startChoosingForQR() }
             }
             .shareSheet(isPresented: $showingShareSheet, items: exportFileURLs)
             .sheet(item: $transfer.prompt) { prompt in
@@ -249,7 +281,7 @@ struct ServerListView: View {
                    presenting: transfer.replacing) { _ in
                 Button("Replace", role: .destructive) { transfer.confirmReplace(into: viewModel) }
                     .dangerTint()
-                Button("Cancel", role: .cancel) { transfer.replacing = nil }
+                Button("Cancel", role: .cancel) { transfer.skipReplace() }
             } message: { incoming in
                 Text(verbatim: UIL10n.string(
                     "“%@” is already on this device. Replacing it swaps its SSH key, passwords and pinned host keys for the ones in the file.",
@@ -281,7 +313,7 @@ struct ServerListView: View {
             }
         }
         #endif
-        .navigationTitle("Servers")
+        .screenTitle("Servers")
         .sectionToolbar(.servers) {
             Button {
                 if LicensePrompt.shared.allow() { addingServer = true }
@@ -289,13 +321,13 @@ struct ServerListView: View {
                 Label("Add server", systemImage: "plus")
             }
             Button {
-                if LicensePrompt.shared.allow() { importing = true }
+                if LicensePrompt.shared.allow() { askingImportWay = true }
             } label: {
                 Label(Self.importTitle, systemImage: "square.and.arrow.down")
             }
             if !viewModel.deployments.isEmpty {
                 Button {
-                    exportingSeveral = true
+                    askingExportWay = true
                 } label: {
                     Label(Self.exportTitle, systemImage: "square.and.arrow.up")
                 }
@@ -311,9 +343,12 @@ struct ServerListView: View {
         }
         #if os(macOS)
         .toolbar {
-            if !allTags.isEmpty {
+            if showsTagStrip {
                 ToolbarItem(placement: .principal) {
-                    tagPicker.labelsHidden()
+                    HStack(spacing: 6) {
+                        tagPicker.labelsHidden()
+                        groupActionsMenu
+                    }
                 }
             }
         }
@@ -376,8 +411,47 @@ struct ServerListView: View {
         #endif
     }
 
+    private func explainProblem(_ problem: ServerProblem) {
+        let facts = metrics.healthFacts(for: viewModel.deployments)
+        let title = UIL10n.string(ServerProblemCards.titleKey(problem))
+        AIChatStore.shared.start(AIExplain.problem(problem, facts: facts,
+                                                   deployments: viewModel.deployments, title: title))
+    }
+
+    private func cardGrid(for row: ServerCardLayout.Row) -> some View {
+        Grid(horizontalSpacing: Self.columnGutter, verticalSpacing: 0) {
+            GridRow {
+                ForEach(row.columns, id: \.first?.id) { column in
+                    VStack(spacing: Self.columnGutter) {
+                        ForEach(column) { deployment in
+                            card(for: deployment, in: row.all)
+                                .frame(width: growing.contains(deployment.id)
+                                           ? narrowCellWidth : nil,
+                                       alignment: .leading)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity,
+                                       alignment: .leading)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity,
+                           alignment: .top)
+                }
+                if row.columns.count == 1, row.all.count == 1,
+                   cellWidth(for: row.all[0]) == nil,
+                   size(of: row.all[0]) == .compact {
+                    Color.clear.frame(maxWidth: .infinity)
+                }
+            }
+        }
+    }
+
     private func serverList(for deployments: [Deployment]) -> some View {
         List {
+            ServerProblemCards(counts: ServerProblems.counts(metrics.healthFacts(for: self.deployments(on: selectedPage))),
+                               selection: $problemFilter,
+                               explain: { explainProblem($0) })
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 6, leading: Self.rowInset, bottom: 6, trailing: Self.rowInset))
             if let error = viewModel.errorMessage {
                 Label(error, systemImage: "exclamationmark.triangle")
                     .foregroundStyle(.red)
@@ -393,34 +467,12 @@ struct ServerListView: View {
                                               width: cellWidth(for: $0))
                     }
                 }) {
-                Grid(horizontalSpacing: Self.columnGutter, verticalSpacing: 0) {
-                    GridRow {
-                        ForEach(row.columns, id: \.first?.id) { column in
-                            VStack(spacing: Self.columnGutter) {
-                                ForEach(column) { deployment in
-                                    card(for: deployment, in: row.all)
-                                        .frame(width: growing.contains(deployment.id)
-                                                   ? narrowCellWidth : nil,
-                                               alignment: .leading)
-                                        .frame(maxWidth: .infinity, maxHeight: .infinity,
-                                               alignment: .leading)
-                                }
-                            }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity,
-                                   alignment: .top)
-                        }
-                        if row.columns.count == 1, row.all.count == 1,
-                           cellWidth(for: row.all[0]) == nil,
-                           size(of: row.all[0]) == .compact {
-                            Color.clear.frame(maxWidth: .infinity)
-                        }
-                    }
-                }
+                cardGrid(for: row)
                 }
                 .modifier(CardRowChrome())
                 .swipeActions(edge: .trailing, allowsFullSwipe: row.all.count == 1) {
                     if row.all.count == 1, let only = row.all.first {
-                        Button(role: .destructive) {
+                        Button {
                             deploymentToDelete = only
                         } label: {
                             Label("Delete", systemImage: "trash")
@@ -445,7 +497,7 @@ struct ServerListView: View {
             }
         }
         #if !os(macOS)
-        .contentMargins(.top, allTags.isEmpty ? 0 : tagStripHeight,
+        .contentMargins(.top, showsTagStrip ? tagStripHeight : 0,
                         for: .scrollContent)
         .bottomBarClearance()
         #endif
@@ -454,6 +506,38 @@ struct ServerListView: View {
             await metrics.reconnectAll(viewModel.deployments)
         }
     }
+
+    #if os(macOS)
+    /// The selected group's moves, names and files
+    private var groupActionsMenu: some View {
+        Menu {
+            if let group = selectedPage.tag {
+                Button("Move left") { moveGroup(group, by: -1) }
+                    .disabled(allTags.first == group)
+                Button("Move right") { moveGroup(group, by: 1) }
+                    .disabled(allTags.last == group)
+                Divider()
+                Button("Rename group") {
+                    renamingGroup = group
+                }
+                Button("Export group…") { Task { await startGroupExport([group]) } }
+                Button("Delete group", role: .destructive) { delete(group: group) }
+                    .dangerTint()
+                Divider()
+            }
+            Button("New group…") {
+                namingNewGroup = true
+            }
+            Button("Export all groups…") { Task { await startGroupExport(allTags) } }
+            Button("Import groups…") { importGroups() }
+        } label: {
+            Label("Groups", systemImage: "ellipsis.circle")
+        }
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Groups")
+    }
+    #endif
 
     @ViewBuilder
     private var tagPicker: some View {
@@ -505,7 +589,7 @@ struct ServerListView: View {
 
     @ViewBuilder
     private var tagStrip: some View {
-        if !allTags.isEmpty {
+        if showsTagStrip {
             tagPicker
                 .padding(.horizontal, 16)
                 // Room above for the lens that lifts while held.
@@ -533,7 +617,7 @@ struct ServerListView: View {
     }
 
     private var tagStripHeight: CGFloat {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         barSettings.groupStripStyle == .custom ? Self.customTagStripHeight : 14 + stripHeight + 6
         #else
         Self.customTagStripHeight
@@ -584,12 +668,14 @@ struct ServerListView: View {
             .onTapGesture { open(deployment) }
             .accessibilityAddTraits(.isButton)
             .accessibilityAction { open(deployment) }
+        #if !os(tvOS)
         .simultaneousGesture(
             LongPressGesture(minimumDuration: 0.05, maximumDistance: 50)
                 .onEnded { _ in pressTracker.press(deployment.id) })
         .simultaneousGesture(
             LongPressGesture(minimumDuration: ServerCardHold.menuDelay, maximumDistance: 50)
                 .onEnded { _ in pressTracker.markHeld(deployment.id) })
+        #endif
         .glassCardContextMenu {
             contextMenu { pressTracker.target(in: row, fallback: deployment) }
         }
@@ -645,49 +731,17 @@ struct ServerListView: View {
         .dangerTint()
     }
 
-    @ViewBuilder
     private func appearanceChoices(_ target: @escaping () -> Deployment) -> some View {
-        Section("Card size") {
-            menuChoice("App default", picked: target().cardSize == nil) {
-                setCardSize(nil, for: target())
-            }
-            ForEach(ServerCardSize.allCases) { size in
-                menuChoice(size.localizedName, picked: target().cardSize == size) {
-                    setCardSize(size, for: target())
-                }
-            }
-        }
-        Section("Load indicator") {
-            menuChoice("App default", picked: target().metricsIndicatorStyle == nil) {
-                setIndicatorStyle(nil, for: target())
-            }
-            ForEach(Self.indicatorChoices, id: \.style) { choice in
-                menuChoice(choice.title,
-                           picked: target().metricsIndicatorStyle == choice.style) {
-                    setIndicatorStyle(choice.style, for: target())
-                }
-            }
-        }
-        Section("Color") {
-            menuChoice("Default", picked: target().tintName == nil) {
-                setTint(nil, for: target())
-            }
-            ForEach(ServerTint.allCases) { tint in
-                menuChoice(tint.localizedName, picked: target().tintName == tint.rawValue) {
-                    setTint(tint.rawValue, for: target())
-                }
-            }
-        }
+        ServerAppearanceChoices(deployment: target,
+                                setCardSize: { setCardSize($0, for: target()) },
+                                setIndicatorStyle: { setIndicatorStyle($0, for: target()) },
+                                setTint: { setTint($0, for: target()) })
     }
 
     private func menuChoice(_ title: LocalizedStringKey, picked: Bool,
                             _ choose: @escaping () -> Void) -> some View {
         MenuChoice(title, picked: picked, choose: choose)
     }
-
-    private static let indicatorChoices: [(style: MetricsIndicatorStyle, title: LocalizedStringKey)] = [
-        (.bars, "Bars"), (.track, "Line"), (.rings, "Rings"), (.minimal, "Minimal"),
-    ]
 
     private func startExport(of deployment: Deployment) async {
         if gateExport {
@@ -702,9 +756,38 @@ struct ServerListView: View {
         case .export(let deployments):
             transfer.prompt = nil
             Task { await writeExports(deployments, passphrase: passphrase) }
+        case .exportGroups(let groups):
+            transfer.prompt = nil
+            Task { await writeGroupExport(groups, passphrase: passphrase) }
         case .unlock(let data):
             transfer.unlock(data, passphrase: passphrase, into: viewModel)
         }
+    }
+
+    // MARK: - QR transfer
+
+    private var quickTransferSheets: QuickTransferSheets {
+        QuickTransferSheets(viewModel: viewModel, transfer: transfer, choosing: $choosingForQR,
+                            chosen: $chosenForQR, sending: $quickSend, receiving: $receivingByQR) { chosen in
+            await startQuickSend(chosen)
+        }
+    }
+
+    private func startChoosingForQR() {
+        if viewModel.deployments.count == 1 {
+            Task { await startQuickSend(viewModel.deployments) }
+        } else {
+            choosingForQR = true
+        }
+    }
+
+    private func startQuickSend(_ deployments: [Deployment]) async {
+        guard !deployments.isEmpty else { return }
+        if gateExport {
+            let reason = UIL10n.string("Unlock to export these servers")
+            guard await BiometricGate.authenticate(reason: reason) else { return }
+        }
+        quickSend = QuickTransferTarget(deployments: deployments)
     }
 
     /// Several servers in one share
@@ -745,6 +828,31 @@ struct ServerListView: View {
         showingShareSheet = true
     }
 
+    /// Writes one sealed file holding the groups and their servers
+    private func writeGroupExport(_ groups: [String], passphrase: String) async {
+        cleanupExportFile()
+        guard let data = await viewModel.groupExportData(groups: groups, passphrase: passphrase) else { return }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(ServerGroupBundle.fileName(for: groups))
+        do {
+            try data.write(to: url, options: .atomic)
+        } catch {
+            viewModel.errorMessage = UIL10n.string("Could not export: %@", groups.joined(separator: ", "))
+            return
+        }
+        exportFileURLs = [url]
+        showingShareSheet = true
+    }
+
+    private func startGroupExport(_ groups: [String]) async {
+        guard !groups.isEmpty else { return }
+        if gateExport {
+            let reason = UIL10n.string("Unlock to export these servers")
+            guard await BiometricGate.authenticate(reason: reason) else { return }
+        }
+        transfer.askToExport(groups: groups)
+    }
+
     #if DEBUG
     /// Adds a debug server as an installed local server
     private func seedTestStand() -> Deployment {
@@ -772,7 +880,7 @@ struct ServerListView: View {
             return
         }
         guard let requested = env["GRYONIXNEXUS_DEMO_OPEN_DASHBOARD"],
-              navigationPath.isEmpty else { return }
+              navigationPath.count <= 1 else { return }
         let index = max((Int(requested) ?? 1) - 1, 0)
         let byID = UUID(uuidString: requested).flatMap { id in viewModel.deployments.first { $0.id == id } }
         guard let first = byID ?? (viewModel.deployments.indices.contains(index)
@@ -781,16 +889,16 @@ struct ServerListView: View {
             let draft = ConfiguratorDraft(recovering: first)
             ConfiguratorStore.shared.saveDeploymentConfig(draft)
         }
-        navigationPath.append(first)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            if env["GRYONIXNEXUS_DEMO_OPEN_HISTORY"] != nil {
-                let metric = env["GRYONIXNEXUS_DEMO_HISTORY_METRIC"].flatMap(HistoryMetric.init(rawValue:))
-                navigationPath.append(MetricsHistoryTarget(deployment: first, host: .vps, metric: metric))
-            }
-            if env["GRYONIXNEXUS_DEMO_OPEN_ENERGY"] != nil {
-                navigationPath.append(EnergyTarget(deployment: first, host: .vps, cores: 4))
-            }
+        var path = NavigationPath()
+        path.append(first)
+        if env["GRYONIXNEXUS_DEMO_OPEN_HISTORY"] != nil {
+            let metric = env["GRYONIXNEXUS_DEMO_HISTORY_METRIC"].flatMap(HistoryMetric.init(rawValue:))
+            path.append(MetricsHistoryTarget(deployment: first, host: .vps, metric: metric))
         }
+        if env["GRYONIXNEXUS_DEMO_OPEN_ENERGY"] != nil {
+            path.append(EnergyTarget(deployment: first, host: .vps, cores: 4))
+        }
+        navigationPath = path
         if env["GRYONIXNEXUS_DEMO_OPEN_MESH"] != nil {
             navigationPath.append(MeshDevicesTarget(deployment: first))
         }
@@ -873,8 +981,8 @@ struct ServerListView: View {
         navigator.serversAction = nil
         switch action {
         case .add: if LicensePrompt.shared.allow() { addingServer = true }
-        case .importServer: if LicensePrompt.shared.allow() { importing = true }
-        case .export: exportingSeveral = true
+        case .importServer: if LicensePrompt.shared.allow() { askingImportWay = true }
+        case .export: askingExportWay = true
         }
     }
 
@@ -915,19 +1023,33 @@ struct ServerListView: View {
     }
 
     private var allTags: [String] {
-        ServerGroups.known(in: viewModel.deployments)
+        ServerGroups.known(in: viewModel.deployments, order: ServerGroups.parse(groupOrderRaw))
+    }
+
+    /// One place left or right on the strip
+    private func moveGroup(_ group: String, by offset: Int) {
+        guard let order = ServerGroups.moving(group, by: offset, among: allTags,
+                                              stored: ServerGroups.parse(groupOrderRaw)) else { return }
+        withAnimation(.snappy(duration: 0.25)) { groupOrderRaw = ServerGroups.format(order) }
+    }
+
+    private func importGroups() {
+        if LicensePrompt.shared.allow() { importing = true }
     }
 
     private func keepSelectionReachable() {
-        guard let tag = selectedPage.tag, !allTags.contains(tag) else { return }
+        guard let tag = selectedPage.tag, !showsTagStrip || !allTags.contains(tag) else { return }
         selectedPage = .all
     }
 
-    #if os(iOS)
+    /// A strip only for two or more groups
+    private var showsTagStrip: Bool { allTags.count >= 2 }
+
+    #if os(iOS) || os(tvOS)
     /// The held segment's own menu
     private func groupMenu(for page: ServerPage) -> UIMenu {
         guard let group = page.tag else {
-            return UIMenu(title: UIL10n.string("All"), children: [newGroupAction()])
+            return UIMenu(title: UIL10n.string("All"), children: [newGroupAction(), groupFilesMenu()])
         }
         let members = ServerGroups.members(of: group, in: viewModel.deployments)
         let membership = UIMenu(title: "", options: .displayInline, children:
@@ -940,7 +1062,6 @@ struct ServerListView: View {
         let edits = UIMenu(title: "", options: .displayInline, children: [
             UIAction(title: UIL10n.string("Rename group"),
                      image: UIImage(systemName: "pencil")) { _ in
-                groupNameField = group
                 renamingGroup = group
             },
             newGroupAction(),
@@ -948,12 +1069,37 @@ struct ServerListView: View {
                      image: UIImage(systemName: "trash"),
                      attributes: .destructive) { _ in delete(group: group) },
         ])
-        return UIMenu(title: group, children: [membership, edits])
+        let tags = allTags
+        let moves = UIMenu(title: "", options: .displayInline, children: [
+            UIAction(title: UIL10n.string("Move left"), image: UIImage(systemName: "arrow.left"),
+                     attributes: tags.first == group ? .disabled : []) { _ in moveGroup(group, by: -1) },
+            UIAction(title: UIL10n.string("Move right"), image: UIImage(systemName: "arrow.right"),
+                     attributes: tags.last == group ? .disabled : []) { _ in moveGroup(group, by: 1) },
+        ])
+        let export = UIAction(title: UIL10n.string("Export group…"),
+                              image: UIImage(systemName: "square.and.arrow.up")) { _ in
+            Task { await startGroupExport([group]) }
+        }
+        return UIMenu(title: group, children: [membership, moves,
+                                               UIMenu(title: "", options: .displayInline, children: [export]),
+                                               edits])
+    }
+
+    /// Every group to one file, or groups from one
+    private func groupFilesMenu() -> UIMenu {
+        UIMenu(title: "", options: .displayInline, children: [
+            UIAction(title: UIL10n.string("Export all groups…"),
+                     image: UIImage(systemName: "square.and.arrow.up.on.square"),
+                     attributes: allTags.isEmpty ? .disabled : []) { _ in
+                Task { await startGroupExport(allTags) }
+            },
+            UIAction(title: UIL10n.string("Import groups…"),
+                     image: UIImage(systemName: "square.and.arrow.down")) { _ in importGroups() },
+        ])
     }
 
     private func newGroupAction() -> UIAction {
         UIAction(title: UIL10n.string("New group…"), image: UIImage(systemName: "plus")) { _ in
-            groupNameField = ""
             namingNewGroup = true
         }
     }
@@ -989,10 +1135,13 @@ struct ServerListView: View {
             viewModel.updateAppearance(updated)
         }
         if selectedPage.tag == group { selectedPage = .tag(name) }
+        groupOrderRaw = ServerGroups.format(
+            ServerGroups.renaming(group, to: name, in: ServerGroups.parse(groupOrderRaw)))
     }
 
     private func delete(group: String) {
         setMembership([], of: group)
+        groupOrderRaw = ServerGroups.format(ServerGroups.removing(group, from: ServerGroups.parse(groupOrderRaw)))
     }
 
     private func deployments(on page: ServerPage) -> [Deployment] {
@@ -1000,10 +1149,17 @@ struct ServerListView: View {
         return viewModel.deployments.filter { $0.tags.contains(tag) }
     }
 
-    private var filteredDeployments: [Deployment] { deployments(on: selectedPage) }
+    private var filteredDeployments: [Deployment] {
+        var list = deployments(on: selectedPage)
+        if let problem = problemFilter {
+            let ids = ServerProblems.ids(with: problem, in: metrics.healthFacts(for: list))
+            list = list.filter { ids.contains($0.id) }
+        }
+        return ServerListOrdering.ordered(list) { metrics.offlineIDs.contains($0.id) }
+    }
 
     private var listBackground: Color {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         Color(.systemGroupedBackground)
         #else
         Color.clear

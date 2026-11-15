@@ -1,4 +1,4 @@
-#if os(iOS)
+#if os(iOS) || os(tvOS)
 import SwiftUI
 
 /// Dynamic Island sizes from Apple's Live Activity guidelines
@@ -11,16 +11,22 @@ enum IslandCompact {
     static let widestGlyph: CGFloat = 22
     static let narrowestGlyph: CGFloat = 14
 
-    /// Fits a running clock under an hour
-    static let timerWidth: CGFloat = 34
-    static let widestTimer: CGFloat = 42
+    /// Fits a running clock up to "59:59"
+    static let timerWidth: CGFloat = 32
+    /// Fits a running clock with hours
+    static let hoursTimerWidth: CGFloat = 42
+    static let widestTimer: CGFloat = 52
+    /// Hours get their room a little before they show
+    static let hoursFrom: TimeInterval = 55 * 60
 
     static func glyphDiameter(scaled: CGFloat) -> CGFloat {
         min(max(scaled, narrowestGlyph), widestGlyph)
     }
 
-    static func trailingWidth(scaled: CGFloat) -> CGFloat {
-        min(max(scaled, timerWidth), widestTimer)
+    /// The clock's room, wider once it shows hours
+    static func trailingWidth(scaled: CGFloat, elapsed: TimeInterval = 0) -> CGFloat {
+        let room = elapsed < hoursFrom ? timerWidth : hoursTimerWidth
+        return min(max(scaled * room / timerWidth, room), widestTimer)
     }
 }
 
@@ -41,12 +47,13 @@ struct CompactIslandTimer: View {
 
     var body: some View {
         TunnelSessionTimer(since: since, font: .caption2.monospacedDigit().weight(.semibold))
-            .frame(width: IslandCompact.trailingWidth(scaled: scaled), alignment: .trailing)
+            .frame(width: IslandCompact.trailingWidth(scaled: scaled, elapsed: Date().timeIntervalSince(since)),
+                   alignment: .trailing)
     }
 }
 
-/// The compact island's percentage, only as wide as needed
-struct CompactIslandPercent: View {
+/// A short compact-island label, only as wide as needed
+struct CompactIslandLabel: View {
     let text: String
     let tint: Color
 

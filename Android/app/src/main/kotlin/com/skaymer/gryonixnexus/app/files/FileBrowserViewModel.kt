@@ -2,7 +2,9 @@ package com.skaymer.gryonixnexus.app.files
 
 import com.skaymer.gryonixnexus.R
 import com.skaymer.gryonixnexus.app.notify.OperationNotices
+import com.skaymer.gryonixnexus.app.shell.SettingsStore
 import com.skaymer.gryonixnexus.servercontrol.Deployment
+import com.skaymer.gryonixnexus.servercontrol.FileShortcuts
 import com.skaymer.gryonixnexus.servercontrol.RemoteFileBrowser
 import com.skaymer.gryonixnexus.servercontrol.RemoteFileEntry
 import com.skaymer.gryonixnexus.servercontrol.RemotePath
@@ -34,7 +36,14 @@ data class FileBrowserState(
     /** Whether the server has answered about a directory at all */
     val hasAnswered: Boolean = false,
     val pendingDownload: DownloadedFile? = null,
+    val searchResults: List<RemoteFileEntry>? = null,
+    val isSearching: Boolean = false,
+    val selection: Set<String> = emptySet(),
+    val shortcuts: FileShortcuts = FileShortcuts(),
+    val preview: FilePreviewData? = null,
 ) {
+    val shownEntries: List<RemoteFileEntry> get() = searchResults ?: entries
+
     val isAtRoot: Boolean get() = path == "/"
 
     val saysItIsEmpty: Boolean
@@ -42,15 +51,18 @@ data class FileBrowserState(
 }
 
 class FileBrowserViewModel(
-    private val scope: CoroutineScope,
-    private val browsers: suspend (Deployment) -> RemoteFileBrowser,
+    internal val scope: CoroutineScope,
+    internal val browsers: suspend (Deployment) -> RemoteFileBrowser,
     private val startFolder: (Deployment) -> String? = { null },
     private val release: suspend (Deployment) -> Unit = {},
+    internal val settings: SettingsStore? = null,
 ) {
-    private val _state = MutableStateFlow(FileBrowserState())
+    internal val _state = MutableStateFlow(FileBrowserState())
     val state: StateFlow<FileBrowserState> = _state.asStateFlow()
 
     private var job: Job? = null
+    internal var searchJob: Job? = null
+    internal val thumbnails = HashMap<String, ByteArray>()
 
     /** First look: land where the control user lands */
     fun start(deployment: Deployment) {
@@ -84,7 +96,7 @@ class FileBrowserViewModel(
     }
 
     /** The machine every call below is addressed to */
-    private fun host(deployment: Deployment): SSHHostID =
+    internal fun host(deployment: Deployment): SSHHostID =
         _state.value.host ?: deployment.servicesHost
 
     /** Re-read the directory on screen */
@@ -100,6 +112,7 @@ class FileBrowserViewModel(
     /** Walk into a directory */
     fun open(deployment: Deployment, entry: RemoteFileEntry) {
         if (entry.kind != RemoteFileEntry.Kind.DIRECTORY) return
+        cancelSearch()
         navigate(deployment, entry.path)
     }
 
@@ -107,6 +120,7 @@ class FileBrowserViewModel(
     fun goUp(deployment: Deployment) {
         val state = _state.value
         if (state.isAtRoot || state.path.isEmpty()) return
+        cancelSearch()
         navigate(deployment, RemotePath.parent(state.path))
     }
 
@@ -131,6 +145,7 @@ class FileBrowserViewModel(
             try {
                 val bytes = browsers(deployment)
                     .downloadFile(entry.path, host(deployment), TRANSFER_LIMIT_BYTES)
+                noteOpened(deployment, entry.path)
                 val file = DownloadedFile(entry.name, bytes)
                 _state.value = _state.value.copy(transfer = null, pendingDownload = file)
                 onReady(file)
@@ -191,6 +206,7 @@ class FileBrowserViewModel(
     }
 
     fun reset() {
+        searchJob?.cancel()
         job?.cancel()
         job = null
         _state.value = FileBrowserState()
@@ -199,7 +215,7 @@ class FileBrowserViewModel(
     // MARK: - Internals
 
     /** Where you are changes only when the new place answered */
-    private fun navigate(deployment: Deployment, path: String) {
+    internal fun navigate(deployment: Deployment, path: String) {
         job?.cancel()
         job = scope.launch {
             _state.value = _state.value.copy(isLoading = true, errorMessage = null)
@@ -214,7 +230,7 @@ class FileBrowserViewModel(
         }
     }
 
-    private fun show(path: String, entries: List<RemoteFileEntry>) {
+    internal fun show(path: String, entries: List<RemoteFileEntry>) {
         _state.value = _state.value.copy(
             path = path,
             entries = RemoteFileEntry.sorted(entries),
@@ -225,7 +241,7 @@ class FileBrowserViewModel(
         )
     }
 
-    private suspend fun fail(deployment: Deployment, failure: Exception) {
+    internal suspend fun fail(deployment: Deployment, failure: Exception) {
         release(deployment)
         _state.value = _state.value.copy(
             isLoading = false,

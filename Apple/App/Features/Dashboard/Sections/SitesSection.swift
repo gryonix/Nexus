@@ -84,7 +84,7 @@ struct SitesSection: View {
             HStack(spacing: 12) {
                 Image(systemName: site.systemImage)
                     .foregroundStyle(.tint)
-                    .frame(width: 22)
+                    .rowIconFrame(22)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(verbatim: site.name)
                         .foregroundStyle(.primary)
@@ -95,15 +95,17 @@ struct SitesSection: View {
                         .truncationMode(.middle)
                 }
                 Spacer()
+                #if !os(tvOS)
                 Image(systemName: "arrow.up.right")
                     .font(.callout.weight(.semibold))
                     .foregroundStyle(.tint)
+                #endif
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(site.url == nil)
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
         #endif
     }
@@ -120,7 +122,7 @@ private struct HomeDoorRow: View {
             #if os(macOS)
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(address, forType: .string)
-            #else
+            #elseif os(iOS)
             UIPasteboard.general.string = address
             #endif
             copied = true
@@ -128,7 +130,7 @@ private struct HomeDoorRow: View {
             HStack(spacing: 12) {
                 Image(systemName: "iphone.and.arrow.forward")
                     .foregroundStyle(.secondary)
-                    .frame(width: 22)
+                    .rowIconFrame(22)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(label)
                         .font(.caption)

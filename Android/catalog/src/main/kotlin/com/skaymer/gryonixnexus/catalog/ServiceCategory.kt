@@ -135,6 +135,12 @@ data class ServiceCategory(
             systemImage = "house",
             selection = Selection.MULTIPLE, order = 16)
 
+        val AUDIO = ServiceCategory(
+            id = "audio", title = "Audio and AirPlay",
+            summary = "Turns a machine at home into an AirPlay speaker or screen and a hub for your music. Only on a machine at home.",
+            systemImage = "hifispeaker.2",
+            selection = Selection.MULTIPLE, order = 17)
+
         val IMPLICIT = ServiceCategory(
             id = "implicit", title = "", summary = "", systemImage = "gearshape",
             selection = Selection.MULTIPLE, order = 99)
@@ -142,7 +148,7 @@ data class ServiceCategory(
         /** Every category, in the order the forms show them */
         val SELECTABLE: List<ServiceCategory> = listOf(
             MAIL, PASSWORDS, SECRETS, FILES, PHOTOS, MEDIA, CODE, NETWORK, VPN, MESH,
-            REMOTE_ACCESS, DASHBOARD, SINGLE_SIGN_ON, GAMES, AI, AUTOMATION, SMART_HOME
+            REMOTE_ACCESS, DASHBOARD, SINGLE_SIGN_ON, GAMES, AI, AUTOMATION, SMART_HOME, AUDIO
         )
     }
 }

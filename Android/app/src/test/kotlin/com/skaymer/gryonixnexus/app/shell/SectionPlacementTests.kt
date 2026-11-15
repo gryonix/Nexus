@@ -12,7 +12,7 @@ class SectionPlacementTests {
         assertEquals(
             listOf(
                 AppTab.SERVERS, AppTab.METRICS, AppTab.CONTAINERS, AppTab.VPN,
-                AppTab.TERMINAL, AppTab.CONFIGURATOR, AppTab.SETTINGS
+                AppTab.TERMINAL, AppTab.AI, AppTab.CONFIGURATOR, AppTab.SETTINGS
             ),
             TabBarSettings(InMemorySettingsStore()).order.value,
             "containers rides beside metrics, and both it and terminal are kept off " +

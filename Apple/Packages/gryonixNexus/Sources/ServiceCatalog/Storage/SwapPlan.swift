@@ -10,6 +10,8 @@ public struct SwapPlan: Sendable, Hashable {
     public static let sizes = [1, 2, 4, 8]
     /// Sizes a custom value may take
     public static let allowed = 1...256
+    /// Sizes the wheel offers, zero meaning off
+    public static let wheel = [0, 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256]
 
     public init(sizeGB: Int) { self.sizeGB = sizeGB }
 

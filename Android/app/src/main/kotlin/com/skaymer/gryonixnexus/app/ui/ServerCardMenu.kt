@@ -21,15 +21,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.skaymer.gryonixnexus.app.ui.design.ConfirmAlert
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.padding
 import com.skaymer.gryonixnexus.R
 import com.skaymer.gryonixnexus.app.servers.ServerTint
+import com.skaymer.gryonixnexus.servercontrol.Deployment
 import com.skaymer.gryonixnexus.servercontrol.MetricsIndicatorStyle
 import com.skaymer.gryonixnexus.servercontrol.ServerCardSize
 
 /** Which list the open menu is showing */
-private enum class CardMenuPage { ROOT, SIZE, INDICATOR, COLOR }
+private enum class CardMenuPage { ROOT, SIZE, INDICATOR, COLOR, ICON }
 
 @Composable
 fun ServerCardMenu(
@@ -38,10 +40,14 @@ fun ServerCardMenu(
     size: ServerCardSize?,
     style: MetricsIndicatorStyle?,
     tint: String?,
+    icon: String?,
     onDismiss: () -> Unit,
     onSize: (ServerCardSize?) -> Unit,
     onIndicator: (MetricsIndicatorStyle?) -> Unit,
     onTint: (String?) -> Unit,
+    onIcon: (String?) -> Unit,
+    /** The server the menu belongs to */
+    deployment: Deployment,
     onForget: () -> Unit,
     onExport: () -> Unit,
     /** Addresses, passwords and pinned host keys — see `ConnectionEdit` */
@@ -67,6 +73,10 @@ fun ServerCardMenu(
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.card_color)) },
                     onClick = { page = CardMenuPage.COLOR }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.card_icon)) },
+                    onClick = { page = CardMenuPage.ICON }
                 )
                 HorizontalDivider()
                 DropdownMenuItem(
@@ -128,17 +138,20 @@ fun ServerCardMenu(
                     ) { onTint(option.raw); onDismiss() }
                 }
             }
+            CardMenuPage.ICON -> {
+                BackItem(stringResource(R.string.card_icon)) { page = CardMenuPage.ROOT }
+                ServerIconPicker(
+                    icon, ServerTint.of(tint).composeColor(),
+                    Modifier.padding(horizontal = 12.dp, vertical = 8.dp).widthIn(max = 220.dp),
+                ) { onIcon(it); onDismiss() }
+            }
         }
     }
 
     if (confirming) {
-        ConfirmAlert(
-            title = stringResource(R.string.delete_server_title, name),
-            message = stringResource(R.string.delete_server_message),
-            confirm = stringResource(R.string.delete_server_confirm),
-            cancel = stringResource(R.string.delete_server_cancel),
-            destructive = true,
-            onConfirm = { confirming = false; onForget() },
+        ServerRemovalDialog(
+            deployment = deployment,
+            onRemoved = { confirming = false; onForget() },
             onCancel = { confirming = false },
         )
     }

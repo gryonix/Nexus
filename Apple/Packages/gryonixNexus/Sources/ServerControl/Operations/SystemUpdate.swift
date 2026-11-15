@@ -19,6 +19,8 @@ public struct SystemUpdateStatus: Sendable, Equatable {
     public var swapFileBytes: Int64 = 0
     /// The system's own timer; nil when the updater predates it
     public var schedule: CommandCatalog.Backups.Schedule?
+    /// The host's reboot timer; nil when the updater predates it
+    public var rebootSchedule: RebootSchedule?
     public var log: [String] = []
 
     public init() {}
@@ -50,8 +52,48 @@ public struct SystemUpdateStatus: Sendable, Equatable {
         case "swap": swapBytes = Int64(value) ?? 0
         case "swapfile": swapFileBytes = Int64(value) ?? 0
         case "schedule": schedule = CommandCatalog.Backups.Schedule(wrapperArgument: value)
+        case "reboot_schedule": rebootSchedule = RebootSchedule(wrapperArgument: value)
         default: break
         }
+    }
+}
+
+/// When the host restarts by itself
+public enum RebootSchedule: Sendable, Equatable {
+    case off
+    case daily(hour: Int, minute: Int)
+    /// Weekday 1 is Monday, 7 is Sunday
+    case weekly(weekday: Int, hour: Int, minute: Int)
+
+    public var wrapperArgument: String {
+        switch self {
+        case .off: return "off"
+        case .daily(let hour, let minute): return "daily@\(Self.clock(hour, minute))"
+        case .weekly(let weekday, let hour, let minute): return "weekly:\(weekday)@\(Self.clock(hour, minute))"
+        }
+    }
+
+    public init?(wrapperArgument: String) {
+        if wrapperArgument == "off" { self = .off; return }
+        let parts = wrapperArgument.split(separator: "@", maxSplits: 1).map(String.init)
+        guard parts.count == 2, let time = Self.time(parts[1]) else { return nil }
+        if parts[0] == "daily" {
+            self = .daily(hour: time.hour, minute: time.minute)
+        } else if parts[0].hasPrefix("weekly:"), let day = Int(parts[0].dropFirst(7)), (1...7).contains(day) {
+            self = .weekly(weekday: day, hour: time.hour, minute: time.minute)
+        } else {
+            return nil
+        }
+    }
+
+    private static func clock(_ hour: Int, _ minute: Int) -> String {
+        String(format: "%02d:%02d", min(max(hour, 0), 23), min(max(minute, 0), 59))
+    }
+
+    private static func time(_ text: String) -> (hour: Int, minute: Int)? {
+        let parts = text.split(separator: ":").compactMap { Int($0) }
+        guard parts.count == 2, (0...23).contains(parts[0]), (0...59).contains(parts[1]) else { return nil }
+        return (parts[0], parts[1])
     }
 }
 
@@ -76,6 +118,10 @@ public enum SystemUpdate {
 
     public static func scheduleCommand(_ schedule: CommandCatalog.Backups.Schedule) -> String {
         "sudo -n \(scriptPath) schedule \(schedule.wrapperArgument)"
+    }
+
+    public static func rebootScheduleCommand(_ schedule: RebootSchedule) -> String {
+        "sudo -n \(scriptPath) reboot-schedule \(schedule.wrapperArgument)"
     }
 
     /// A swap file of `sizeGB`, or none when nil
@@ -124,6 +170,10 @@ public struct SystemUpdateOperations: Sendable {
         try await parsed(SystemUpdate.scheduleCommand(schedule), on: host)
     }
 
+    public func setRebootSchedule(_ schedule: RebootSchedule, host: SSHHostID) async throws -> SystemUpdateStatus {
+        try await parsed(SystemUpdate.rebootScheduleCommand(schedule), on: host)
+    }
+
     public func setSwap(sizeGB: Int?, host: SSHHostID) async throws -> SystemUpdateStatus {
         try await parsed(SystemUpdate.swapCommand(sizeGB: sizeGB), on: host)
     }
@@ -144,4 +194,12 @@ public struct SystemUpdateOperations: Sendable {
 public enum SystemUpdateError: Error, Equatable {
     /// The agent on this host predates the updater
     case updaterMissing
+}
+
+/// What the agent accepts as a machine's host name
+public enum HostNameRules {
+    public static func isValid(_ name: String) -> Bool {
+        guard (1...63).contains(name.utf8.count), name.first != "-", name.last != "-" else { return false }
+        return name.utf8.allSatisfy { ($0 >= 97 && $0 <= 122) || ($0 >= 48 && $0 <= 57) || $0 == 45 }
+    }
 }

@@ -33,17 +33,29 @@ fun RunningJobsStrip(jobs: RunningJobs) {
     if (running.isEmpty()) return
     Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant)) {
         running.forEach { job ->
-            RunningJobRow(job) { jobs.dismiss(job.key) }
+            RunningJobRow(job) { jobs.open(job.key) }
         }
+    }
+    RunningJobPage(jobs, running)
+}
+
+/** The open run's page, when it is listed */
+@Composable
+private fun RunningJobPage(jobs: RunningJobs, running: List<RunningJob>) {
+    val opened by jobs.opened.collectAsState()
+    val job = running.firstOrNull { it.key == opened || it.id == opened } ?: return
+    RunningJobSheet(job, onStop = { jobs.stop(job) }) {
+        jobs.close()
+        jobs.dismiss(job.key)
     }
 }
 
 @Composable
-private fun RunningJobRow(job: RunningJob, onDismiss: () -> Unit) {
+private fun RunningJobRow(job: RunningJob, onOpen: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(enabled = job.finished) { onDismiss() }
+            .clickable { onOpen() }
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

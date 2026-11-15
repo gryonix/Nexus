@@ -19,16 +19,28 @@ object VPNPortShare {
     /** The port AmneziaWG clients connect to */
     fun clientPort(context: ServiceContext): Int = sharedPort(context) ?: context.settings.amneziaWGPort
 
+    /** Marks the flows that came in on the shared port */
+    private const val MARK = "0x4e580001"
+
     /** WireGuard's own packets stay; every other flow moves to AmneziaWG */
     fun dropIn(wireGuardPort: Int, amneziaPort: Int): String = """
         # Managed by gryonixNexus: AmneziaWG answers on the WireGuard port.
         # WireGuard packets start with type 1-4 and three zeros.
+        # The port changes before conntrack, so docker forwards in the kernel.
         table $TABLE
         delete table $TABLE
         table $TABLE {
             chain prerouting {
-                type nat hook prerouting priority dstnat - 10; policy accept;
-                udp dport $wireGuardPort @th,64,32 != { 0x01000000, 0x02000000, 0x03000000, 0x04000000 } redirect to :$amneziaPort
+                type filter hook prerouting priority raw; policy accept;
+                udp dport $wireGuardPort @th,64,32 != { 0x01000000, 0x02000000, 0x03000000, 0x04000000 } udp dport set $amneziaPort meta mark set $MARK
+            }
+            chain remember {
+                type filter hook prerouting priority mangle; policy accept;
+                meta mark $MARK ct mark set $MARK meta mark set 0
+            }
+            chain postrouting {
+                type filter hook postrouting priority srcnat + 10; policy accept;
+                ct mark $MARK udp sport $amneziaPort udp sport set $wireGuardPort
             }
         }
         """.trimIndent() + "\n"

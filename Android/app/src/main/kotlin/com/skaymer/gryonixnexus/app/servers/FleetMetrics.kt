@@ -1,5 +1,7 @@
 package com.skaymer.gryonixnexus.app.servers
 
+import com.skaymer.gryonixnexus.app.widgets.WidgetFeed
+
 import com.skaymer.gryonixnexus.servercontrol.CoroutineSleeper
 import com.skaymer.gryonixnexus.servercontrol.Deployment
 import com.skaymer.gryonixnexus.servercontrol.HostEndpoint
@@ -17,6 +19,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.coroutines.coroutineContext
@@ -43,6 +46,8 @@ class FleetMetrics(
     private val sleeper: SleepProvider = CoroutineSleeper,
     private val silence: SilenceWatch? = null,
     private val clock: () -> Long = System::currentTimeMillis,
+    /** Whether servers are probed on launch */
+    private val collectOnOpen: () -> Boolean = { true },
 ) {
     private class Poller(val deployment: Deployment, val job: Job)
 
@@ -52,12 +57,21 @@ class FleetMetrics(
     private val started = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private val lastRestart = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private var watchdog: Job? = null
+    private val _offline = MutableStateFlow<Set<String>>(emptySet())
+
+    /** Servers whose every machine answers with an error */
+    val offline: StateFlow<Set<String>> = _offline.asStateFlow()
+
+    /** Disk fraction in use, from the live reading */
+    fun diskFraction(deploymentID: String): Double? =
+        cards[deploymentID]?.value?.values?.firstNotNullOfOrNull { it.snapshot }
+            ?.takeIf { it.diskTotalBytes > 0 }?.diskUsedFraction
 
     /** The readings of one server */
     fun card(deploymentID: String): StateFlow<Map<SSHHostID, HostMetricsState>> =
         box(deploymentID).asStateFlow()
 
-    fun sync(deployments: List<Deployment>) {
+    fun sync(deployments: List<Deployment>, force: Boolean = false) {
         val wanted = deployments.associateBy { it.id }
         for ((id, poller) in pollers.toList()) {
             val updated = wanted[id]
@@ -72,8 +86,9 @@ class FleetMetrics(
             }
         }
         cards.keys.retainAll(wanted.keys)
+        _offline.update { it.intersect(wanted.keys) }
         for (deployment in deployments) {
-            if (pollers[deployment.id] == null) start(deployment)
+            if (pollers[deployment.id] == null && (force || collectOnOpen())) start(deployment)
         }
     }
 
@@ -90,6 +105,13 @@ class FleetMetrics(
             pollers.remove(id)
             start(poller.deployment)
         }
+    }
+
+    /** Every server's probes start again, failing or not */
+    fun reconnectAll(deployments: List<Deployment>) {
+        pollers.values.forEach { it.job.cancel() }
+        pollers.clear()
+        sync(deployments, force = true)
     }
 
     /** The app is going away */
@@ -154,7 +176,20 @@ class FleetMetrics(
         start(poller.deployment)
     }
 
+    private suspend fun pollDemo(deployment: Deployment) {
+        var tick = 1L
+        while (coroutineContext.isActive) {
+            for (host in deployment.nodes.map { it.sshHost }) {
+                val snapshot = DemoHostMetrics.snapshot(deployment.id, host, tick)
+                publish(deployment.id, host, HostMetricsState(snapshot = snapshot, lastSeen = clock()))
+            }
+            tick++
+            sleeper.sleep(interval)
+        }
+    }
+
     private suspend fun poll(deployment: Deployment) {
+        if (DemoHostMetrics.covers(deployment.id)) return pollDemo(deployment)
         val hosts = deployment.nodes.map { it.sshHost }
         val entry = entryHost(deployment)
         val timeout = deployment.timeouts.quickSeconds.seconds
@@ -178,14 +213,9 @@ class FleetMetrics(
                 if (!coroutineContext.isActive) break
                 try {
                     val sample = probe.sample(host)
-                    publish(
-                        deployment.id,
-                        host,
-                        HostMetricsState(
-                            snapshot = HostMetricsSnapshot.from(sample, previous[host]),
-                            lastSeen = clock(),
-                        )
-                    )
+                    val snapshot = HostMetricsSnapshot.from(sample, previous[host])
+                    publish(deployment.id, host, HostMetricsState(snapshot = snapshot, lastSeen = clock()))
+                    WidgetFeed.metrics(deployment, host, snapshot, deployment.name)
                     previous[host] = sample
                 } catch (cancelled: CancellationException) {
                     throw cancelled
@@ -211,6 +241,8 @@ class FleetMetrics(
     private fun publish(deploymentID: String, host: SSHHostID, state: HostMetricsState) {
         val box = box(deploymentID)
         box.value = box.value + (host to state)
+        val down = box.value.values.all { it.errorMessage != null }
+        _offline.update { if (down) it + deploymentID else it - deploymentID }
     }
 
     /** Drops the numbers, keeps when the machine last answered */

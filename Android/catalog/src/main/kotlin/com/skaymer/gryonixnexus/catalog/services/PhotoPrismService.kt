@@ -2,6 +2,7 @@ package com.skaymer.gryonixnexus.catalog.services
 
 import com.skaymer.gryonixnexus.catalog.ArchiveBackupPlan
 import com.skaymer.gryonixnexus.catalog.BackupDatabase
+import com.skaymer.gryonixnexus.catalog.BackupPart
 import com.skaymer.gryonixnexus.catalog.BackupPlan
 import com.skaymer.gryonixnexus.catalog.BackupSpec
 import com.skaymer.gryonixnexus.catalog.BackupWrapperSpec
@@ -166,6 +167,7 @@ class PhotoPrismService : ManagedService {
                 plan = BackupPlan.Archive(ArchiveBackupPlan(
                     composeProject = COMPOSE_PROJECT,
                     dataPath = "$path/originals",
+                    dataPart = BackupPart.FILES,
                     databases = listOf(BackupDatabase(
                         engine = BackupDatabase.Engine.MYSQL,
                         service = "mariadb",

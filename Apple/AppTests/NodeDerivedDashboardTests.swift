@@ -16,6 +16,8 @@ final class NodeDerivedDashboardTests: XCTestCase {
         "ServerFormView.swift",
         "ReinstallFlowView.swift",
         "ReattachedInstall.swift",
+        // Configurator questions for services about to install.
+        "AddServiceSetupStep.swift",
         // The AGENT's own Host.topology field, not a deployment's enum.
         "DemoAgentControl.swift",
         // Routes a scenario choice into the configurator.

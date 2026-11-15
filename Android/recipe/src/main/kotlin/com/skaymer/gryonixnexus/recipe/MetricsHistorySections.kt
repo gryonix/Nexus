@@ -26,7 +26,7 @@ internal object MetricsHistorySections {
     # Managed by gryonixNexus — samples host metrics every 10 seconds and keeps
     # downsampled history buckets as CSV files under /var/lib/gryonixnexus/metrics.
     # Columns: epoch,cpu%,memUsed,memTotal,diskUsed,diskTotal,netRx/s,netTx/s,
-    # ioRead/s,ioWrite/s,load1,tempC. Empty field = no data for that sample.
+    # ioRead/s,ioWrite/s,load1,tempC,swapUsed,swapTotal. Empty field = no data for that sample.
     # Power: power-<bucket>.csv, columns epoch,watts,sensor, when a sensor exists.
     # Disks: disks-<bucket>.csv, columns epoch,mount,used,total, one row per filesystem.
     set -euo pipefail
@@ -37,6 +37,7 @@ internal object MetricsHistorySections {
 
     cpu_ticks() { awk '${SH}1=="cpu"{t=0; for(i=2;i<=9;i++) t+=${SH}i; print t, ${SH}5+${SH}6; exit}' /proc/stat; }
     mem_bytes() { awk '/^MemTotal:/{t=${SH}2*1024} /^MemAvailable:/{a=${SH}2*1024} END{print t-a, t}' /proc/meminfo; }
+    swap_bytes() { awk '/^SwapTotal:/{t=${SH}2*1024} /^SwapFree:/{f=${SH}2*1024} END{print t-f, t}' /proc/meminfo; }
     disk_bytes() {
       { df -B1 --output=target,size,used -x tmpfs -x devtmpfs -x overlay 2>/dev/null || true; } \
         | awk 'NR>1 { if (${SH}1=="/") {s=${SH}2; u=${SH}3; f=1} else if (!f && ${SH}2+0>s+0) {s=${SH}2; u=${SH}3} } END{print u+0, s+0}'
@@ -157,6 +158,7 @@ internal object MetricsHistorySections {
           if (${SH}10!="") {iw+=${SH}10; iwn++}
           l+=${SH}11
           if (${SH}12!="") {tp+=${SH}12; tn++}
+          if (${SH}13!="") {su+=${SH}13; st=${SH}14; sn++}
         }
         END {
           if (!n) exit 0
@@ -172,6 +174,9 @@ internal object MetricsHistorySections {
           if (iwn) printf "%d", iw/iwn
           printf ",%.2f,", l/n
           if (tn) printf "%.1f", tp/tn
+          printf ","
+          if (sn) printf "%d,%d", su/sn, st
+          else printf ","
           printf "\n"
         }' "${SH}source")
       [ -n "${SH}row" ] || return 0
@@ -230,6 +235,7 @@ internal object MetricsHistorySections {
       now=${SH}(date +%s)
       read -r total idle < <(cpu_ticks)
       read -r mem_used mem_total < <(mem_bytes)
+      read -r swap_used swap_total < <(swap_bytes)
       read -r disk_used disk_total < <(disk_bytes)
       read -r rx tx < <(net_bytes)
       read -r io_r io_w < <(io_bytes)
@@ -246,9 +252,9 @@ internal object MetricsHistorySections {
         iw_rate=${SH}(rate "${SH}io_w" "${SH}prev_iw")
       fi
 
-      printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+      printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
         "${SH}now" "${SH}cpu" "${SH}mem_used" "${SH}mem_total" "${SH}disk_used" "${SH}disk_total" \
-        "${SH}rx_rate" "${SH}tx_rate" "${SH}ir_rate" "${SH}iw_rate" "${SH}load" "${SH}temp" >> "${SH}DIR/10s.csv"
+        "${SH}rx_rate" "${SH}tx_rate" "${SH}ir_rate" "${SH}iw_rate" "${SH}load" "${SH}temp" "${SH}swap_used" "${SH}swap_total" >> "${SH}DIR/10s.csv"
       chmod 644 "${SH}DIR/10s.csv"
       trim "${SH}DIR/10s.csv" 720
 

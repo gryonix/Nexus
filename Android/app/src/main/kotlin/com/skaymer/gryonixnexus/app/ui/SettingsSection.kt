@@ -12,6 +12,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.outlined.Brush
+import androidx.compose.material.icons.outlined.Extension
+import com.skaymer.gryonixnexus.app.GryonixApplication
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.Tv
+import androidx.compose.material.icons.outlined.NotificationsActive
+import androidx.compose.material.icons.outlined.PhoneAndroid
+import androidx.compose.material.icons.outlined.Cloud
+import androidx.compose.material.icons.outlined.SwapVert
+import androidx.compose.material.icons.outlined.Verified
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.DropdownMenu
@@ -70,6 +81,7 @@ import com.skaymer.gryonixnexus.app.metrics.HistoryPresentation
 import com.skaymer.gryonixnexus.app.metrics.HistoryMetric
 import com.skaymer.gryonixnexus.app.metrics.HistoryRange
 import com.skaymer.gryonixnexus.app.metrics.MetricsPreferences
+import com.skaymer.gryonixnexus.app.metrics.MetricsCollection
 import com.skaymer.gryonixnexus.app.metrics.OfferedCharts
 import com.skaymer.gryonixnexus.app.servers.MetricsDisplaySettings
 import com.skaymer.gryonixnexus.app.servers.WakeButtonSettings
@@ -95,6 +107,7 @@ import com.skaymer.gryonixnexus.app.ui.design.PlainButton
 import com.skaymer.gryonixnexus.app.ui.design.RowLabel
 import com.skaymer.gryonixnexus.app.ui.design.ToggleRow
 import com.skaymer.gryonixnexus.app.ui.design.ValueRow
+import com.skaymer.gryonixnexus.app.ui.design.WheelRow
 import com.skaymer.gryonixnexus.servercontrol.MetricsIndicatorStyle
 import com.skaymer.gryonixnexus.servercontrol.ServerCardSize
 
@@ -122,20 +135,25 @@ fun SettingsSection(
                 PAGE_APPEARANCE_CARDS -> R.string.settings_cards
                 PAGE_APPEARANCE_CHARTS -> R.string.settings_appearance_charts
                 PAGE_APPEARANCE_SERVER -> R.string.settings_server_screen
+                PAGE_APPEARANCE_SUMMARY -> R.string.problem_summary_title
                 PAGE_SECTIONS -> R.string.settings_sections
                 PAGE_SECURITY -> R.string.settings_security
+                PAGE_SSH_KEYS -> R.string.ssh_keys_title
                 PAGE_NOTIFICATIONS -> R.string.notify_push_title
                 PAGE_OPERATIONS -> R.string.operations_page_title
                 PAGE_RANGES -> R.string.settings_offered_ranges
                 PAGE_METRICS -> R.string.settings_offered_metrics
                 PAGE_LICENSES -> R.string.settings_licenses
                 PAGE_LICENSE -> R.string.license_title
+                PAGE_APPLE_TV -> R.string.appletv_title
+                PAGE_MODULES -> R.string.modules_title
+                PAGE_SCRIPTS -> R.string.scripts_title
                 else -> R.string.cloudflare_title
             }
         )
-        BackHandler { page = null }
+        BackHandler { page = parentPage(page) }
         DisposableEffect(title) {
-            pushed?.push(title) { page = null }
+            pushed?.push(title) { page = parentPage(page) }
             onDispose { pushed?.clear() }
         }
         when (page) {
@@ -144,20 +162,27 @@ fun SettingsSection(
             PAGE_APPEARANCE_CARDS -> AppearanceCardsPage(store)
             PAGE_APPEARANCE_CHARTS -> AppearanceChartsPage(store) { page = it }
             PAGE_APPEARANCE_SERVER -> AppearanceServerScreenPage(tabs)
+            PAGE_APPEARANCE_SUMMARY -> AppearanceProblemSummaryPage(store)
             PAGE_RANGES -> OfferedRangesPage(store)
             PAGE_METRICS -> OfferedMetricsPage(store)
             PAGE_SECTIONS -> SectionsPage(tabs, store)
-            PAGE_SECURITY -> SecurityPage(store)
+            PAGE_SECURITY -> SecurityPage(store) { page = PAGE_SSH_KEYS }
+            PAGE_SSH_KEYS -> SshKeysPage(rememberUserSshKeyStore())
             PAGE_NOTIFICATIONS -> NotificationSettingsPage(store, secrets)
             PAGE_OPERATIONS -> OperationNoticeSettingsPage(store)
             PAGE_LICENSES -> LicensesPage()
             PAGE_LICENSE -> LicensePage(store, fleet)
+            PAGE_APPLE_TV -> AppleTvSettingsPage(fleet)
+            PAGE_SCRIPTS -> ScriptsPage()
+            PAGE_MODULES -> (LocalContext.current.applicationContext as? GryonixApplication)?.modules
+                ?.let { ModulesSettingsPage(it) }
             else -> LicenseLocked { DNSAPIPage(credentials, DNSCredentialTokenStore(secrets), store) }
         }
         return
     }
 
     val revision by store.revision.collectAsState()
+    val modulesOn by (LocalContext.current.applicationContext as GryonixApplication).modules.on.collectAsState()
 
     LazyColumn(
         Modifier.fillMaxSize().background(Gryonix.colors.groupedBackground),
@@ -167,11 +192,15 @@ fun SettingsSection(
         item { LicenseSettingsRow { page = PAGE_LICENSE } }
         item {
             GroupedSection {
-                PageRow(stringResource(R.string.settings_appearance)) { page = PAGE_APPEARANCE }
-                PageRow(stringResource(R.string.settings_sections)) { page = PAGE_SECTIONS }
-                PageRow(stringResource(R.string.settings_security)) { page = PAGE_SECURITY }
-                PageRow(stringResource(R.string.notify_push_title)) { page = PAGE_NOTIFICATIONS }
-                PageRow(stringResource(R.string.operations_page_title), showDivider = false) {
+                PageRow(stringResource(R.string.settings_appearance), Icons.Outlined.Brush) { page = PAGE_APPEARANCE }
+                PageRow(stringResource(R.string.settings_security), Icons.Outlined.Shield) { page = PAGE_SECURITY }
+                PageRow(stringResource(R.string.modules_title), Icons.Outlined.Extension) { page = PAGE_MODULES }
+                if (com.skaymer.gryonixnexus.app.shell.AppModule.SCRIPTS in modulesOn) {
+                    PageRow(stringResource(R.string.scripts_title), Icons.Outlined.Extension) { page = PAGE_SCRIPTS }
+                }
+                PageRow(stringResource(R.string.notify_push_title), Icons.Outlined.NotificationsActive) { page = PAGE_NOTIFICATIONS }
+                PageRow(stringResource(R.string.appletv_title), Icons.Outlined.Tv) { page = PAGE_APPLE_TV }
+                PageRow(stringResource(R.string.operations_page_title), Icons.Outlined.PhoneAndroid, showDivider = false) {
                     page = PAGE_OPERATIONS
                 }
             }
@@ -179,24 +208,20 @@ fun SettingsSection(
         item {
             var showingProxies by remember { mutableStateOf(false) }
             GroupedSection {
-                PageRow(stringResource(R.string.proxies), showDivider = false) {
-                    if (LicensePrompt.allow()) showingProxies = true
-                }
-            }
-            if (showingProxies) {
-                ProxyListSheet(store, secrets) { showingProxies = false }
-            }
-        }
-        item {
-            GroupedSection {
                 val chosen = remember(revision) { credentials.selected }
                 ValueRow(
                     title = stringResource(R.string.cloudflare_title),
                     value = chosen?.kind?.displayName.orEmpty(),
                     subtitle = dnsAPISummary(credentials, DNSCredentialTokenStore(secrets), revision),
                     onClick = { page = PAGE_CLOUDFLARE },
-                    showDivider = false,
+                    leading = { Icon(Icons.Outlined.Cloud, null) },
                 )
+                PageRow(stringResource(R.string.proxies), Icons.Outlined.SwapVert, showDivider = false) {
+                    if (LicensePrompt.allow()) showingProxies = true
+                }
+            }
+            if (showingProxies) {
+                ProxyListSheet(store, secrets) { showingProxies = false }
             }
         }
         item {
@@ -300,6 +325,7 @@ private const val PAGE_APPEARANCE_APP = "appearance.app"
 private const val PAGE_APPEARANCE_CARDS = "appearance.cards"
 private const val PAGE_APPEARANCE_CHARTS = "appearance.charts"
 private const val PAGE_APPEARANCE_SERVER = "appearance.server"
+private const val PAGE_APPEARANCE_SUMMARY = "appearance.summary"
 private const val PAGE_SECTIONS = "sections"
 private const val PAGE_SECURITY = "security"
 private const val PAGE_NOTIFICATIONS = "notifications"
@@ -309,6 +335,18 @@ private const val PAGE_RANGES = "ranges"
 private const val PAGE_METRICS = "metrics"
 private const val PAGE_LICENSES = "licenses"
 private const val PAGE_LICENSE = "license"
+private const val PAGE_APPLE_TV = "appletv"
+private const val PAGE_MODULES = "modules"
+private const val PAGE_SCRIPTS = "scripts"
+private const val PAGE_SSH_KEYS = "sshkeys"
+
+private fun parentPage(page: String?): String? = when (page) {
+    PAGE_SSH_KEYS -> PAGE_SECURITY
+    PAGE_RANGES, PAGE_METRICS -> PAGE_APPEARANCE_CHARTS
+    PAGE_SECTIONS, PAGE_APPEARANCE_APP, PAGE_APPEARANCE_CARDS, PAGE_APPEARANCE_CHARTS,
+    PAGE_APPEARANCE_SERVER, PAGE_APPEARANCE_SUMMARY -> PAGE_APPEARANCE
+    else -> null
+}
 
 private const val SUPPORT_CHAT = "https://discord.gg/RsMMRPgzhK"
 private const val WEBSITE = "https://gryonix.com"
@@ -347,15 +385,30 @@ private fun LicenseSettingsRow(onOpen: () -> Unit) {
             value = licenseStatusText(status),
             onClick = onOpen,
             showDivider = false,
+            leading = { Icon(Icons.Outlined.Verified, null) },
         )
     }
 }
 
 @Composable
-private fun PageRow(title: String, showDivider: Boolean = true, onClick: () -> Unit) {
+private fun AppleTvSettingsPage(fleet: FleetRepository) {
+    val app = androidx.compose.ui.platform.LocalContext.current.applicationContext
+        as com.skaymer.gryonixnexus.app.GryonixApplication
+    val deployments by fleet.deployments.collectAsState()
+    AppleTvPage(app.appleTv, if (fleet.isDemo) emptyList() else deployments)
+}
+
+@Composable
+private fun PageRow(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    showDivider: Boolean = true,
+    onClick: () -> Unit,
+) {
     GroupedRow(
         showDivider = showDivider,
         onClick = onClick,
+        leading = icon?.let { { Icon(it, null) } },
         trailing = { DisclosureChevron() },
     ) {
         RowLabel(title)
@@ -380,7 +433,6 @@ private fun dnsAPISummary(
 @Composable
 private fun AppearancePage(store: SettingsStore, tabs: TabBarSettings, onPage: (String) -> Unit) {
     val revision by store.revision.collectAsState()
-    val override by tabs.groupServicesOverride.collectAsState()
     LazyColumn(
         Modifier.fillMaxSize().background(Gryonix.colors.groupedBackground),
         contentPadding = GroupedContentPadding,
@@ -393,42 +445,63 @@ private fun AppearancePage(store: SettingsStore, tabs: TabBarSettings, onPage: (
                     title = stringResource(R.string.settings_appearance_app),
                     value = stringResource(accent.labelRes),
                     onClick = { onPage(PAGE_APPEARANCE_APP) },
-                )
-                val size = remember(revision) {
-                    ServerCardColumns.of(store.string(ServerCardColumns.KEY))
-                }
-                ValueRow(
-                    title = stringResource(R.string.settings_cards),
-                    value = stringResource(
-                        if (size.cardSize == ServerCardSize.WIDE) R.string.card_wide
-                        else R.string.card_compact
-                    ),
-                    onClick = { onPage(PAGE_APPEARANCE_CARDS) },
-                )
-                val offered = remember(revision) { OfferedCharts.of(store) }
-                ValueRow(
-                    title = stringResource(R.string.settings_appearance_charts),
-                    value = stringResource(
-                        R.string.settings_appearance_charts_summary,
-                        offered.ranges.size, HistoryRange.entries.size,
-                        offered.metrics.size, HistoryMetric.entries.size,
-                    ),
-                    onClick = { onPage(PAGE_APPEARANCE_CHARTS) },
-                )
-                ValueRow(
-                    title = stringResource(R.string.settings_server_screen),
-                    value = stringResource(
-                        when (override) {
-                            null -> R.string.settings_group_automatic
-                            true -> R.string.settings_group_always
-                            else -> R.string.settings_group_never
-                        }
-                    ),
-                    onClick = { onPage(PAGE_APPEARANCE_SERVER) },
                     showDivider = false,
                 )
             }
         }
+        item {
+            GroupedSection {
+                val order by tabs.order.collectAsState()
+                val hidden by tabs.hidden.collectAsState()
+                ValueRow(
+                    title = stringResource(R.string.settings_sections),
+                    value = "${order.count { it !in hidden }}/${order.size}",
+                    onClick = { onPage(PAGE_SECTIONS) },
+                    showDivider = false,
+                )
+            }
+        }
+        item { AppearanceServerRows(store, tabs, revision, onPage) }
+    }
+}
+
+@Composable
+private fun AppearanceServerRows(store: SettingsStore, tabs: TabBarSettings, revision: Long, onPage: (String) -> Unit) {
+    val override by tabs.groupServicesOverride.collectAsState()
+    GroupedSection {
+        ValueRow(
+            title = stringResource(R.string.problem_summary_title),
+            value = problemSummaryValue(store, revision),
+            onClick = { onPage(PAGE_APPEARANCE_SUMMARY) },
+        )
+        val size = remember(revision) { ServerCardColumns.of(store.string(ServerCardColumns.KEY)) }
+        ValueRow(
+            title = stringResource(R.string.settings_cards),
+            value = stringResource(if (size.cardSize == ServerCardSize.WIDE) R.string.card_wide else R.string.card_compact),
+            onClick = { onPage(PAGE_APPEARANCE_CARDS) },
+        )
+        ValueRow(
+            title = stringResource(R.string.settings_server_screen),
+            value = stringResource(
+                when (override) {
+                    null -> R.string.settings_group_automatic
+                    true -> R.string.settings_group_always
+                    else -> R.string.settings_group_never
+                }
+            ),
+            onClick = { onPage(PAGE_APPEARANCE_SERVER) },
+        )
+        val offered = remember(revision) { OfferedCharts.of(store) }
+        ValueRow(
+            title = stringResource(R.string.settings_appearance_charts),
+            value = stringResource(
+                R.string.settings_appearance_charts_summary,
+                offered.ranges.size, HistoryRange.entries.size,
+                offered.metrics.size, HistoryMetric.entries.size,
+            ),
+            onClick = { onPage(PAGE_APPEARANCE_CHARTS) },
+            showDivider = false,
+        )
     }
 }
 
@@ -498,55 +571,37 @@ private fun AppearanceCardsPage(store: SettingsStore) {
 
 @Composable
 internal fun ConnectionWaitRows(store: SettingsStore, revision: Long) {
-    val silence = remember(revision) { ConnectionSettings.silence(store) }
-    val reconnect = remember(revision) { ConnectionSettings.reconnect(store) }
-    var editing by remember { mutableStateOf<String?>(null) }
     ConnectionWaitRow(
         title = stringResource(R.string.settings_connection_silence),
-        current = silence,
-        presets = ConnectionSettings.SILENCES,
+        current = remember(revision) { ConnectionSettings.silence(store) },
+        offered = ConnectionSettings.SILENCE_WHEEL,
         onPick = { store.setString(ConnectionSettings.SILENCE_KEY, it.toString()) },
-        onOther = { editing = ConnectionSettings.SILENCE_KEY },
     )
     ConnectionWaitRow(
         title = stringResource(R.string.settings_connection_reconnect),
-        current = reconnect,
-        presets = ConnectionSettings.RECONNECTS,
+        current = remember(revision) { ConnectionSettings.reconnect(store) },
+        offered = ConnectionSettings.RECONNECT_WHEEL,
         onPick = { store.setString(ConnectionSettings.RECONNECT_KEY, it.toString()) },
-        onOther = { editing = ConnectionSettings.RECONNECT_KEY },
         showDivider = false,
     )
-    editing?.let { key ->
-        val silenceKey = key == ConnectionSettings.SILENCE_KEY
-        CustomSecondsAlert(
-            title = stringResource(
-                if (silenceKey) R.string.settings_connection_silence else R.string.settings_connection_reconnect
-            ),
-            range = if (silenceKey) ConnectionSettings.SILENCE_RANGE else ConnectionSettings.RECONNECT_RANGE,
-            onSet = { store.setString(key, it.toString()) },
-            onDismiss = { editing = null },
-        )
-    }
 }
 
 @Composable
 private fun ConnectionWaitRow(
     title: String,
     current: Int,
-    presets: List<Int>,
+    offered: List<Int>,
     onPick: (Int) -> Unit,
-    onOther: () -> Unit,
     showDivider: Boolean = true,
 ) {
     val never = stringResource(R.string.settings_group_never)
-    val label = { seconds: Int -> if (seconds == 0) never else ConnectionSettings.title(seconds) }
-    val shown = if (current in presets) presets else presets + current
-    ChoiceRow(
+    val waits = if (current in offered) offered else (offered + current).sorted()
+    WheelRow(
         title = title,
-        value = label(current),
+        choices = waits.map { seconds -> if (seconds == 0) never else ConnectionSettings.title(seconds) },
+        selected = waits.indexOf(current),
+        onSelect = { onPick(waits[it]) },
         showDivider = showDivider,
-        options = shown.map { seconds -> label(seconds) to { onPick(seconds) } } +
-            (stringResource(R.string.connection_other_time) to onOther),
     )
 }
 
@@ -571,6 +626,16 @@ private fun AppearanceChartsPage(store: SettingsStore, onPage: (String) -> Unit)
         contentPadding = GroupedContentPadding,
         verticalArrangement = GroupedSpacing,
     ) {
+        item {
+            GroupedSection(footer = stringResource(R.string.metrics_collect_on_open_footer)) {
+                ToggleRow(
+                    title = stringResource(R.string.metrics_collect_on_open),
+                    checked = remember(revision) { store.boolean(MetricsCollection.KEY) ?: true },
+                    onCheckedChange = { store.setBoolean(MetricsCollection.KEY, it) },
+                    showDivider = false,
+                )
+            }
+        }
         item {
             GroupedSection(
                 header = stringResource(R.string.settings_charts),
@@ -655,7 +720,7 @@ private fun SectionsPage(tabs: TabBarSettings, store: SettingsStore) {
 }
 
 @Composable
-private fun SecurityPage(store: SettingsStore) {
+private fun SecurityPage(store: SettingsStore, onOpenKeys: () -> Unit) {
     val revision by store.revision.collectAsState()
     val security = remember(store) { SecuritySettings(store) }
     val unlock = rememberUnlock(stringResource(R.string.settings_security_unlock_reason))
@@ -679,6 +744,12 @@ private fun SecurityPage(store: SettingsStore) {
                     revision,
                     showDivider = false,
                 )
+            }
+        }
+        item { KnownHostsSection() }
+        item {
+            GroupedSection {
+                PageRow(stringResource(R.string.ssh_keys_title), showDivider = false, onClick = onOpenKeys)
             }
         }
     }
@@ -1138,6 +1209,15 @@ private fun ChartScaleRow(store: SettingsStore, revision: Long) {
 private fun ServerScreenRows(tabs: TabBarSettings) {
     val collapsible by tabs.sitesCollapsible.collectAsState()
     val override by tabs.groupServicesOverride.collectAsState()
+    val icons by tabs.sectionIcons.collectAsState()
+    ChoiceRow(
+        title = stringResource(R.string.settings_section_labels),
+        value = stringResource(if (icons) R.string.settings_labels_icons else R.string.settings_labels_text),
+        options = listOf(
+            stringResource(R.string.settings_labels_text) to { tabs.setSectionIcons(false) },
+            stringResource(R.string.settings_labels_icons) to { tabs.setSectionIcons(true) },
+        ),
+    )
     ToggleRow(
         title = stringResource(R.string.settings_sites_collapsible),
         checked = collapsible,

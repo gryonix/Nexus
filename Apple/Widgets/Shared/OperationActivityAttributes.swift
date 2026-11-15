@@ -18,16 +18,19 @@ struct OperationActivityAttributes: ActivityAttributes {
         /// The script's step counter, done of total
         var step: Int?
         var steps: Int?
+        /// When the card last heard how the run goes
+        var updatedAt: Date?
 
         init(progressText: String, isFinished: Bool,
              errorMessage: String? = nil, progress: Double? = nil, canRetry: Bool? = nil,
-             stopArmed: Bool? = nil) {
+             stopArmed: Bool? = nil, updatedAt: Date? = Date()) {
             self.progressText = progressText
             self.isFinished = isFinished
             self.errorMessage = errorMessage
             self.progress = progress
             self.canRetry = canRetry
             self.stopArmed = stopArmed
+            self.updatedAt = updatedAt
         }
     }
 
@@ -100,22 +103,11 @@ enum OperationPresentation {
         outcome(state) == .running
     }
 
-    static func barValue(_ state: OperationActivityAttributes.ContentState) -> Double? {
-        guard outcome(state) == .running, let progress = state.progress,
-              progress.isFinite else { return nil }
-        return min(max(progress, 0), 1)
-    }
-
     /// "3/7" while a script counts its steps
     static func stepText(_ state: OperationActivityAttributes.ContentState) -> String? {
         guard outcome(state) == .running, let step = state.step, let steps = state.steps,
               steps > 0, step <= steps else { return nil }
         return "\(step)/\(steps)"
-    }
-
-    static func percentText(_ state: OperationActivityAttributes.ContentState) -> String? {
-        guard let value = barValue(state) else { return nil }
-        return "\(Int((value * 100).rounded()))%"
     }
 
     /// One line for a finished run: done or failed
@@ -125,10 +117,6 @@ enum OperationPresentation {
         case .failed: return String(localized: "Failed")
         case .running: return state.progressText
         }
-    }
-
-    static func staleNote() -> String {
-        String(localized: "Last update from the server. Open the app for the current progress.")
     }
 }
 #endif

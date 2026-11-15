@@ -12,7 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -35,6 +35,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import com.skaymer.gryonixnexus.app.ui.design.SymbolIcons
+import com.skaymer.gryonixnexus.app.ui.design.IOSSheet
+import com.skaymer.gryonixnexus.app.ui.design.SheetAction
+import com.skaymer.gryonixnexus.app.ui.design.MenuValueRow
+import com.skaymer.gryonixnexus.app.ui.design.MenuCheckItem
+import com.skaymer.gryonixnexus.app.ui.design.GroupedRow
+import com.skaymer.gryonixnexus.app.ui.design.RowLabel
+import androidx.compose.material.icons.filled.Check
+import com.skaymer.gryonixnexus.app.metrics.MetricPanelSummary
+import com.skaymer.gryonixnexus.app.servers.ServerTint
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
@@ -46,6 +62,7 @@ import com.skaymer.gryonixnexus.app.ui.design.GroupedContentPadding
 import com.skaymer.gryonixnexus.app.ui.design.GroupedSection
 import com.skaymer.gryonixnexus.app.ui.design.GroupedSpacing
 import com.skaymer.gryonixnexus.app.ui.design.Gryonix
+import com.skaymer.gryonixnexus.app.ui.design.SectionHeader
 import com.skaymer.gryonixnexus.app.ui.design.IOSAlert
 import com.skaymer.gryonixnexus.app.ui.design.IOSSegmentedControl
 import com.skaymer.gryonixnexus.app.ui.design.Metrics
@@ -140,12 +157,15 @@ fun MetricsSection(
         contentPadding = GroupedContentPadding,
         verticalArrangement = GroupedSpacing,
     ) {
+        if (onlyServer != null) {
+            item { SectionHeader(stringResource(R.string.metrics_my_panels)) }
+        }
         if (tiles.isEmpty()) {
             item {
                 EmptyBoard(
                     R.string.metrics_no_panels,
                     R.string.metrics_no_panels_hint,
-                    onAdd = { adding = true },
+                    onAdd = if (bar != null) ({ adding = true }) else null,
                 )
             }
         }
@@ -258,46 +278,32 @@ private fun PanelTile(
     val windowed = remember(tile.points, panel) { tile.points.windowed(panel.range) }
     val series = remember(windowed, metrics) { HistoryMetric.series(metrics, windowed) }
 
-    CardSurface(
+    val tint = server?.let { ServerTint.of(it.tintName).composeColor() } ?: Gryonix.colors.accent
+    val shape = RoundedCornerShape(22.dp)
+    Box(
         Modifier
             .fillMaxWidth()
             .padding(horizontal = Metrics.listInset)
+            .clip(shape)
+            .background(Gryonix.colors.cardBackground)
+            .background(tint.copy(alpha = 0.12f))
+            .border(0.5.dp, tint.copy(alpha = 0.3f), shape)
             .clickable(onClick = onOpen)
     ) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val names = HistoryMetric.entries.filter { it in metrics }
-                    .map { stringResource(it.titleRes) }
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        server?.name ?: panel.deploymentID,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Gryonix.colors.label,
-                        maxLines = 1
-                    )
-                    Text(
-                        listOfNotNull(
-                            names.joinToString(", "),
-                            stringResource(panel.range.titleRes),
-                            machineName(server, panel.host),
-                        ).joinToString(" · "),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Gryonix.colors.secondaryLabel,
-                        maxLines = 1
-                    )
-                }
-                PanelMenu(canMoveUp, canMoveDown, onEdit, onRemove, onMove, onOpen)
-            }
-
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            PanelHeader(panel, server, canMoveUp, canMoveDown, onEdit, onRemove, onMove, onOpen)
+            val interval = panel.range.bucket.pointInterval
+            val context = androidx.compose.ui.platform.LocalContext.current
+            Text(
+                remember(series, panel) { MetricPanelSummary.text(panel.metrics, series, interval, context::getString) },
+                style = MaterialTheme.typography.bodySmall,
+                color = Gryonix.colors.secondaryLabel,
+            )
             when {
                 series.any { it.values.size >= 2 } -> HistoryChart(
                     series = series,
                     percentChart = HistoryMetric.isPercentChart(metrics),
-                    axisLabel = { ceiling -> HistoryMetric.axisLabel(metrics, ceiling) },
+                    axisLabel = { value -> HistoryMetric.tickLabel(metrics, value) },
                     height = TILE_CHART_HEIGHT,
                 )
                 tile.errorMessage != null -> Text(
@@ -330,6 +336,65 @@ private fun PanelTile(
     }
 }
 
+/** Metric icon and name; server and range; the "…" menu */
+@Composable
+private fun PanelHeader(
+    panel: MetricPanel,
+    server: Deployment?,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
+    onEdit: () -> Unit,
+    onRemove: () -> Unit,
+    onMove: (Int) -> Unit,
+    onOpen: () -> Unit,
+) {
+    val first = panel.metric
+    val more = panel.metrics.size - 1
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Icon(SymbolIcons.of(metricSymbol(first)), null, tint = seriesColor(metricKey(first), 0, 1), modifier = Modifier.size(20.dp))
+        Text(
+            stringResource(first.titleRes) + if (more > 0) " +$more" else "",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = Gryonix.colors.label,
+            maxLines = 1,
+        )
+        Text(
+            listOfNotNull(server?.name ?: panel.deploymentID, machineName(server, panel.host), stringResource(panel.range.titleRes))
+                .joinToString(" · "),
+            style = MaterialTheme.typography.bodySmall,
+            color = Gryonix.colors.secondaryLabel,
+            maxLines = 1,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(1f),
+        )
+        PanelMenu(canMoveUp, canMoveDown, onEdit, onRemove, onMove, onOpen)
+    }
+}
+
+private fun metricSymbol(metric: HistoryMetric): String = when (metric) {
+    HistoryMetric.CPU -> "cpu"
+    HistoryMetric.MEMORY -> "memorychip"
+    HistoryMetric.DISK -> "internaldrive"
+    HistoryMetric.NETWORK -> "network"
+    HistoryMetric.DISK_IO -> "arrow.up.arrow.down.circle"
+    HistoryMetric.LOAD -> "gauge.with.needle"
+    HistoryMetric.TEMPERATURE -> "thermometer.medium"
+    HistoryMetric.POWER -> "bolt.fill"
+}
+
+/** The series whose colour the metric's icon takes */
+private fun metricKey(metric: HistoryMetric): String = when (metric) {
+    HistoryMetric.CPU -> "cpu"
+    HistoryMetric.MEMORY -> "mem"
+    HistoryMetric.DISK -> "disk"
+    HistoryMetric.NETWORK -> "net"
+    HistoryMetric.DISK_IO -> "io"
+    HistoryMetric.LOAD -> "load"
+    HistoryMetric.TEMPERATURE -> "temp"
+    HistoryMetric.POWER -> "power"
+}
+
 @Composable
 private fun PanelMenu(
     canMoveUp: Boolean,
@@ -343,7 +408,7 @@ private fun PanelMenu(
     Column {
         IconButton(onClick = { open = true }, modifier = Modifier.size(28.dp)) {
             Icon(
-                Icons.Filled.MoreVert,
+                Icons.Filled.MoreHoriz,
                 contentDescription = stringResource(R.string.metrics_panel_actions),
                 tint = Gryonix.colors.tertiaryLabel,
                 modifier = Modifier.size(20.dp),
@@ -407,74 +472,96 @@ private fun PanelEditor(
         hostRaw = MetricPanel.raw(hosts.first())
     }
 
-    IOSAlert(
-        title = stringResource(
-            if (panel == null) R.string.metrics_add_panel else R.string.metrics_edit_panel
-        ),
-        onDismiss = onCancel,
-        actions = listOf(
-            AlertAction(stringResource(R.string.containers_cancel), onSelect = onCancel),
-            AlertAction(
-                stringResource(R.string.metrics_save_panel),
-                preferred = true,
-                onSelect = {
-                    onSave(
-                        MetricPanel(
-                            id = panel?.id ?: UUID.randomUUID().toString(),
-                            deploymentID = server.id,
-                            hostRaw = hostRaw,
-                            metricsRaw = HistoryMetric.entries.filter { it in metrics }
-                                .map { it.key },
-                            rangeRaw = range.rawValue,
-                        )
+    IOSSheet(
+        title = stringResource(if (panel == null) R.string.metrics_add_panel else R.string.metrics_edit_panel),
+        onClose = onCancel,
+        closeLabel = stringResource(R.string.containers_cancel),
+        action = SheetAction(
+            title = stringResource(R.string.metrics_save_panel),
+            enabled = metrics.isNotEmpty(),
+            onSelect = {
+                onSave(
+                    MetricPanel(
+                        id = panel?.id ?: UUID.randomUUID().toString(),
+                        deploymentID = server.id,
+                        hostRaw = hostRaw,
+                        metricsRaw = HistoryMetric.entries.filter { it in metrics }.map { it.key },
+                        rangeRaw = range.rawValue,
                     )
-                },
-            ),
+                )
+            },
         ),
     ) {
-        Column(
-            Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            PickerGroup(stringResource(R.string.history_pick_server)) {
-                IOSSegmentedControl(
-                    segments = deployments,
-                    selected = server,
-                    label = { it.name },
-                    onSelect = { serverID = it.id },
-                )
+        PanelServerSection(deployments, server, hostRaw, onServer = { serverID = it }, onHost = { hostRaw = it })
+        PanelMetricsSection(
+            offered = offeredCharts.metrics,
+            chosen = metrics,
+            range = MetricsPreferences.resolve(range, offeredCharts.ranges),
+            ranges = offeredCharts.ranges,
+            onToggle = { metrics = HistoryMetric.toggling(it, metrics) },
+            onRange = { range = it },
+        )
+    }
+}
+
+/** Which server, and which of its machines, a tile reads */
+@Composable
+private fun PanelServerSection(
+    deployments: List<Deployment>,
+    server: Deployment,
+    hostRaw: String,
+    onServer: (String) -> Unit,
+    onHost: (String) -> Unit,
+) {
+    val nodes = server.nodes
+    GroupedSection(header = stringResource(R.string.history_pick_server)) {
+        MenuValueRow(stringResource(R.string.history_pick_server), server.name, showDivider = nodes.size > 1) { close ->
+            deployments.forEach { candidate ->
+                MenuCheckItem(candidate.name, candidate.id == server.id) { onServer(candidate.id); close() }
             }
-            if (hosts.size > 1) {
-                PickerGroup(stringResource(R.string.metrics_pick_machine)) {
-                    IOSSegmentedControl(
-                        segments = server.nodes,
-                        selected = server.nodes.first { MetricPanel.raw(it.sshHost) == hostRaw },
-                        label = { it.name.ifEmpty { it.endpoint.host } },
-                        onSelect = { hostRaw = MetricPanel.raw(it.sshHost) },
-                    )
+        }
+        if (nodes.size > 1) {
+            val current = nodes.firstOrNull { MetricPanel.raw(it.sshHost) == hostRaw } ?: nodes.first()
+            MenuValueRow(stringResource(R.string.metrics_pick_machine), nodeName(current), showDivider = false) { close ->
+                nodes.forEach { node ->
+                    MenuCheckItem(nodeName(node), node == current) { onHost(MetricPanel.raw(node.sshHost)); close() }
                 }
             }
-            PickerGroup(stringResource(R.string.history_pick_metric)) {
-                Row(
-                    Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    offeredCharts.metrics.forEach { candidate ->
-                        CapsuleToggle(
-                            text = stringResource(candidate.titleRes),
-                            selected = candidate in metrics,
-                            onClick = { metrics = HistoryMetric.toggling(candidate, metrics) },
-                        )
+        }
+    }
+}
+
+private fun nodeName(node: com.skaymer.gryonixnexus.servercontrol.DeploymentNode): String =
+    node.name.ifEmpty { node.endpoint.host }
+
+/** The metrics a tile draws and the window it covers */
+@Composable
+private fun PanelMetricsSection(
+    offered: List<HistoryMetric>,
+    chosen: Set<HistoryMetric>,
+    range: HistoryRange,
+    ranges: List<HistoryRange>,
+    onToggle: (HistoryMetric) -> Unit,
+    onRange: (HistoryRange) -> Unit,
+) {
+    val colors = Gryonix.colors
+    GroupedSection(header = stringResource(R.string.metrics_what_to_show)) {
+        offered.forEach { metric ->
+            GroupedRow(
+                onClick = { onToggle(metric) },
+                leading = { Icon(SymbolIcons.of(metricSymbol(metric)), null, tint = colors.label, modifier = Modifier.size(22.dp)) },
+                trailing = {
+                    if (metric in chosen) {
+                        Icon(Icons.Filled.Check, null, tint = colors.accent, modifier = Modifier.size(20.dp))
                     }
-                }
+                },
+            ) {
+                RowLabel(stringResource(metric.titleRes))
             }
-            PickerGroup(stringResource(R.string.history_pick_range)) {
-                IOSSegmentedControl(
-                    segments = offeredCharts.ranges,
-                    selected = MetricsPreferences.resolve(range, offeredCharts.ranges),
-                    label = { stringResource(it.titleRes) },
-                    onSelect = { range = it },
-                )
+        }
+        MenuValueRow(stringResource(R.string.metrics_period), stringResource(range.titleRes), showDivider = false) { close ->
+            ranges.forEach { candidate ->
+                MenuCheckItem(stringResource(candidate.titleRes), candidate == range) { onRange(candidate); close() }
             }
         }
     }
@@ -486,18 +573,6 @@ private fun machineName(server: Deployment?, host: SSHHostID): String? {
     if (nodes.size < 2) return null
     val node = nodes.firstOrNull { it.sshHost == host } ?: return null
     return node.name.ifEmpty { node.endpoint.host }
-}
-
-@Composable
-private fun PickerGroup(label: String, content: @Composable () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(
-            label.uppercase(),
-            style = MaterialTheme.typography.labelSmall,
-            color = Gryonix.colors.secondaryLabel,
-        )
-        content()
-    }
 }
 
 @Composable

@@ -230,6 +230,22 @@ public struct ServiceSettings: Sendable, Hashable, Codable {
     public var zigbee2MQTTPath: String
     /// Full hostname; empty — zigbee.<domain>
     public var zigbee2MQTTHostname: String
+    public var shairportPath: String
+    /// "airplay2" or "airplay1"
+    public var shairportMode: String
+    /// The speaker's name on the phones
+    public var shairportName: String
+    /// The ALSA device the sound goes to
+    public var shairportOutput: String
+    /// Extra speaker options, `key=value;` pairs
+    public var shairportOptions: String
+    /// The screen's name on the phones
+    public var uxplayName: String
+    /// Packaged speakers' name on the phones; empty: the machine's
+    public var speakerName: String
+    public var odioPath: String
+    /// Full hostname; empty — odio.<domain>
+    public var odioHostname: String
     /// The admin username, default "admin"
     public var adminUsername: String
     public var crowdsecEnabled: Bool
@@ -343,6 +359,15 @@ public struct ServiceSettings: Sendable, Hashable, Codable {
         mosquittoPath: String = "/opt/mosquitto",
         zigbee2MQTTPath: String = "/opt/zigbee2mqtt",
         zigbee2MQTTHostname: String = "",
+        shairportPath: String = "/opt/shairport-sync",
+        shairportMode: String = "airplay2",
+        shairportName: String = "gryonix",
+        shairportOutput: String = "default",
+        shairportOptions: String = "",
+        uxplayName: String = "gryonix TV",
+        speakerName: String = "",
+        odioPath: String = "/opt/odio",
+        odioHostname: String = "",
         adminUsername: String = "admin",
         crowdsecEnabled: Bool = true,
         backupRoot: String = "/opt/backups",
@@ -451,6 +476,15 @@ public struct ServiceSettings: Sendable, Hashable, Codable {
         self.mosquittoPath = mosquittoPath
         self.zigbee2MQTTPath = zigbee2MQTTPath
         self.zigbee2MQTTHostname = zigbee2MQTTHostname
+        self.shairportPath = shairportPath
+        self.shairportMode = shairportMode
+        self.shairportName = shairportName
+        self.shairportOutput = shairportOutput
+        self.shairportOptions = shairportOptions
+        self.uxplayName = uxplayName
+        self.speakerName = speakerName
+        self.odioPath = odioPath
+        self.odioHostname = odioHostname
         self.adminUsername = adminUsername
         self.crowdsecEnabled = crowdsecEnabled
         self.backupRoot = backupRoot
@@ -592,6 +626,15 @@ public struct ServiceSettings: Sendable, Hashable, Codable {
         mosquittoPath = try container.decoded(.mosquittoPath, or: mosquittoPath)
         zigbee2MQTTPath = try container.decoded(.zigbee2MQTTPath, or: zigbee2MQTTPath)
         zigbee2MQTTHostname = try container.decoded(.zigbee2MQTTHostname, or: zigbee2MQTTHostname)
+        shairportPath = try container.decoded(.shairportPath, or: shairportPath)
+        shairportMode = try container.decoded(.shairportMode, or: shairportMode)
+        shairportName = try container.decoded(.shairportName, or: shairportName)
+        shairportOutput = try container.decoded(.shairportOutput, or: shairportOutput)
+        shairportOptions = try container.decoded(.shairportOptions, or: shairportOptions)
+        uxplayName = try container.decoded(.uxplayName, or: uxplayName)
+        speakerName = try container.decoded(.speakerName, or: speakerName)
+        odioPath = try container.decoded(.odioPath, or: odioPath)
+        odioHostname = try container.decoded(.odioHostname, or: odioHostname)
         adminUsername = try container.decoded(.adminUsername, or: adminUsername)
         crowdsecEnabled = try container.decoded(.crowdsecEnabled, or: crowdsecEnabled)
         backupRoot = try container.decoded(.backupRoot, or: backupRoot)

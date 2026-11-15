@@ -81,14 +81,28 @@ class VPNRelayTests {
     }
 
     @Test
+    fun `the chosen DNS leads the order`() {
+        val edit = VPNDNSPriorityEditing
+        assertEquals("local", edit.chosenEntry(listOf("10.53.0.53"), "10.53.0.53"))
+        assertEquals("94.140.14.14", edit.chosenEntry(listOf("94.140.14.14", "94.140.15.15"), "10.53.0.53"))
+        assertEquals("1.1.1.1", edit.chosenEntry(emptyList(), "10.53.0.53"))
+        assertEquals(listOf("local", "94.140.14.14", "1.1.1.1"), edit.pin(listOf("94.140.14.14", "1.1.1.1"), "local"))
+        assertEquals(
+            listOf("local", "1.1.1.1", "8.8.8.8", "9.9.9.9"),
+            edit.pin(listOf("1.1.1.1", "8.8.8.8", "9.9.9.9", "1.0.0.1"), "local"),
+        )
+    }
+
+    @Test
     fun `the DNS order is edited within its bounds`() {
         val edit = VPNDNSPriorityEditing
         val order = listOf("local", "1.1.1.1", "9.9.9.9")
-        assertEquals(listOf("1.1.1.1", "local", "9.9.9.9"), edit.moveUp(1, order))
-        assertEquals(order, edit.moveUp(0, order))
+        assertEquals(listOf("local", "9.9.9.9", "1.1.1.1"), edit.moveUp(2, order))
+        assertEquals(order, edit.moveUp(1, order), "nothing climbs over the chosen DNS")
+        assertEquals(order, edit.moveDown(0, order), "the chosen DNS stays first")
         assertEquals(order, edit.moveDown(2, order))
-        assertEquals(listOf("1.1.1.1", "9.9.9.9"), edit.remove(0, order))
-        assertEquals(listOf("local"), edit.remove(0, listOf("local")), "the last resolver stays")
+        assertEquals(order, edit.remove(0, order), "the chosen DNS cannot be removed")
+        assertEquals(listOf("local", "9.9.9.9"), edit.remove(1, order))
         assertEquals(order + "8.8.8.8", edit.add("8.8.8.8", order))
         assertEquals(order, edit.add("1.1.1.1", order), "no repeats")
         val full = order + "8.8.8.8"

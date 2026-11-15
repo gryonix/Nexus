@@ -68,8 +68,8 @@ struct TabBarSettingsView: View {
                 InfoSectionHeader("Where things appear", note: "The Metrics, VPN, Containers and Terminal tabs show every server at once; inside a server is the same thing for that one machine. Choosing one place hides the tab — it changes nothing on the servers themselves. Containers and Terminal start inside the server only.")
             }
         }
-        .navigationTitle("Sections")
-        #if os(iOS)
+        .screenTitle("Sections")
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         .environment(\.editMode, .constant(.active))
         #endif

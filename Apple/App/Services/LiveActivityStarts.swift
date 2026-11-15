@@ -46,6 +46,8 @@ final class LiveActivityStarts {
     private func follow(_ activity: Activity<OperationActivityAttributes>) {
         guard let job = activity.attributes.jobID, let server = activity.attributes.serverID,
               following.insert(activity.id).inserted else { return }
+        IslandJournal.shared.note("the server opened a card for job \(IslandJournal.short(job))",
+                                  run: activity.attributes.title)
         OperationActivities.shared.adoptRemote(activity)
         Task {
             for await data in activity.pushTokenUpdates {
@@ -56,22 +58,29 @@ final class LiveActivityStarts {
 
     private func handOver(_ token: String, job: String, server: String) async {
         guard let device = PushRegistration.shared.token else {
+            IslandJournal.shared.note("job \(IslandJournal.short(job)): waiting for this phone's push address")
             pending.append((token, job, server))
             return
         }
+        var answers: [String] = []
         for relay in PushRelays.known {
-            await Self.put("\(relay)/v1/devices/\(device)/live/\(server)/\(job)", ["activity_token": token])
+            let status = await Self.put("\(relay)/v1/devices/\(device)/live/\(server)/\(job)", ["activity_token": token])
+            answers.append(status.map { "HTTP \($0)" } ?? "no answer")
         }
+        IslandJournal.shared.note("job \(IslandJournal.short(job)): card address sent to the relay, "
+            + answers.joined(separator: ", "))
     }
 
-    private static func put(_ address: String, _ body: [String: Any]) async {
-        guard let url = URL(string: address), let data = try? JSONSerialization.data(withJSONObject: body) else { return }
+    @discardableResult
+    private static func put(_ address: String, _ body: [String: Any]) async -> Int? {
+        guard let url = URL(string: address), let data = try? JSONSerialization.data(withJSONObject: body) else { return nil }
         var request = URLRequest(url: url, timeoutInterval: 15)
         request.httpMethod = "PUT"
         request.httpBody = data
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(DevicePushProof.secret, forHTTPHeaderField: "x-gryonix-device-secret")
-        _ = try? await URLSession.shared.data(for: request)
+        let answer = try? await URLSession.shared.data(for: request)
+        return (answer?.1 as? HTTPURLResponse)?.statusCode
     }
 
     static func hex(_ data: Data) -> String {

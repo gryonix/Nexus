@@ -22,7 +22,7 @@ struct OfferedRangesView: View {
         }
         .formStyle(.grouped)
         .bottomBarClearance()
-        .navigationTitle("Periods")
+        .screenTitle("Periods")
         .raisedNavigationTitle()
     }
 }
@@ -49,7 +49,7 @@ struct OfferedMetricsView: View {
         }
         .formStyle(.grouped)
         .bottomBarClearance()
-        .navigationTitle("Metrics")
+        .screenTitle("Metrics")
         .raisedNavigationTitle()
     }
 }

@@ -18,6 +18,7 @@ struct ThisDeviceRows: View {
     @ObservedObject private var pins = TunnelEndpointPins.shared
     /// Servers that can host this device's tunnel
     let servers: [Deployment]
+    let onImport: () -> Void
 
     private var server: Deployment? { servers.first { $0.id == profile.serverID } }
 
@@ -26,7 +27,7 @@ struct ThisDeviceRows: View {
             serverRow
             protocolRow
             configurationRow
-            if #available(macOS 15.0, *) { dnsRow }
+            if #available(macOS 15.0, *), !profile.isForeign { dnsRow }
             endpointRow
         }
         .disabled(tunnel.status.isBusy || tunnel.isProvisioningThisDevice)
@@ -34,16 +35,13 @@ struct ThisDeviceRows: View {
 
     @ViewBuilder
     private var serverRow: some View {
-        if servers.isEmpty {
-            plainRow("Server", profile.serverName)
-        } else {
-            MenuRow("Server", value: profile.serverName) {
-                ForEach(servers) { deployment in
-                    VerbatimMenuChoice(deployment.name, picked: deployment.id == profile.serverID) {
-                        switchServer(to: deployment)
-                    }
+        MenuRow("Server", value: profile.serverName) {
+            ForEach(servers) { deployment in
+                VerbatimMenuChoice(deployment.name, picked: deployment.id == profile.serverID) {
+                    switchServer(to: deployment)
                 }
             }
+            ImportedTunnelChoices(tunnel: tunnel, onImport: onImport)
         }
     }
 
@@ -86,6 +84,13 @@ struct ThisDeviceRows: View {
             MenuRow("Configuration", value: profile.deviceName) {
                 TunnelConfigurationChoices(tunnel: tunnel, clients: clients,
                                            deployment: server, protocolID: profile.protocolID)
+            }
+        } else if profile.isForeign {
+            MenuRow("Configuration", value: UIL10n.string("Imported")) {
+                Button("Remove", role: .destructive) {
+                    Task { await tunnel.remove(profile) }
+                }
+                .dangerTint()
             }
         } else {
             plainRow("Configuration", profile.deviceName)
@@ -142,7 +147,7 @@ struct ThisDeviceRows: View {
         #if os(macOS)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
-        #else
+        #elseif os(iOS)
         UIPasteboard.general.string = text
         #endif
     }

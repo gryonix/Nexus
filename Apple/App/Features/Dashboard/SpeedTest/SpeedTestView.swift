@@ -33,8 +33,8 @@ struct SpeedTestView: View {
                 }
             }
         }
-        .navigationTitle("Speed test")
-        #if os(iOS)
+        .screenTitle("Speed test")
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .task { await model.loadLocations() }

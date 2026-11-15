@@ -40,6 +40,7 @@ public enum ServiceDefaultHostnames {
         .n8n: "flows",
         .homeAssistant: "home",
         .zigbee2MQTT: "zigbee",
+        .odio: "odio",
     ]
 
     public static func hostname(_ id: ServiceID, _ context: ServiceContext) -> String {

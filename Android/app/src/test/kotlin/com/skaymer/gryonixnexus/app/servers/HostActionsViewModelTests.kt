@@ -292,7 +292,7 @@ class HostActionsViewModelTests {
     }
 
     @Test
-    fun `a page toggle before the machine has answered sends nothing`() = runTest {
+    fun `a page toggle before the machine has answered reads the guard first`() = runTest {
         val guard = ScriptedGuard(listOf(Result.success(AdminLockdownState.Off)))
         val model = HostActionsViewModel(
             scope = CoroutineScope(StandardTestDispatcher(testScheduler)),
@@ -303,7 +303,8 @@ class HostActionsViewModelTests {
         model.setLockdown(single(setOf(ServiceID.NEXTCLOUD)), "files.example.test", true)
         runCurrent()
 
-        assertTrue(guard.asked.isEmpty())
+        assertEquals("status", guard.asked.first())
+        assertEquals(2, guard.asked.size)
     }
 
     @Test

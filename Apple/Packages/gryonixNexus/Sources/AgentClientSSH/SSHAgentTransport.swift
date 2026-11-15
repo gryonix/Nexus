@@ -1,6 +1,8 @@
 import Foundation
 import AgentClient
 @preconcurrency import Citadel
+import NIOCore
+import NIOSSH
 
 @available(macOS 15.0, *)
 public struct SSHAgentTransport: AgentTransport {
@@ -96,8 +98,29 @@ public struct SSHAgentTransport: AgentTransport {
 
 @available(macOS 15.0, *)
 extension SSHAgentTransport {
-    /// The SSH session stopped answering channel requests
+    /// The link died before the call reached the agent
     public static func isDeadLink(_ error: Error) -> Bool {
-        (error as? CitadelError) == .channelCreationFailed
+        if (error as? CitadelError) == .channelCreationFailed { return true }
+        if let ssh = error as? NIOSSHError { return ssh.type == .creatingChannelAfterClosure }
+        if let channel = error as? ChannelError { return channel == .ioOnClosedChannel || channel == .alreadyClosed }
+        return false
+    }
+}
+
+/// Errors that mean the connection itself went away
+public enum SSHLinkDrop {
+    public static func isDropped(_ error: Error) -> Bool {
+        if let ssh = error as? NIOSSHError {
+            return ssh.type == .tcpShutdown || ssh.type == .creatingChannelAfterClosure
+        }
+        if let channel = error as? ChannelError {
+            return [.ioOnClosedChannel, .alreadyClosed, .eof, .outputClosed].contains(channel)
+        }
+        if let io = error as? IOError {
+            return [ECONNRESET, EPIPE, ENOTCONN, ETIMEDOUT, ENETDOWN, ENETUNREACH, EHOSTDOWN, EHOSTUNREACH]
+                .contains(io.errnoCode)
+        }
+        if (error as? CitadelError) == .channelCreationFailed { return true }
+        return false
     }
 }

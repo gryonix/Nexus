@@ -13,9 +13,7 @@ public final class TunnelActivityRelay: @unchecked Sendable {
     private let session: URLSession
 
     public init(groupIdentifier: String = AppGroup.identifier, session: URLSession = .shared) {
-        identityURL = FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: groupIdentifier)?
-            .appendingPathComponent("tunnel-relay-identity")
+        identityURL = AppGroup.writableURL(groupIdentifier)?.appendingPathComponent("tunnel-relay-identity")
         self.session = session
     }
 

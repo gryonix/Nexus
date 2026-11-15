@@ -7,6 +7,7 @@ import com.skaymer.gryonixnexus.catalog.ServiceContext
 import com.skaymer.gryonixnexus.catalog.ServiceID
 import com.skaymer.gryonixnexus.catalog.ServiceRegistry
 import com.skaymer.gryonixnexus.catalog.Topology
+import com.skaymer.gryonixnexus.catalog.services.ShairportSyncService
 import com.skaymer.gryonixnexus.core.Domain
 import com.skaymer.gryonixnexus.core.NetworkAddress
 import com.skaymer.gryonixnexus.core.ServerRole
@@ -66,6 +67,8 @@ class MailInputValidator {
                 L10nGeneration.errConflictingServices(language, names))
         }
         if (input.scope == DeploymentScope.LOCAL_ONLY) checkLocalOnlyServices(input)
+        checkAirPlayScreen(input)
+        checkAudioHubPlayers(input)
         checkHomeOnlyServices(input)
         checkHomeAssistantStick(input)
         checkSmartHomeAddOns(input)
@@ -80,6 +83,20 @@ class MailInputValidator {
                     L10nGeneration.errTunnelCarriesOnlyWeb(language, offender.displayName))
             }
         }
+    }
+
+    /** Screen and AirPlay 2 speaker clash on one machine */
+    private fun checkAirPlayScreen(input: MailRecipeInput) {
+        if (ServiceID.UXPLAY !in input.services || ServiceID.SHAIRPORT_SYNC !in input.services) return
+        if (input.serviceSettings.shairportMode == ShairportSyncService.AIRPLAY_1) return
+        throw ValidationError.InconsistentTopology(L10nGeneration.errAirPlayScreenNeedsAirPlay1(input.language))
+    }
+
+    /** The hub already runs these players */
+    private fun checkAudioHubPlayers(input: MailRecipeInput) {
+        if (ServiceID.ODIO !in input.services) return
+        val player = ServiceRegistry.services(input.services intersect ServiceID.AUDIO_HUB_PLAYERS).firstOrNull() ?: return
+        throw ValidationError.InconsistentTopology(L10nGeneration.errOverlapsAudioHub(input.language, player.displayName))
     }
 
     private fun checkHomeOnlyServices(input: MailRecipeInput) {

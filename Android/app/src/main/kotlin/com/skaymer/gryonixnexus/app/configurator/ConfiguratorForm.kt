@@ -41,6 +41,13 @@ data class ConfiguratorForm(
     companion object
     val isLocalOnly: Boolean get() = scope == DeploymentScope.LOCAL_ONLY
 
+    /** Server reached on the local network, no public IP */
+    val addressIsOnNetwork: Boolean
+        get() = topology == Topology.SINGLE_HOST && scope in setOf(
+            DeploymentScope.LOCAL_ONLY, DeploymentScope.CLOUDFLARE_TUNNEL, DeploymentScope.MESH_ONLY,
+            DeploymentScope.TAILSCALE_ONLY,
+        )
+
     /** The recipe input this form describes */
     fun toInput(
         language: AppLanguage = AppLanguage.EN,

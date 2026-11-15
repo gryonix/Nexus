@@ -14,9 +14,7 @@ public struct FileDeploymentStore: DeploymentStore {
         if let fileURL {
             self.fileURL = fileURL
         } else {
-            let support = FileManager.default.urls(for: .applicationSupportDirectory,
-                                                   in: .userDomainMask).first!
-            let directory = support.appendingPathComponent("gryonixNexus", isDirectory: true)
+            let directory = AppSupportDirectory.base.appendingPathComponent("gryonixNexus", isDirectory: true)
             AppSupportDirectory.adoptLegacyName(at: directory, legacyName: "GryonixNexus")
             self.fileURL = directory.appendingPathComponent("deployments.json")
         }

@@ -19,7 +19,7 @@ public struct PurgeOptions: Sendable, Hashable {
 
 /// Every remote command the dashboard sends, as exact literals
 public enum CommandCatalog {
-    public static let ipForwardingCheck = "sudo sysctl net.ipv4.ip_forward"
+    public static let ipForwardingCheck = "PATH=$PATH:/usr/sbin:/sbin sysctl net.ipv4.ip_forward"
 
     public static func pingSelf(vpsHost: String) -> String {
         "ping -c 1 -W 2 \(ShellQuoting.singleQuoted(vpsHost))"
@@ -58,8 +58,10 @@ public enum CommandCatalog {
         public static let off = "sudo /opt/gryonixnexus-admin-lockdown.sh off"
         public static let status = "sudo /opt/gryonixnexus-admin-lockdown.sh status"
 
-        public static func only(hosts: [String]) -> String {
-            "sudo /opt/gryonixnexus-admin-lockdown.sh only " + hosts.joined(separator: " ")
+        public static func only(hosts: [String], denyVPN: [String]? = nil) -> String {
+            let base = "sudo /opt/gryonixnexus-admin-lockdown.sh only " + hosts.joined(separator: " ")
+            guard let denyVPN else { return base }
+            return ([base, "--no-vpn"] + denyVPN).joined(separator: " ")
         }
 
         /// Client-side mirror of the wrapper's host validation
@@ -349,6 +351,15 @@ public enum CommandCatalog {
         public static func setDrives(mode: String, encrypt: Bool, uuids: [String]) -> String {
             let quoted = ([mode, encrypt ? "1" : "0"] + uuids).map(ShellQuoting.singleQuoted)
             return "sudo \(controlScriptPath) set-drives \(quoted.joined(separator: " "))"
+        }
+
+        public static let showParts = "sudo \(controlScriptPath) show-parts"
+
+        /// `sudo <wrapper> set-parts <backup|update> [--service <id>] [parts...]`
+        public static func setParts(scope: String, service: String? = nil, parts: [String]) -> String {
+            let own = service.map { ["--service", $0] } ?? []
+            let quoted = ([scope] + own + parts).map(ShellQuoting.singleQuoted)
+            return "sudo \(controlScriptPath) set-parts \(quoted.joined(separator: " "))"
         }
 
         /// What `test-destination` prints: `<marker> <0|1> <detail>`

@@ -24,10 +24,10 @@ struct CrowdSecSettingsView: View {
                 unreadSection
             }
         }
-        .navigationTitle("CrowdSec")
+        .screenTitle("CrowdSec")
         .pleaseWait(viewModel.runningSecurityAction != nil || viewModel.securityListBusy,
                     detail: viewModel.securityActionProgress)
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar { reloadButton }
@@ -241,7 +241,7 @@ struct CrowdSecSettingsView: View {
             guard selecting else { return }
             if selected.contains(ban.ip) { selected.remove(ban.ip) } else { selected.insert(ban.ip) }
         }
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         .swipeActions(edge: .trailing) {
             Button(role: .destructive) {
                 block(ban.ip, duration: Self.defaultBan)

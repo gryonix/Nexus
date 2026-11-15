@@ -1,5 +1,7 @@
 package com.skaymer.gryonixnexus.app.storage
 
+import com.skaymer.gryonixnexus.app.servers.DemoDeployments
+import com.skaymer.gryonixnexus.app.servers.DemoHardware
 import com.skaymer.gryonixnexus.catalog.storage.FastStoragePlan
 import com.skaymer.gryonixnexus.catalog.storage.ServerHardware
 import com.skaymer.gryonixnexus.catalog.storage.StorageArray
@@ -30,7 +32,8 @@ class StorageOverview(
         scope.launch {
             for (node in deployment.nodes) {
                 val parsed = try {
-                    ServerHardware.parse(control(deployment).run(ServerHardware.PROBE_COMMAND, node.sshHost, 20.seconds).stdout)
+                    if (DemoDeployments.isDemoID(deployment.id)) ServerHardware.parse(DemoHardware.degradedProbe)
+                    else ServerHardware.parse(control(deployment).run(ServerHardware.PROBE_COMMAND, node.sshHost, 20.seconds).stdout)
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (failure: Exception) {

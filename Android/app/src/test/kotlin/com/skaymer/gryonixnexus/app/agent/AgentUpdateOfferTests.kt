@@ -1,5 +1,6 @@
 package com.skaymer.gryonixnexus.app.agent
 
+import com.skaymer.gryonixnexus.app.shell.InMemorySettingsStore
 import com.skaymer.gryonixnexus.catalog.Topology
 import com.skaymer.gryonixnexus.servercontrol.Deployment
 import com.skaymer.gryonixnexus.servercontrol.HostEndpoint
@@ -129,5 +130,55 @@ class AgentUpdateOfferTests {
         val shown = newer.offer.value
         assertEquals("9999.0.0", shown?.version)
         assertEquals(AgentUpdateOffer.Source.PUBLISHED, shown?.servers?.single()?.source)
+    }
+
+    private fun TestScope.resumingOffer(
+        servers: List<Deployment>,
+        pending: PendingAgentUpdates,
+        installs: MutableList<String>,
+        installed: suspend (Deployment) -> String,
+    ) = AgentUpdateOffer(
+        scope = CoroutineScope(StandardTestDispatcher(testScheduler)),
+        fleet = { servers },
+        installed = { deployment, _ -> installed(deployment) },
+        install = { installs += it.id },
+        retryDelayMillis = 1_000,
+        pending = pending,
+    )
+
+    @Test
+    fun `an update the app was closed during carries on at the next start`() = runTest {
+        val pending = PendingAgentUpdates(InMemorySettingsStore(), now = { 0 })
+        pending.add(listOf(PendingAgentUpdates.Entry("old", "0.0.100", "0.0.200", false, 0)))
+        val installs = mutableListOf<String>()
+        val offer = resumingOffer(listOf(server("old")), pending, installs) {
+            if (installs.isEmpty()) "0.0.100" else "999.0.0"
+        }
+        offer.checkOnLaunch()
+        runCurrent()
+        assertEquals(listOf("old"), installs, "the build is followed or started again without a tap")
+        assertNull(offer.offer.value, "no window asks to update a server that is updating")
+        assertEquals(emptyList(), pending.load(), "a finished update is forgotten")
+    }
+
+    @Test
+    fun `an update that finished while the app was closed is not run again`() = runTest {
+        val pending = PendingAgentUpdates(InMemorySettingsStore(), now = { 0 })
+        pending.add(listOf(PendingAgentUpdates.Entry("old", "0.0.100", "0.0.200", false, 0)))
+        val installs = mutableListOf<String>()
+        val offer = resumingOffer(listOf(server("old")), pending, installs) { "0.0.200" }
+        offer.checkOnLaunch()
+        runCurrent()
+        assertEquals(emptyList(), installs)
+        assertEquals(emptyList(), pending.load())
+    }
+
+    @Test
+    fun `a pending update from long ago is given up`() {
+        var clock = 0L
+        val pending = PendingAgentUpdates(InMemorySettingsStore(), now = { clock })
+        pending.add(listOf(PendingAgentUpdates.Entry("old", "0.0.100", "0.0.200", false, 0)))
+        clock = PendingAgentUpdates.KEPT_FOR_MILLIS + 1
+        assertEquals(emptyList(), pending.load())
     }
 }

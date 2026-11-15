@@ -6,6 +6,7 @@ import com.skaymer.gryonixnexus.catalog.storage.RaidPlan
 import com.skaymer.gryonixnexus.catalog.storage.ServerDisk
 import com.skaymer.gryonixnexus.catalog.storage.ServerHardware
 import com.skaymer.gryonixnexus.catalog.storage.StorageArray
+import com.skaymer.gryonixnexus.servercontrol.DetachedScript
 import com.skaymer.gryonixnexus.servercontrol.SSHCommandRunner
 import com.skaymer.gryonixnexus.servercontrol.SSHHostID
 import java.util.Base64
@@ -113,6 +114,19 @@ object StoragePreparation {
     /** Uploads the script, runs it as root, checks its marker */
     suspend fun run(step: StorageStep, runner: SSHCommandRunner, username: String) {
         output(step.script, step.doneMarker, runner, SSHHostID.VPS, elevated = username != "root")
+    }
+
+    /** Runs the script detached, reading on across dropped links */
+    suspend fun detachedOutput(
+        script: String,
+        doneMarker: String,
+        runner: SSHCommandRunner,
+        host: SSHHostID,
+        elevated: Boolean,
+    ): String {
+        val output = DetachedScript.output(script, elevated, "speed", runner, host).output
+        if (doneMarker !in output) throw Failure(output.lines().takeLast(6).joinToString("\n"))
+        return output
     }
 
     /** Runs the script on `host` and returns its output */

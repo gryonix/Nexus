@@ -61,7 +61,7 @@ class TunnelSetup(
             val context = deployment.serviceContext
             return ServiceRegistry.all
                 .filter { it.id in deployment.services && it.id !in ServiceRegistry.mailEngineIDs }
-                .mapNotNull { it.webIngress(context) }
+                .mapNotNull { it.webIngress(context)?.takeIf { site -> !site.homeOnly } }
                 .flatMap { context.servedHostnames(it.hostname) }
                 .filterNot { it.startsWith("mail.") }
                 .distinct()

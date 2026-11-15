@@ -1,7 +1,7 @@
 import Foundation
 import ServiceCatalog
 import SwiftUI
-#if os(iOS)
+#if os(iOS) || os(tvOS)
 import UIKit
 #endif
 
@@ -12,6 +12,7 @@ enum AppTab: String, CaseIterable, Identifiable, Hashable {
     case containers
     case vpn
     case terminal
+    case ai
     case configurator
     case settings
 
@@ -25,6 +26,7 @@ enum AppTab: String, CaseIterable, Identifiable, Hashable {
         case .metrics: return "Metrics"
         case .vpn: return "VPN"
         case .terminal: return "Terminal"
+        case .ai: return "AI"
         case .configurator: return "Configurator"
         case .settings: return "Settings"
         }
@@ -42,6 +44,7 @@ enum AppTab: String, CaseIterable, Identifiable, Hashable {
         case .metrics: return "chart.xyaxis.line"
         case .vpn: return "lock.shield"
         case .terminal: return "apple.terminal"
+        case .ai: return "sparkles"
         case .configurator: return "doc.badge.gearshape"
         case .settings: return "gearshape"
         }
@@ -51,7 +54,7 @@ enum AppTab: String, CaseIterable, Identifiable, Hashable {
     var icon: Image {
         switch self {
         case .vpn: return Image("TabIconLogo")
-        case .servers, .containers, .metrics, .terminal, .configurator, .settings:
+        case .servers, .containers, .metrics, .terminal, .ai, .configurator, .settings:
             return Image(systemName: systemImage)
         }
     }
@@ -59,7 +62,7 @@ enum AppTab: String, CaseIterable, Identifiable, Hashable {
     func icon(tunnelActive: Bool) -> Image {
         switch self {
         case .vpn: return Image(tunnelActive ? "TabIconLogo" : "TabIconGlobe")
-        case .servers, .containers, .metrics, .terminal, .configurator, .settings:
+        case .servers, .containers, .metrics, .terminal, .ai, .configurator, .settings:
             return icon
         }
     }
@@ -71,11 +74,11 @@ enum AppTab: String, CaseIterable, Identifiable, Hashable {
             .environment(\.symbolVariants, .none)
     }
 
-    #if os(iOS)
+    #if os(iOS) || os(tvOS)
     var uiIcon: UIImage? {
         switch self {
         case .vpn: return UIImage(named: "TabIconLogo")?.withRenderingMode(.alwaysTemplate)
-        case .servers, .containers, .metrics, .terminal, .configurator, .settings:
+        case .servers, .containers, .metrics, .terminal, .ai, .configurator, .settings:
             return UIImage(systemName: systemImage)
         }
     }
@@ -83,7 +86,7 @@ enum AppTab: String, CaseIterable, Identifiable, Hashable {
     func barIconName(tunnelActive: Bool) -> String {
         switch self {
         case .vpn: return tunnelActive ? "TabIconLogo" : "TabIconGlobe"
-        case .servers, .containers, .metrics, .terminal, .configurator, .settings:
+        case .servers, .containers, .metrics, .terminal, .ai, .configurator, .settings:
             return systemImage
         }
     }
@@ -283,7 +286,8 @@ final class TabBarSettings: ObservableObject {
 
     /// The sections to actually show, in the user's order
     var visibleTabs: [AppTab] {
-        let shown = order.filter { !hidden.contains($0) }
+        let aiOn = ModuleSettings.shared.isOn(.ai)
+        let shown = order.filter { !hidden.contains($0) && ($0 != .ai || aiOn) }
         return shown.isEmpty ? [.settings] : shown
     }
 

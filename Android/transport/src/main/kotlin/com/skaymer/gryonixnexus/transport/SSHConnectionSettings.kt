@@ -4,6 +4,7 @@ import com.skaymer.gryonixnexus.servercontrol.AppSSHIdentity
 import com.skaymer.gryonixnexus.servercontrol.DashboardConfig
 import com.skaymer.gryonixnexus.servercontrol.Deployment
 import com.skaymer.gryonixnexus.servercontrol.DeploymentNode
+import com.skaymer.gryonixnexus.servercontrol.HomePathChoice
 import com.skaymer.gryonixnexus.servercontrol.SSHHostID
 
 /** Connection parameters for the sshj-backed runner */
@@ -11,9 +12,11 @@ data class SSHConnectionSettings(
     val vpsHost: String,
     val vpsPort: Int = 22,
     val username: String,
+    val homeUsername: String = username,
     val homeHost: String,
     val homePort: Int = 22,
     val homeLANHost: String? = null,
+    val homePath: HomePathChoice = HomePathChoice.AUTOMATIC,
     val privateKeySeed: ByteArray,
     val passwords: Map<SSHHostID, String> = emptyMap(),
     val pinnedVPSHostKey: String? = null,
@@ -37,8 +40,9 @@ data class SSHConnectionSettings(
         if (this === other) return true
         if (other !is SSHConnectionSettings) return false
         return vpsHost == other.vpsHost && vpsPort == other.vpsPort &&
-            username == other.username && homeHost == other.homeHost &&
-            homePort == other.homePort && homeLANHost == other.homeLANHost &&
+            username == other.username && homeUsername == other.homeUsername &&
+            homeHost == other.homeHost &&
+            homePort == other.homePort && homeLANHost == other.homeLANHost && homePath == other.homePath &&
             privateKeySeed.contentEquals(other.privateKeySeed) &&
             passwords == other.passwords &&
             pinnedVPSHostKey == other.pinnedVPSHostKey &&
@@ -83,7 +87,8 @@ data class SSHConnectionSettings(
 
     /** Whose account a command for [host] signs in as */
     fun username(host: SSHHostID): String = when (val kind = host.kind) {
-        is SSHHostID.Kind.Slot -> username
+        is SSHHostID.Kind.Slot ->
+            if (kind.slot == DeploymentNode.LegacySlot.HOME) homeUsername else username
         is SSHHostID.Kind.Node ->
             additionalNodes.firstOrNull { it.id == kind.id }?.user ?: username
     }
@@ -131,6 +136,7 @@ data class SSHConnectionSettings(
             vpsHost = config.vpsHost,
             vpsPort = config.sshPort,
             username = config.sshUser,
+            homeUsername = config.homeSSHUser.ifEmpty { config.sshUser },
             homeHost = config.homeWGAddress,
             homePort = config.sshPort,
             homeLANHost = homeLANHost,

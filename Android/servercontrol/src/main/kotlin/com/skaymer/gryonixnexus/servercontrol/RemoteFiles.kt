@@ -67,4 +67,11 @@ interface RemoteFileBrowser {
     suspend fun uploadFile(data: ByteArray, path: String, host: SSHHostID)
 
     suspend fun deleteFile(entry: RemoteFileEntry, host: SSHHostID)
+
+    suspend fun renameFile(oldPath: String, newPath: String, host: SSHHostID) {
+        throw ServerControlError.NotConfigured("rename")
+    }
+
+    suspend fun searchFiles(directory: String, pattern: String, limit: Int, host: SSHHostID): List<RemoteFileEntry> =
+        FileSearch.walk(directory, pattern, limit) { listDirectory(it, host) }
 }

@@ -8,11 +8,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import com.skaymer.gryonixnexus.app.terminal.TerminalDirectHost
 import com.skaymer.gryonixnexus.app.terminal.TerminalDirectHostStore
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +31,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import com.skaymer.gryonixnexus.app.ui.design.ActionRow
 import com.skaymer.gryonixnexus.app.ui.design.AlertAction
+import com.skaymer.gryonixnexus.app.ui.design.FormSheet
 import com.skaymer.gryonixnexus.app.ui.design.AlertFields
 import com.skaymer.gryonixnexus.app.ui.design.CheckRow
 import com.skaymer.gryonixnexus.app.ui.design.FieldRow
@@ -72,32 +75,14 @@ fun TerminalSection(
     var opened by remember(deployment.id) { mutableStateOf(false) }
 
     if (opened) {
-        val terminal = remember(deployment.id, node.id) {
-            TerminalViewModel(
-                scope = scope,
-                sessions = { endpoint, login ->
-                    sessions.transport(endpoint, login) { host, key -> sessions.pin(deployment, host, key) }
-                },
-            )
-        }
-        TerminalScreen(
-            terminal = terminal,
-            onOpen = { columns, rows ->
-                terminal.open(
-                    endpoint = sessions.endpoint(deployment, node),
-                    login = TerminalLogin(
-                        username = username.trim(),
-                        secret = if (useAppKey) {
-                            TerminalLogin.Secret.PrivateKeySeed(sessions.appKeySeed(deployment))
-                        } else {
-                            TerminalLogin.Secret.Password(password)
-                        },
-                    ),
-                    columns = columns,
-                    rows = rows,
-                )
-            },
-            modifier = modifier,
+        TerminalShell(
+            deployment, sessions, node,
+            TerminalLogin(
+                username = username.trim(),
+                secret = if (useAppKey) TerminalLogin.Secret.PrivateKeySeed(sessions.appKeySeed(deployment))
+                else TerminalLogin.Secret.Password(password),
+            ),
+            modifier,
         )
         return
     }
@@ -197,6 +182,73 @@ fun TerminalSection(
 
 internal fun Deployment.firstTerminalNode(): DeploymentNode = nodes.first()
 
+/** A live shell on one machine with one login */
+@Composable
+fun TerminalShell(
+    deployment: Deployment,
+    sessions: TerminalSessions,
+    node: DeploymentNode,
+    login: TerminalLogin,
+    modifier: Modifier = Modifier,
+    startupInput: ByteArray? = null,
+) {
+    val scope = rememberCoroutineScope()
+    val notices = terminalNotices()
+    val terminal = remember(deployment.id, node.id, login.username) {
+        sessions.shellModel(scope, deployment, node, startupInput, notices)
+    }
+    TerminalShellView(deployment, sessions, node, terminal, login, modifier)
+}
+
+/** Lines a shell prints on a drop and return */
+@Composable
+fun terminalNotices(): (TerminalViewModel.Notice) -> String {
+    val lost = stringResource(R.string.terminal_connection_lost)
+    val back = stringResource(R.string.terminal_reconnected)
+    return { if (it == TerminalViewModel.Notice.LOST) lost else back }
+}
+
+/** An existing shell model, drawn with its keys and design */
+@Composable
+fun TerminalShellView(
+    deployment: Deployment,
+    sessions: TerminalSessions,
+    node: DeploymentNode,
+    terminal: TerminalViewModel,
+    login: TerminalLogin,
+    modifier: Modifier = Modifier,
+) {
+    val routes = remember(deployment, node.id) { sessions.routes(deployment, node) }
+    val queued by com.skaymer.gryonixnexus.app.terminal.TerminalScriptQueue.pending.collectAsState()
+    val state by terminal.state.collectAsState()
+    LaunchedEffect(queued, state.isOpen) {
+        if (state.isOpen && queued.containsKey(deployment.id)) {
+            com.skaymer.gryonixnexus.app.terminal.TerminalScriptQueue.take(deployment.id)?.let { terminal.send(it) }
+        }
+    }
+    val look by sessions.appearance.look.collectAsState()
+    val dark = androidx.compose.foundation.isSystemInDarkTheme()
+    var designing by remember { mutableStateOf(false) }
+    TerminalScreen(
+        terminal = terminal,
+        look = look,
+        keys = sessions.accessoryKeys,
+        theme = look.theme(dark, deployment.id),
+        onZoom = { factor -> sessions.appearance.update { it.zoomed(factor) } },
+        onDesign = { designing = true },
+        onOpen = { columns, rows ->
+            terminal.open(routes = sessions.routes(deployment, node), login = login, columns = columns, rows = rows)
+        },
+        modifier = modifier,
+        footer = {
+            sessions.vpn?.let { vpn -> TerminalVpnOffer(vpn, deployment, routes, terminal) }
+        },
+    )
+    if (designing) {
+        TerminalDesignSheet(sessions.appearance, sessions.accessoryKeys, deployment.id, onClose = { designing = false })
+    }
+}
+
 @Composable
 fun TerminalTab(
     fleet: com.skaymer.gryonixnexus.app.servers.FleetRepository,
@@ -209,7 +261,10 @@ fun TerminalTab(
     val deployments by fleet.deployments.collectAsState()
     var saved by remember { mutableStateOf(directHosts.load()) }
     var chosen by remember { mutableStateOf<String?>(null) }
+    val queuedScripts by com.skaymer.gryonixnexus.app.terminal.TerminalScriptQueue.pending.collectAsState()
+    LaunchedEffect(queuedScripts) { queuedScripts.keys.firstOrNull()?.let { chosen = it } }
     var adding by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<TerminalDirectHost?>(null) }
 
     val server = deployments.firstOrNull { it.id == chosen }
         ?: saved.firstOrNull { it.id == chosen }?.deployment
@@ -264,6 +319,14 @@ fun TerminalTab(
                             onClick = { chosen = host.id },
                             showDivider = host != saved.last(),
                             trailing = {
+                                IconButton(onClick = { editing = host }, modifier = Modifier.size(28.dp)) {
+                                    Icon(
+                                        Icons.Filled.Edit,
+                                        contentDescription = stringResource(R.string.terminal_host_edit),
+                                        tint = Gryonix.colors.accent,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
                                 IconButton(
                                     onClick = {
                                         directHosts.remove(host.id)
@@ -298,13 +361,16 @@ fun TerminalTab(
         }
     }
 
-    if (adding) {
+    if (adding || editing != null) {
         TerminalHostDialog(
-            onCancel = { adding = false },
+            servers = deployments,
+            initial = editing,
+            onCancel = { adding = false; editing = null },
             onSave = { host ->
                 directHosts.upsert(host)
                 saved = directHosts.load()
                 adding = false
+                editing = null
             },
         )
     }
@@ -312,16 +378,19 @@ fun TerminalTab(
 
 @Composable
 private fun TerminalHostDialog(
+    servers: List<com.skaymer.gryonixnexus.servercontrol.Deployment>,
+    initial: TerminalDirectHost?,
     onCancel: () -> Unit,
     onSave: (TerminalDirectHost) -> Unit,
 ) {
-    var name by remember { mutableStateOf("") }
-    var host by remember { mutableStateOf("") }
-    var port by remember { mutableStateOf("22") }
-    var user by remember { mutableStateOf("root") }
+    var via by remember { mutableStateOf(initial?.via) }
+    var name by remember { mutableStateOf(initial?.name.orEmpty()) }
+    var host by remember { mutableStateOf(initial?.host.orEmpty()) }
+    var port by remember { mutableStateOf((initial?.port ?: 22).toString()) }
+    var user by remember { mutableStateOf(initial?.username ?: "root") }
 
-    IOSAlert(
-        title = stringResource(R.string.terminal_add_host),
+    FormSheet(
+        title = stringResource(if (initial == null) R.string.terminal_add_host else R.string.terminal_host_edit),
         onDismiss = onCancel,
         actions = listOf(
             AlertAction(stringResource(R.string.access_cancel), onSelect = onCancel),
@@ -332,10 +401,12 @@ private fun TerminalHostDialog(
                 onSelect = {
                     onSave(
                         TerminalDirectHost(
+                            id = initial?.id ?: java.util.UUID.randomUUID().toString(),
                             name = name,
                             host = host.trim(),
                             port = port.toIntOrNull()?.takeIf { it in 1..65535 } ?: 22,
                             username = user.trim(),
+                            via = via,
                         )
                     )
                 },
@@ -363,8 +434,33 @@ private fun TerminalHostDialog(
                 label = stringResource(R.string.terminal_host_name),
                 value = name,
                 onValueChange = { name = it },
-                showDivider = false,
             )
+            ViaRow(servers, via) { via = it }
+            if (via != null) {
+                Text(
+                    stringResource(R.string.terminal_via_address_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Gryonix.colors.secondaryLabel,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                )
+            }
         }
     }
+}
+
+/** The managed machine a connection goes through */
+@Composable
+private fun ViaRow(
+    servers: List<com.skaymer.gryonixnexus.servercontrol.Deployment>,
+    via: com.skaymer.gryonixnexus.app.terminal.TerminalVia?,
+    onChoose: (com.skaymer.gryonixnexus.app.terminal.TerminalVia?) -> Unit,
+) {
+    val choices = remember(servers) { com.skaymer.gryonixnexus.app.terminal.TerminalRoutes.viaChoices(servers) }
+    val directly = stringResource(R.string.terminal_via_directly)
+    ChoiceRow(
+        title = stringResource(R.string.terminal_via_title),
+        value = choices.firstOrNull { it.first == via }?.second ?: directly,
+        showDivider = false,
+        options = listOf(directly to { onChoose(null) }) + choices.map { (choice, title) -> title to { onChoose(choice) } },
+    )
 }

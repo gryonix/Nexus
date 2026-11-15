@@ -96,6 +96,51 @@ data class SshPasswordAccess(
     }
 }
 
+/** One account on the host and what its SSH accepts */
+data class SshUserAccess(
+    val name: String,
+    val passwordLoginOpen: Boolean,
+    /** sshd answered about THIS account */
+    val isKnown: Boolean,
+    /** The account carries a key of its own */
+    val hasKeys: Boolean,
+    val appKeyPresent: Boolean,
+    /** The account the app signs in with */
+    val isLoginUser: Boolean,
+) {
+    /** The host refuses passwords for this account */
+    val isClosed: Boolean get() = isKnown && !passwordLoginOpen
+
+    /** Closing this one would leave nobody a way in */
+    val wouldLockOut: Boolean get() = !hasKeys
+}
+
+/** The accounts of one host */
+data class SshUsers(
+    val users: List<SshUserAccess>,
+    val host: SshPasswordAccess,
+    /** What the last change did, in the host's own words */
+    val detail: String,
+    /** The host answered at all */
+    val isKnown: Boolean,
+) {
+    /** Every account refuses passwords */
+    val isClosedForEveryone: Boolean get() = users.isNotEmpty() && users.all { it.isClosed }
+
+    /** The accounts that refuse passwords right now */
+    val closedNames: List<String> get() = users.filter { it.isClosed }.map { it.name }
+
+    /** The host reading, closed when every account is closed */
+    val hostAccess: SshPasswordAccess
+        get() = if (host.isKnown && host.passwordLoginOpen && isClosedForEveryone) {
+            host.copy(passwordLoginOpen = false)
+        } else host
+
+    companion object {
+        val UNKNOWN = SshUsers(emptyList(), SshPasswordAccess.UNKNOWN, "", isKnown = false)
+    }
+}
+
 data class HostSecurityDecisions(
     val isPresent: Boolean,
     val decisions: List<Decision>,

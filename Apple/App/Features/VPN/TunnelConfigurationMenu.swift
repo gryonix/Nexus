@@ -65,6 +65,7 @@ struct TunnelConfigurationMenu: View {
     @ObservedObject var clients: ServerTunnelClients
     let servers: [Deployment]
     let width: CGFloat
+    let onImport: () -> Void
 
     var body: some View {
         Menu {
@@ -78,12 +79,18 @@ struct TunnelConfigurationMenu: View {
                     }
                 }
             }
+            ImportedTunnelChoices(tunnel: tunnel, onImport: onImport)
         } label: {
+            #if os(tvOS)
+            Label("Choose server and protocol", systemImage: "chevron.down.circle")
+                .frame(maxWidth: .infinity, alignment: .leading)
+            #else
             Image(systemName: "chevron.down.circle")
                 .font(.headline)
                 .foregroundStyle(.secondary)
                 .frame(width: width, height: width)
                 .contentShape(Rectangle())
+            #endif
         }
         .accessibilityLabel(Text("Choose server and protocol"))
     }
@@ -125,5 +132,31 @@ struct TunnelConfigurationChoices: View {
     private func isInUse(_ deviceID: String) -> Bool {
         guard let chosen = tunnel.selected else { return false }
         return chosen.serverID == deployment.id && chosen.protocolID == protocolID && chosen.deviceID == deviceID
+    }
+}
+
+/// Tunnels imported from other servers, and adding one
+struct ImportedTunnelChoices: View {
+    @ObservedObject var tunnel: TunnelController
+    let onImport: () -> Void
+
+    var body: some View {
+        let imported = tunnel.profiles.filter(\.isForeign)
+        if !imported.isEmpty {
+            Section("Imported") {
+                ForEach(imported) { profile in
+                    VerbatimMenuChoice(profile.deviceName, picked: tunnel.selected?.id == profile.id) {
+                        Task { await tunnel.choose(profile) }
+                    }
+                }
+            }
+        }
+        #if !os(tvOS)
+        Section {
+            Button(action: onImport) {
+                Label("Add a configuration…", systemImage: "plus")
+            }
+        }
+        #endif
     }
 }

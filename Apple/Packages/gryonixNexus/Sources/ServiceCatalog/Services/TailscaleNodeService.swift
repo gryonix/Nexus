@@ -65,6 +65,10 @@ public struct TailscaleNodeService: ManagedService {
                   - \(path)/state:/var/lib/tailscale
                 environment:
                   TS_STATE_DIR: /var/lib/tailscale
+                  # Joins once; later starts reuse the saved identity.
+                  TS_AUTH_ONCE: "true"
+                  # A real interface, so the host itself reaches the mesh.
+                  TS_USERSPACE: "false"
                   TS_HOSTNAME: \(nodeName(context))
                   # Read from .env, which is 0600 and written once.
                   TS_AUTHKEY: ${TS_AUTHKEY}
@@ -82,6 +86,26 @@ public struct TailscaleNodeService: ManagedService {
         let path = context.settings.tailscaleNodePath
         let lang = context.language
         let name = nodeName(context)
+        // Without our own control server, the node joins Tailscale.
+        guard context.installedServices.contains(.headscale) else {
+            return [
+                #"""
+                log "Mesh node: \#(L10nServices.serviceStarting(lang))"
+                install -d -m 755 \#(path)
+                install -d -m 700 \#(path)/state
+                cd \#(path)
+                docker compose -p \#(Self.composeProject) pull -q
+                # A node without its key (and without an identity from an
+                # earlier join) would only restart for ever, so it is not started.
+                if grep -q '_current-profile' \#(path)/state/tailscaled.state 2>/dev/null \
+                   || grep -q '^TS_AUTHKEY=.\+' \#(path)/.env 2>/dev/null; then
+                  docker compose -p \#(Self.composeProject) up -d
+                else
+                  log "  \#(L10nServices.meshNodeNoKeyNote(lang))"
+                fi
+                """#
+            ]
+        }
         return [
             #"""
             log "Mesh node: \#(L10nServices.serviceStarting(lang))"
@@ -177,6 +201,12 @@ public struct TailscaleNodeService: ManagedService {
     public func reportSteps(_ context: ServiceContext) -> [String] {
         let lang = context.language
         let name = nodeName(context)
+        // Tailscale names the node here.
+        guard context.installedServices.contains(.headscale) else {
+            return [#"""
+            echo "\#(L10nServices.meshNodeTitle(lang)): \#(name)"
+            """#]
+        }
         let base = HeadscaleService().baseDomain(context)
         return [#"""
         echo "\#(L10nServices.meshNodeTitle(lang)): \#(name).\#(base)"

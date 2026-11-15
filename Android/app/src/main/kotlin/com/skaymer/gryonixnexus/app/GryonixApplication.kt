@@ -23,6 +23,7 @@ import com.skaymer.gryonixnexus.servercontrol.ServiceRemovalRouting
 import com.skaymer.gryonixnexus.servercontrol.SSHServiceRemoval
 import com.skaymer.gryonixnexus.agentcontrol.AgentInstallOperations
 import com.skaymer.gryonixnexus.app.secrets.DNSCredentialTokenStore
+import com.skaymer.gryonixnexus.app.secrets.TailscaleKeyStore
 import com.skaymer.gryonixnexus.catalog.ManagedService
 import com.skaymer.gryonixnexus.catalog.ServiceID
 import com.skaymer.gryonixnexus.catalog.ServiceRegistry
@@ -87,6 +88,7 @@ import com.skaymer.gryonixnexus.app.install.InstallSessions
 import com.skaymer.gryonixnexus.app.mesh.AgentMesh
 import com.skaymer.gryonixnexus.app.mesh.MeshViewModel
 import com.skaymer.gryonixnexus.app.metrics.EnergySettings
+import com.skaymer.gryonixnexus.app.metrics.MetricsCollection
 import com.skaymer.gryonixnexus.app.storage.StorageViewModel
 import com.skaymer.gryonixnexus.app.speed.SpeedTestHistory
 import com.skaymer.gryonixnexus.app.speed.SpeedTestViewModel
@@ -133,11 +135,14 @@ import com.skaymer.gryonixnexus.app.shell.SettingsStore
 import com.skaymer.gryonixnexus.app.servers.ConnectionSettings
 import com.skaymer.gryonixnexus.app.servers.SilenceWatch
 import com.skaymer.gryonixnexus.app.shell.ServerSectionSettings
+import com.skaymer.gryonixnexus.app.shell.ModuleSettings
+import com.skaymer.gryonixnexus.app.shell.ServiceOwnNames
 import com.skaymer.gryonixnexus.app.shell.TabBarSettings
 import com.skaymer.gryonixnexus.app.shell.WelcomeState
 import com.skaymer.gryonixnexus.app.vpn.AgentVPNClients
 import com.skaymer.gryonixnexus.app.vpn.EndpointPinStore
 import com.skaymer.gryonixnexus.app.vpn.LastTunnel
+import com.skaymer.gryonixnexus.app.terminal.TerminalVpn
 import com.skaymer.gryonixnexus.app.vpn.OnDemandMonitor
 import com.skaymer.gryonixnexus.app.vpn.OnDemandSettings
 import com.skaymer.gryonixnexus.app.vpn.OwnVpnDevices
@@ -166,6 +171,7 @@ import com.skaymer.gryonixnexus.servercontrol.ServiceUpdateRouting
 import com.skaymer.gryonixnexus.servercontrol.UninstallOperations
 import java.io.File
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.emitAll
@@ -179,6 +185,9 @@ class GryonixApplication : Application() {
     lateinit var store: SettingsStore
         private set
     lateinit var tabs: TabBarSettings
+        private set
+    lateinit var modules: ModuleSettings
+    lateinit var serviceNames: ServiceOwnNames
         private set
 
     lateinit var security: SecuritySettings
@@ -194,7 +203,9 @@ class GryonixApplication : Application() {
 
     /** Restart sshd, reboot, and the guard over the admin panels */
     lateinit var hostActions: HostActionsViewModel
+    lateinit var openAPI: com.skaymer.gryonixnexus.app.servers.OpenAPIViewModel
     lateinit var systemUpdates: com.skaymer.gryonixnexus.app.servers.SystemUpdateViewModel
+    lateinit var systemSettings: com.skaymer.gryonixnexus.app.servers.SystemSettingsViewModel
 
     lateinit var wakeOnLAN: WakeOnLANViewModel
 
@@ -205,6 +216,11 @@ class GryonixApplication : Application() {
     /** Moving one server, with its secrets, to another device */
     lateinit var transfer: DeploymentTransferService
         private set
+
+    /** The phone's side of the Apple TV link */
+    val appleTv by lazy {
+        com.skaymer.gryonixnexus.app.tv.AppleTvLink(this, File(filesDir, "paired-tvs.json"), secrets, license, transfer)
+    }
 
     /** Per-server section arrangement — the strip on a server's own screen */
     lateinit var sections: ServerSectionSettings
@@ -242,6 +258,7 @@ class GryonixApplication : Application() {
 
     /** The tunnel this device brings up itself — see `VpnTunnel` */
     lateinit var vpnTunnel: VpnTunnel
+    lateinit var advancedVpn: com.skaymer.gryonixnexus.app.vpn.AdvancedVpnStore
         private set
 
     lateinit var terminalHosts: TerminalDirectHostStore
@@ -249,6 +266,7 @@ class GryonixApplication : Application() {
 
     /** Where a terminal gets its own connection — see `TerminalSessions` */
     lateinit var terminals: TerminalSessions
+    lateinit var machineAccounts: com.skaymer.gryonixnexus.app.terminal.MachineAccounts
         private set
 
     lateinit var connectionCheck: ConnectionCheck
@@ -261,6 +279,8 @@ class GryonixApplication : Application() {
     lateinit var history: HistoryViewModel
     lateinit var energy: EnergySettings
     lateinit var storage: StorageViewModel
+    private val demoLockdowns = java.util.concurrent.ConcurrentHashMap<String, com.skaymer.gryonixnexus.app.servers.DemoAdminLockdown>()
+    private val demoOpenAPI = java.util.concurrent.ConcurrentHashMap<String, com.skaymer.gryonixnexus.agentcontrol.OpenAPIAccess>()
     lateinit var storageOverview: com.skaymer.gryonixnexus.app.storage.StorageOverview
     lateinit var speed: SpeedTestViewModel
     lateinit var processes: com.skaymer.gryonixnexus.app.servers.TopProcessesViewModel
@@ -305,6 +325,7 @@ class GryonixApplication : Application() {
         private set
 
     lateinit var vpnClients: VPNClientsViewModel
+    lateinit var serverRemoval: com.skaymer.gryonixnexus.app.servers.ServerRemoval
         private set
 
     /** Moves a server's VPN between home and its relay */
@@ -386,18 +407,87 @@ class GryonixApplication : Application() {
     lateinit var installs: InstallRegistry
         private set
 
-    /** The scope the poll loops live in */
-    private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    /** Poll loops' scope; a failed job never kills the app */
+    private val background = CoroutineScope(
+        SupervisorJob() + Dispatchers.IO + CoroutineExceptionHandler { _, failure ->
+            android.util.Log.w("Nexus", "background job failed", failure)
+        }
+    )
 
     /** The live SSH session of every server, one per machine */
     private lateinit var sessions: ServerSessions
 
     private lateinit var agents: AgentSessions
 
+    val scripts: com.skaymer.gryonixnexus.app.servers.SavedScriptStore by lazy {
+        com.skaymer.gryonixnexus.app.servers.SavedScriptStore(store)
+    }
+
+    val aiSettings: com.skaymer.gryonixnexus.app.ai.AiSettings by lazy {
+        com.skaymer.gryonixnexus.app.ai.AiSettings(store, secrets)
+    }
+
+    val aiImages: com.skaymer.gryonixnexus.app.ai.AiImageStore by lazy {
+        com.skaymer.gryonixnexus.app.ai.AiImageStore(File(noBackupFilesDir, "ai-images"))
+    }
+
+    val aiChats: com.skaymer.gryonixnexus.app.ai.AiChatStore by lazy {
+        com.skaymer.gryonixnexus.app.ai.AiChatStore(
+            file = com.skaymer.gryonixnexus.aiassistant.AIChatFileStore(File(noBackupFilesDir, "ai-chats.json")),
+            images = aiImages,
+            scope = background,
+            settings = aiSettings,
+            localBaseUrl = { com.skaymer.gryonixnexus.app.ai.AiOllamaTunnel.baseUrl(this, it) },
+            show = { navigator.show(com.skaymer.gryonixnexus.app.shell.AppTab.AI) },
+            text = { id ->
+                getString(
+                    when (id) {
+                        com.skaymer.gryonixnexus.app.ai.AiChatStore.AiMessageId.CHOOSE_FIRST -> R.string.ai_choose_first
+                        com.skaymer.gryonixnexus.app.ai.AiChatStore.AiMessageId.LIMIT_REACHED -> R.string.ai_limit_reached
+                    },
+                )
+            },
+        )
+    }
+
+    val portForwards: com.skaymer.gryonixnexus.app.servers.PortForwardManager by lazy {
+        com.skaymer.gryonixnexus.app.servers.PortForwardManager(store) { sessions.runner(it) }
+    }
+
+    suspend fun sshRunner(deployment: com.skaymer.gryonixnexus.servercontrol.Deployment) = sessions.runner(deployment)
+
+    /** The tunnels' MTU, kernel or program, CPU and UDP drops */
+    suspend fun vpnSpeedFacts(deployment: com.skaymer.gryonixnexus.servercontrol.Deployment): gryonixnexusd.v1.VpnSpeedFacts {
+        if (com.skaymer.gryonixnexus.app.servers.DemoDeployments.isDemoID(deployment.id)) {
+            return gryonixnexusd.v1.VpnSpeedFacts(
+                interfaces = listOf(
+                    gryonixnexusd.v1.VpnInterfaceFacts(protocol = "wireguard", interface_ = "wgpanel", mtu = 1280, kernel = true),
+                    gryonixnexusd.v1.VpnInterfaceFacts(protocol = "amneziawg", interface_ = "wg0", mtu = 1280, kernel = false),
+                ),
+                cpu_cores = 2, load = 0.4, client_mtu = 1280,
+                amnezia_kernel_status = "off", amnezia_kernel_possible = true,
+            )
+        }
+        return agents.client(deployment, deployment.vpnHost).vpnSpeedFacts()
+    }
+
+    /** Moves AmneziaWG into the kernel or back */
+    suspend fun setAmneziaKernel(deployment: com.skaymer.gryonixnexus.servercontrol.Deployment, enabled: Boolean): gryonixnexusd.v1.VpnSpeedFacts {
+        if (com.skaymer.gryonixnexus.app.servers.DemoDeployments.isDemoID(deployment.id)) {
+            val facts = vpnSpeedFacts(deployment)
+            return facts.copy(
+                interfaces = facts.interfaces.map { if (it.protocol == "amneziawg") it.copy(kernel = enabled) else it },
+                amnezia_kernel_status = if (enabled) "on" else "off",
+            )
+        }
+        return agents.client(deployment, deployment.vpnHost).setAmneziaKernel(enabled)
+    }
+
     /** Take a server off the list for good */
     fun forget(deploymentID: String) {
         fleet.remove(deploymentID)
         sections.forget(deploymentID)
+        vpnTunnel.forget(deploymentID)
         background.launch { sessions.disconnect(deploymentID) }
     }
 
@@ -453,8 +543,20 @@ class GryonixApplication : Application() {
             .install(anchor, context, onChunk = onChunk)
     }
 
+    suspend fun checkInstall(deployment: Deployment, services: List<ServiceID>): List<com.skaymer.gryonixnexus.agentcontrol.InstallFinding> {
+        if (!deployment.usesAgent) return emptyList()
+        return try {
+            AgentInstallOperations(client = agents.client(deployment, deployment.servicesHost), gate = agents.gate(deployment))
+                .check(services)
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (failure: Exception) {
+            emptyList()
+        }
+    }
+
     /** Sends the relay its forwards and role again */
-    private suspend fun reprovisionRelay(deployment: Deployment): List<String> {
+    suspend fun reprovisionRelay(deployment: Deployment): List<String> {
         val relay = agents.client(deployment, com.skaymer.gryonixnexus.servercontrol.SSHHostID.VPS)
         return AgentInstallOperations(client = relay, gate = agents.gate(deployment))
             .provisionHost(hostSurfaceContext(deployment, HostRole.HOST_ROLE_VPS_RELAY)).notes
@@ -502,6 +604,83 @@ class GryonixApplication : Application() {
         )
     }
 
+    suspend fun probePublicPorts(deployment: Deployment, ports: List<Int>): List<Int>? =
+        runCatching {
+            com.skaymer.gryonixnexus.agentcontrol.AgentExposure(
+                agents.client(deployment, com.skaymer.gryonixnexus.servercontrol.SSHHostID.VPS), agents.gate(deployment),
+            ).openPorts(deployment.entry.host, ports)
+        }.getOrNull()
+
+    suspend fun localRootCA(deployment: Deployment): String =
+        com.skaymer.gryonixnexus.agentcontrol.AgentExposure(
+            agents.client(deployment, deployment.servicesHost), agents.gate(deployment),
+        ).localRootCA()
+
+    suspend fun audioOutputs(deployment: Deployment): List<gryonixnexusd.v1.AudioOutput> =
+        com.skaymer.gryonixnexus.agentcontrol.AgentExposure(
+            agents.client(deployment, deployment.servicesHost), agents.gate(deployment),
+        ).audioOutputs()
+
+    suspend fun mcpAccess(deployment: Deployment, enabled: Boolean?, publicKey: String = "") =
+        exposure(deployment).mcpAccess(enabled, publicKey)
+
+    suspend fun setHomeOnlyPorts(deployment: Deployment, ports: List<Pair<String, Int>>) =
+        exposure(deployment).setHomeOnlyPorts(ports)
+
+    suspend fun localAliases(deployment: Deployment, host: String?, on: Boolean): Map<String, String> =
+        exposure(deployment).localAliases(host, on)
+
+    suspend fun odio(deployment: Deployment, method: String, path: String, body: String = ""): String =
+        exposure(deployment).odio(method, path, body)
+
+    private suspend fun exposure(deployment: Deployment) = com.skaymer.gryonixnexus.agentcontrol.AgentExposure(
+        agents.client(deployment, deployment.servicesHost), agents.gate(deployment),
+    )
+
+    suspend fun loadAppModules(deployment: Deployment): Boolean =
+        runCatching { exposure(deployment).appModules() }
+            .onSuccess { modules.adopt(deployment.id, it.toSet()) }.isSuccess
+
+    suspend fun saveAppModules(deployment: Deployment, on: Set<String>) {
+        modules.adopt(deployment.id, exposure(deployment).setAppModules(on.sorted()).toSet())
+    }
+
+    /** Reads the server's names; sends up ones made without it */
+    suspend fun loadServiceNames(deployment: Deployment) {
+        if (!deployment.usesAgent) return
+        var names = runCatching { exposure(deployment).serviceNames() }.getOrNull() ?: return
+        if (deployment.id in serviceNames.unsent) {
+            for ((id, name) in serviceNames.names(deployment.id)) {
+                if (names[id] == name) continue
+                names = runCatching { exposure(deployment).serviceNames(id to name) }.getOrNull() ?: return
+            }
+        }
+        serviceNames.adopt(deployment.id, names)
+    }
+
+    /** Names a service on the server, or only here */
+    suspend fun renameService(deployment: Deployment, service: String, name: String) {
+        val cleaned = ServiceOwnNames.cleaned(name)
+        val kept = if (deployment.usesAgent) runCatching { exposure(deployment).serviceNames(service to cleaned) }.getOrNull() else null
+        if (kept != null) serviceNames.adopt(deployment.id, kept)
+        else serviceNames.set(cleaned, service, deployment.id, sent = !deployment.usesAgent)
+    }
+
+    /** Removes and restores a home-only site's address records */
+    fun homeOnlyDNS() = com.skaymer.gryonixnexus.app.servers.HomeOnlyDNS(
+        provider = {
+            val credential = dnsCredentials.selected ?: dnsCredentials.all.firstOrNull()
+            credential?.let { DNSCredentialTokenStore(secrets).token(it) }
+                ?.takeIf { it.isNotBlank() }
+                ?.let { credential.kind.makeProvider(it) }
+        },
+        text = com.skaymer.gryonixnexus.app.servers.HomeOnlyDNS.Text(
+            removed = { zone, count -> getString(R.string.remove_service_dns_removed, zone, count) },
+            restored = { getString(R.string.add_service_dns_done, it) },
+            notPublished = { zone, count -> getString(R.string.add_service_dns_failed, zone, count) },
+        ),
+    )
+
     /** Publishes and removes service names through the saved DNS token */
     private fun servicePublisher() = com.skaymer.gryonixnexus.app.servers.ServiceDNSPublisher(
             provider = {
@@ -523,6 +702,7 @@ class GryonixApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        com.skaymer.gryonixnexus.app.widgets.WidgetFeed.attach(this)
         OperationNotices.install(this)
         createStores()
         createSessions()
@@ -552,6 +732,8 @@ class GryonixApplication : Application() {
         appUpdates = AppUpdateViewModel(store, installed.first, installed.second)
         welcome = WelcomeState(store)
         tabs = TabBarSettings(store)
+        modules = ModuleSettings(store)
+        serviceNames = ServiceOwnNames(store)
         security = SecuritySettings(store)
         sections = ServerSectionSettings(store)
         secrets = KeystoreSecretStore(
@@ -564,12 +746,20 @@ class GryonixApplication : Application() {
             settings = store,
             eraser = DeploymentEraser(secrets, store),
         )
-        terminals = TerminalSessions(secrets)
         vpnTunnel = VpnTunnel(applicationContext)
+        advancedVpn = com.skaymer.gryonixnexus.app.vpn.AdvancedVpnStore(secrets, filesDir)
         val sessionNotice = VpnSessionNoticeSettings(store)
         vpnTunnel.noticeSettings = sessionNotice
         val onDemand = OnDemandSettings(store)
         vpnTunnel.lastTunnel = LastTunnel(secrets)
+        vpnTunnel.imported = com.skaymer.gryonixnexus.app.vpn.ImportedTunnels(secrets)
+        com.skaymer.gryonixnexus.app.widgets.TunnelFeed.follow(background, vpnTunnel)
+        terminals = TerminalSessions(
+            secrets, store,
+            fleet = { fleet.deployments.value },
+            via = { id -> terminalHosts.load().firstOrNull { it.id == id }?.via },
+            vpn = TerminalVpn(vpnTunnel, LastTunnel(secrets)),
+        )
         vpnTunnel.endpointPins = EndpointPinStore(getSharedPreferences(EndpointPinStore.FILE, Context.MODE_PRIVATE))
         vpnTunnel.onDemand = onDemand
         OnDemandMonitor(applicationContext, vpnTunnel, onDemand, LastTunnel(secrets), refresh = ::refreshedTunnel).start()
@@ -600,6 +790,7 @@ class GryonixApplication : Application() {
         connectionCheck = ConnectionCheck(sessions)
         metrics = FleetMetrics(
             scope = background,
+            collectOnOpen = { store.boolean(MetricsCollection.KEY) ?: true },
             runners = { sessions.runner(it) },
             release = { sessions.release(it.id) },
             silence = SilenceWatch(
@@ -626,6 +817,7 @@ class GryonixApplication : Application() {
             scope = background,
             history = SpeedTestHistory(getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)),
             control = { sessions.runner(it) },
+            own = { sessions.detached(it) },
         )
         history = HistoryViewModel(
             scope = background,
@@ -636,9 +828,12 @@ class GryonixApplication : Application() {
             estimates = { serverId, host -> energy.estimate(serverId, host) },
         )
         metricPanels = MetricPanelStore(store)
+        background.launch { fleet.deployments.collect(metricPanels::seedDemoBoardIfEmpty) }
         deviceIdentity = DeviceIdentity(secrets)
         license = com.skaymer.gryonixnexus.app.licensing.LicenseStore(
             secrets, deviceUid = { deviceIdentity.uid }, deviceName = android.os.Build.MODEL,
+            devCopy = packageName.endsWith(".dev") &&
+                applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0,
         )
         val claim = com.skaymer.gryonixnexus.app.servers.TransferClaim(
             secrets, deviceUID = { deviceIdentity.uid }, deviceLabel = { android.os.Build.MODEL },
@@ -658,16 +853,7 @@ class GryonixApplication : Application() {
     }
 
     private fun createAgentLifecycle() {
-        agentInstall = AgentInstallViewModel(
-            scope = background,
-            runners = { sessions.runner(it) },
-            browsers = { SSHJFileBrowser(sessions.runner(it)) },
-            sources = { assets.open("agent-src.bin").use { it.readBytes() } },
-            version = { agents.client(it).getState().agent_version },
-            ensureSudo = { ensureSudo(it, allowing = AgentBootstrapSections.SCRIPT_PATH) },
-            onAgentFound = { fleet.update(it) },
-            release = { sessions.release(it.id) },
-        )
+        agentInstall = newAgentInstall()
         agentRemoval = com.skaymer.gryonixnexus.app.agent.AgentRemoval(
             scope = background,
             remove = { agents.client(it).removeAgent() },
@@ -677,10 +863,14 @@ class GryonixApplication : Application() {
             scope = background,
             fleet = { fleet.deployments.value.filter { !fleet.isDemo } },
             installed = { deployment, host -> agents.client(deployment, host).getState().agent_version },
+            target = {
+                com.skaymer.gryonixnexus.app.agent.AgentSource.named(store.string(com.skaymer.gryonixnexus.app.agent.AgentSource.SETTINGS_KEY))
+                    .offeredVersion(AgentBootstrapSections.BUNDLED_VERSION)
+            },
             install = { deployment ->
-                agentInstall.reset()
-                agentInstall.install(deployment)
-                agentInstall.state.first { it.isFinished }
+                val installer = newAgentInstall()
+                installer.install(deployment)
+                installer.state.first { it.isFinished }
             },
             published = { deployment, host ->
                 agents.client(deployment, host).getAgentUpdateStatus()
@@ -690,6 +880,7 @@ class GryonixApplication : Application() {
                 agentSelfUpdate.apply(deployment)
                 agentSelfUpdate.state.first { !it.isApplying }
             },
+            pending = com.skaymer.gryonixnexus.app.agent.PendingAgentUpdates(store),
         )
         agentSelfUpdate = AgentSelfUpdateViewModel(
             scope = background,
@@ -759,6 +950,7 @@ class GryonixApplication : Application() {
             scope = background,
             runners = { sessions.runner(it) },
             release = { sessions.release(it.id) },
+            reprovision = { reprovisionRelay(it) },
         )
         wakeOnLAN = WakeOnLANViewModel(
             scope = background,
@@ -769,17 +961,40 @@ class GryonixApplication : Application() {
         )
     }
 
+    /** A separate installer for each server */
+    private fun newAgentInstall() = AgentInstallViewModel(
+        scope = background,
+        runners = { sessions.runner(it) },
+        browsers = { com.skaymer.gryonixnexus.app.session.fileBrowser(sessions.runner(it)) },
+        sources = { assets.open("agent-src.bin").use { it.readBytes() } },
+        version = {
+            if (com.skaymer.gryonixnexus.app.servers.DemoDeployments.isDemoID(it.id)) AgentBootstrapSections.BUNDLED_VERSION
+            else agents.client(it).getState().agent_version
+        },
+        ensureSudo = { ensureSudo(it, allowing = AgentBootstrapSections.SCRIPT_PATH) },
+        chosenSource = { com.skaymer.gryonixnexus.app.agent.AgentSource.named(store.string(com.skaymer.gryonixnexus.app.agent.AgentSource.SETTINGS_KEY)) },
+        onAgentFound = { fleet.update(it) },
+        release = { sessions.release(it.id) },
+    )
+
     private fun createMaintenance() {
         systemUpdates = com.skaymer.gryonixnexus.app.servers.SystemUpdateViewModel(
             scope = background,
             runners = { sessions.runner(it) },
             release = { sessions.release(it.id) },
         )
+        systemSettings = com.skaymer.gryonixnexus.app.servers.SystemSettingsViewModel(
+            scope = background,
+            agent = { deployment, host -> agents.client(deployment, host) },
+            release = { sessions.release(it.id) },
+        )
         hostActions = HostActionsViewModel(
             scope = background,
             runners = { sessions.runner(it) },
             lockdowns = { deployment ->
-                when (LockdownRouting.route(
+                if (com.skaymer.gryonixnexus.app.servers.DemoDeployments.isDemoID(deployment.id)) {
+                    demoLockdowns.getOrPut(deployment.id) { com.skaymer.gryonixnexus.app.servers.DemoAdminLockdown() }
+                } else when (LockdownRouting.route(
                     usesAgent = deployment.usesAgent,
                     agentTransportAvailable = true,
                 )) {
@@ -795,6 +1010,16 @@ class GryonixApplication : Application() {
                 }
             },
             release = { sessions.release(it.id) },
+        )
+        openAPI = com.skaymer.gryonixnexus.app.servers.OpenAPIViewModel(
+            scope = background,
+            access = { deployment ->
+                if (com.skaymer.gryonixnexus.app.servers.DemoDeployments.isDemoID(deployment.id)) {
+                    demoOpenAPI.getOrPut(deployment.id) { com.skaymer.gryonixnexus.app.servers.DemoOpenAPIAccess(deployment) }
+                } else {
+                    com.skaymer.gryonixnexus.agentcontrol.AgentOpenAPI(agents.client(deployment), agents.gate(deployment))
+                }
+            },
         )
         erase = EraseViewModel(
             scope = background,
@@ -884,7 +1109,7 @@ class GryonixApplication : Application() {
                 }
             },
             release = { sessions.release(it.id) },
-            browsers = { SSHJFileBrowser(sessions.runner(it)) },
+            browsers = { com.skaymer.gryonixnexus.app.session.fileBrowser(sessions.runner(it)) },
             runners = { sessions.runner(it) },
             oldCopies = { deployment, service ->
                 if (deployment.usesAgent && AgentServiceMapping.agentID(service.id) != null) {
@@ -932,6 +1157,7 @@ class GryonixApplication : Application() {
         homeDoors = com.skaymer.gryonixnexus.app.servers.HomeDoors(
             scope = background,
             client = { agents.client(it) },
+            addServices = { id, found -> fleet.addServices(id, found) },
         )
         createAgentTools()
         shellUsers = ShellUserViewModel(
@@ -959,6 +1185,7 @@ class GryonixApplication : Application() {
     /** The saved tunnel as its server knows it now */
     private suspend fun refreshedTunnel(profile: com.skaymer.gryonixnexus.app.vpn.LastTunnel.Profile):
         com.skaymer.gryonixnexus.app.vpn.LastTunnel.Profile? {
+        if (com.skaymer.gryonixnexus.app.vpn.ImportedTunnels.isImported(profile.serverId)) return null
         val deployment = fleet.deployments.value.filter { it.name == profile.server }.singleOrNull() ?: return null
         val label = android.os.Build.MODEL ?: "Android"
         val configuration = if (profile.clientId.isEmpty()) {
@@ -983,7 +1210,10 @@ class GryonixApplication : Application() {
         notices.store = store
         notices.serverName = { deployment(it)?.first?.name }
         notices.canceller = { serverId, job ->
-            val (server, host) = deployment(serverId) ?: error("unknown server")
+            val (server, host) = deployment(serverId)
+                ?: throw com.skaymer.gryonixnexus.app.notify.StopMiss(
+                    com.skaymer.gryonixnexus.app.notify.StopRefusalText.Reason.ServerGone,
+                )
             com.skaymer.gryonixnexus.agentcontrol.AgentJobOperations(agents.client(server, host)).cancel(job)
         }
     }
@@ -1030,6 +1260,14 @@ class GryonixApplication : Application() {
                     gate = agents.gate(deployment),
                 )
             },
+        )
+        machineAccounts = com.skaymer.gryonixnexus.app.terminal.MachineAccounts(
+            operations = { deployment, node ->
+                com.skaymer.gryonixnexus.agentcontrol.AgentSecurityOperations(
+                    agents.client(deployment, node.sshHost), agents.gate(deployment),
+                )
+            },
+            publicKey = { AppIdentities(secrets).publicKey(it.id).orEmpty() },
         )
         hostSecurity = SecurityViewModel(
             scope = background,
@@ -1098,8 +1336,14 @@ class GryonixApplication : Application() {
             release = { sessions.release(it.id) },
             afterInstall = { deployment, service, portsChanged -> afterAddingService(deployment, service, portsChanged) },
             beforeInstall = { deployment, service ->
-                if (service.id != ServiceID.CLOUDFLARED) emptyMap()
-                else mapOf(AgentInstallSettings.CLOUDFLARED_TOKEN_KEY to tunnelSetup().connectorToken(deployment))
+                when {
+                    service.id == ServiceID.CLOUDFLARED ->
+                        mapOf(AgentInstallSettings.CLOUDFLARED_TOKEN_KEY to tunnelSetup().connectorToken(deployment))
+                    service.id == ServiceID.TAILSCALE_NODE && ServiceID.HEADSCALE !in deployment.services ->
+                        TailscaleKeyStore(secrets).key()
+                            ?.let { mapOf(AgentInstallSettings.TAILSCALE_AUTH_KEY_KEY to it) } ?: emptyMap()
+                    else -> emptyMap()
+                }
             },
             plans = { deployment, requests, purpose, onService, onChunk ->
                 val (vpn, rest) = VPNRelayRouting.splitForRelay(requests, deployment.vpnRunsOnRelay) { it.first }
@@ -1112,7 +1356,7 @@ class GryonixApplication : Application() {
                 ensureSudo(deployment, allowing = AgentBootstrapSections.SCRIPT_PATH)
                 AgentBootstrapOperations.install(
                     runner = sessions.runner(deployment),
-                    files = SSHJFileBrowser(sessions.runner(deployment)),
+                    files = com.skaymer.gryonixnexus.app.session.fileBrowser(sessions.runner(deployment)),
                     host = deployment.servicesHost,
                     sources = { assets.open("agent-src.bin").use { it.readBytes() } },
                     onPhase = { line -> onChunk("$line\n") },
@@ -1179,7 +1423,7 @@ class GryonixApplication : Application() {
         val runner = sessions.runner(deployment)
         SudoReadiness.ensure(
             runner = runner,
-            files = SSHJFileBrowser(runner),
+            files = com.skaymer.gryonixnexus.app.session.fileBrowser(runner),
             host = deployment.servicesHost,
             username = deployment.entry.user,
             prompter = sudoPrompter,
@@ -1269,11 +1513,18 @@ class GryonixApplication : Application() {
         )
         files = FileBrowserViewModel(
             scope = background,
-            browsers = { SSHJFileBrowser(sessions.runner(it)) },
+            browsers = { com.skaymer.gryonixnexus.app.session.fileBrowser(sessions.runner(it)) },
             startFolder = { ServerAccessStore.options(store, it.id).sftpDirectory },
             release = { sessions.release(it.id) },
+            settings = store,
         )
     }
+
+    fun dockerAssetsViewModel() = com.skaymer.gryonixnexus.app.containers.DockerAssetsViewModel(
+        scope = background,
+        assets = { com.skaymer.gryonixnexus.agentcontrol.AgentDockerAssets(agents.client(it), agents.gate(it)) },
+        release = { sessions.release(it.id) },
+    )
 
     private fun createVPNMove() {
         vpnMove = VPNMoveViewModel(
@@ -1331,6 +1582,16 @@ class GryonixApplication : Application() {
             ownDevices = OwnVpnDevices.stored(getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)),
             notices = VPNClientNotices(getString(R.string.vpn_device_added), getString(R.string.vpn_device_removed), getString(R.string.dns_changed)),
             localMemory = com.skaymer.gryonixnexus.app.vpn.LocalDNSMemory.stored(getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)),
+            onRemoved = { serverId, clientId -> vpnTunnel.forget(serverId, clientId) },
+        )
+        serverRemoval = com.skaymer.gryonixnexus.app.servers.ServerRemoval(
+            runner = { sessions.runner(it) },
+            release = { sessions.release(it) },
+            appKey = { id ->
+                if (com.skaymer.gryonixnexus.app.secrets.DeploymentSecrets(secrets, id).identitySeed() == null) null
+                else com.skaymer.gryonixnexus.app.secrets.AppIdentities(secrets).publicKey(id)
+            },
+            removeOwnDevices = { vpnClients.removeOwnDevices(it) },
         )
         containers = ContainersViewModel(
             scope = background,
@@ -1427,6 +1688,7 @@ class GryonixApplication : Application() {
                     if (!deployment.usesAgent) fleet.update(deployment.copy(usesAgent = true))
                 },
                 tunnel = tunnelSetup(),
+                tailscaleKey = { TailscaleKeyStore(secrets).key() },
             ),
         )
     }
@@ -1443,7 +1705,7 @@ class GryonixApplication : Application() {
 
     /** Starts Firebase from the relay and asks for a token */
     private suspend fun pushToken(relayUrl: String): String {
-        val settings = com.skaymer.gryonixnexus.app.push.RelayFirebase.settings(relayUrl)
+        val settings = com.skaymer.gryonixnexus.app.push.RelayFirebase.settings(relayUrl, packageName)
             ?: error(getString(com.skaymer.gryonixnexus.R.string.push_relay_has_no_android))
         return com.skaymer.gryonixnexus.app.push.RelayFirebase.token(this, settings)
     }

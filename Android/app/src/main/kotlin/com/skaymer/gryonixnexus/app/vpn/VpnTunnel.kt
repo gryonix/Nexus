@@ -57,6 +57,9 @@ class VpnTunnel(private val context: Context) {
     /** Where a hand-started tunnel is kept for automatic starts */
     var lastTunnel: LastTunnel? = null
 
+    /** Tunnels imported from servers the app does not manage */
+    var imported: ImportedTunnels? = null
+
     /** Addresses dialed in place of a configuration's domain */
     var endpointPins: EndpointPinStore? = null
 
@@ -164,6 +167,14 @@ class VpnTunnel(private val context: Context) {
         _state.value = State.Failed(
             XrayVpnService.failure ?: "the tunnel service did not come up",
         )
+    }
+
+    /** Drops the stored tunnel of a removed server */
+    fun forget(serverId: String, clientId: String? = null) {
+        val stored = lastTunnel?.load() ?: return
+        if (stored.serverId != serverId || (clientId != null && stored.clientId != clientId)) return
+        if (runningDevice() != null) disconnect()
+        lastTunnel?.clear()
     }
 
     /** Take it down */

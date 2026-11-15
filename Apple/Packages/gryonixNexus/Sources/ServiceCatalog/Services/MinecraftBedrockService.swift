@@ -114,6 +114,7 @@ public struct MinecraftBedrockService: ManagedService {
                 plan: .archive(ArchiveBackupPlan(
                     composeProject: Self.composeProject,
                     dataPath: "\(path)/data",
+                    dataPart: .files,
                     databases: [],
                     quiesceServices: [Self.container],
                     encryptsByDefault: false,

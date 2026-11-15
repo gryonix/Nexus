@@ -4,9 +4,12 @@ import com.skaymer.gryonixnexus.catalog.DeploymentScope
 import com.skaymer.gryonixnexus.catalog.ServiceCommand
 import com.skaymer.gryonixnexus.catalog.ServiceContext
 import com.skaymer.gryonixnexus.catalog.ServiceID
+import com.skaymer.gryonixnexus.catalog.ServiceRegistry
 import com.skaymer.gryonixnexus.catalog.ServiceSettings
 import com.skaymer.gryonixnexus.catalog.Topology
 import kotlinx.serialization.SerialName
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.time.Duration
@@ -118,6 +121,7 @@ data class ServicePlacement(
     operator fun get(service: ServiceID): String? = byService[service.rawValue]
 }
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class Deployment(
     val id: String,
@@ -151,7 +155,31 @@ data class Deployment(
     val wakeOnLANBroadcast: String? = null,
     /** Runs the VPN on the relay instead of at home */
     val vpnOnRelay: Boolean? = null,
+    /** Login on the home machine; null reuses the entry user */
+    val homeUser: String? = null,
+    /** Services closed on the relay */
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val homeOnlyServices: Set<ServiceID> = emptySet(),
+    /** Home-only services that VPN clients cannot open either */
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val homeOnlyNoVPN: Set<ServiceID> = emptySet(),
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val homeOnlyDNSRemoved: Set<ServiceID> = emptySet(),
 ) {
+    val homeOnlyIDs: Set<String> get() = homeOnlyServices.map { it.rawValue }.toSet()
+
+    val hostsRefusingVPN: List<String>
+        get() {
+            val context = serviceContext
+            return ServiceRegistry.all
+                .filter { it.id in homeOnlyServices && it.id in homeOnlyNoVPN }
+                .mapNotNull { it.webIngress(context)?.hostname }
+                .flatMap { listOf(it) + context.mirroredHostnames(it) }
+                .toSortedSet().toList()
+        }
+
+    val effectiveHomeUser: String get() = homeUser?.takeIf { it.isNotEmpty() } ?: entry.user
+
     val serviceContext: ServiceContext
         get() = ServiceContext(
             domain = domain,
@@ -167,6 +195,7 @@ data class Deployment(
             vpsHost = entry.host,
             sshPort = entry.port,
             sshUser = entry.user,
+            homeSSHUser = homeUser.orEmpty(),
             homeWGAddress = homeWGAddress.orEmpty(),
             wgInterface = wgInterface,
             mailcowPath = serviceSettings.mailcowPath,
@@ -193,6 +222,10 @@ data class Deployment(
 
     val hasHomeHost: Boolean
         get() = nodes.any { it.routedThrough != null && it.endpoint.host.isNotEmpty() }
+
+    /** A home machine whose services can leave the internet */
+    val closesServicesAtHome: Boolean
+        get() = (hasHomeHost && hasRelayIngress) || scope == DeploymentScope.DYNAMIC_DNS
 
     val nodes: List<DeploymentNode>
         get() = storedNodes?.takeIf { it.isNotEmpty() } ?: derivedNodes
@@ -223,7 +256,7 @@ data class Deployment(
                     endpoint = HostEndpoint(
                         host = homeWGAddress.orEmpty(),
                         port = entry.port,
-                        user = entry.user,
+                        user = effectiveHomeUser,
                     ),
                     capabilities = setOf(NodeCapability.WORKER),
                     routedThrough = relayID,

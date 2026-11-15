@@ -62,3 +62,40 @@ extension Deployment {
         tintName.flatMap { ServerTint(rawValue: $0)?.color }
     }
 }
+
+/// One server's card size, indicator and colour menus
+struct ServerAppearanceChoices: View {
+    let deployment: () -> Deployment
+    let setCardSize: (ServerCardSize?) -> Void
+    let setIndicatorStyle: (MetricsIndicatorStyle?) -> Void
+    let setTint: (String?) -> Void
+
+    private static let indicatorChoices: [(style: MetricsIndicatorStyle, title: LocalizedStringKey)] = [
+        (.bars, "Bars"), (.track, "Line"), (.rings, "Rings"), (.minimal, "Minimal"),
+    ]
+
+    var body: some View {
+        Section("Card size") {
+            MenuChoice("App default", picked: deployment().cardSize == nil) { setCardSize(nil) }
+            ForEach(ServerCardSize.allCases) { size in
+                MenuChoice(size.localizedName, picked: deployment().cardSize == size) { setCardSize(size) }
+            }
+        }
+        Section("Load indicator") {
+            MenuChoice("App default", picked: deployment().metricsIndicatorStyle == nil) { setIndicatorStyle(nil) }
+            ForEach(Self.indicatorChoices, id: \.style) { choice in
+                MenuChoice(choice.title, picked: deployment().metricsIndicatorStyle == choice.style) {
+                    setIndicatorStyle(choice.style)
+                }
+            }
+        }
+        Section("Color") {
+            MenuChoice("Default", picked: deployment().tintName == nil) { setTint(nil) }
+            ForEach(ServerTint.allCases) { tint in
+                MenuChoice(tint.localizedName, picked: deployment().tintName == tint.rawValue) {
+                    setTint(tint.rawValue)
+                }
+            }
+        }
+    }
+}

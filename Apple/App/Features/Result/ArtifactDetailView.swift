@@ -11,7 +11,7 @@ struct ArtifactDetailView: View {
             script
         } else {
             LockCard(reason: LicenseGate.reason)
-                .navigationTitle(artifact.fileName)
+                .screenTitle(artifact.fileName)
         }
     }
 
@@ -39,7 +39,7 @@ struct ArtifactDetailView: View {
             }
             .padding()
         }
-        .navigationTitle(artifact.fileName)
+        .screenTitle(artifact.fileName)
         .raisedNavigationTitle()
         .toolbar {
             ToolbarItemGroup {
@@ -52,11 +52,13 @@ struct ArtifactDetailView: View {
                           systemImage: copied ? "checkmark" : "doc.on.doc")
                 }
 
+                #if !os(tvOS)
                 if let url = try? ExportController.exportURL(for: artifact) {
                     ShareLink(item: url) {
                         Label("Export", systemImage: "square.and.arrow.up")
                     }
                 }
+                #endif
             }
         }
     }
@@ -65,7 +67,7 @@ struct ArtifactDetailView: View {
         #if os(macOS)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(string, forType: .string)
-        #else
+        #elseif os(iOS)
         UIPasteboard.general.string = string
         #endif
     }

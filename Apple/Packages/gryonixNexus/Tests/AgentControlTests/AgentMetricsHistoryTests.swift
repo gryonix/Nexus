@@ -107,6 +107,21 @@ final class AgentMetricsHistoryTests: XCTestCase {
         XCTAssertNil(points[1].diskWrittenPerSecond)
     }
 
+    func testSwapTravelsWhenPresentAndStaysAbsentOtherwise() async throws {
+        var withSwap = point(at: 1_754_400_000, cpu: 1, temperature: nil)
+        withSwap.swapUsedBytes = 100
+        withSwap.swapTotalBytes = 400
+        var response = Gryonixnexusd_V1_MetricsHistoryResponse()
+        response.points = [withSwap, point(at: 1_754_400_010, cpu: 1, temperature: nil)]
+        let payload: Data = try response.serializedBytes()
+        let source = AgentMetricsHistory(client: AgentClient(transport: MockTransport(
+            onUnary: { _, _ in payload })))
+        let points = try await source.history(bucket: .tenSeconds, on: .home)
+        XCTAssertEqual(points[0].swapUsedBytes, 100)
+        XCTAssertEqual(points[0].swapTotalBytes, 400)
+        XCTAssertNil(points[1].swapTotalBytes)
+    }
+
     func testAWindowIsAppliedOnTheServerSoUndrawnRowsAreNotTransferred() async throws {
         let sent = LockedBox<Int64>()
         var response = Gryonixnexusd_V1_MetricsHistoryResponse()

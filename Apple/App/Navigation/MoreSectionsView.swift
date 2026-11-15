@@ -21,7 +21,7 @@ struct MoreSectionsView: View {
                     InfoSectionHeader("More sections", note: "The bar holds five sections; these are the rest. Which ones the bar carries, and in what order, is set in Settings › Sections.")
                 }
             }
-            .navigationTitle("More")
+            .screenTitle("More")
             .raisedNavigationTitle()
         }
     }
@@ -31,7 +31,7 @@ struct MoreSectionsView: View {
             section.icon
                 .font(.body)
                 .foregroundStyle(Color.accentColor)
-                .frame(width: 28)
+                .rowIconFrame(28)
             Text(section.title)
                 .foregroundStyle(.primary)
             Spacer(minLength: 8)

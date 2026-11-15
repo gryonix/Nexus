@@ -33,8 +33,9 @@ object RelayFirebase {
         json.decodeFromJsonElement(FirebaseSettings.serializer(), fcm)
     }.getOrNull()
 
-    suspend fun settings(relayUrl: String): FirebaseSettings? = withContext(Dispatchers.IO) {
-        val connection = URL(relayUrl.trimEnd('/') + "/v1/client").openConnection() as HttpURLConnection
+    suspend fun settings(relayUrl: String, packageName: String): FirebaseSettings? = withContext(Dispatchers.IO) {
+        val address = relayUrl.trimEnd('/') + "/v1/client?package=" + java.net.URLEncoder.encode(packageName, "UTF-8")
+        val connection = URL(address).openConnection() as HttpURLConnection
         connection.connectTimeout = 10_000
         connection.readTimeout = 10_000
         try {

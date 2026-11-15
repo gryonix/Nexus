@@ -41,6 +41,8 @@ class LastTunnel(private val secrets: SecretStore) {
         secrets.setString(ACCOUNT, json.toString())
     }
 
+    fun clear() = secrets.deleteSecret(ACCOUNT)
+
     fun load(): Profile? = runCatching {
         val json = JSONObject(secrets.string(ACCOUNT) ?: return null)
         Profile(
@@ -76,17 +78,25 @@ class OnDemandMonitor(
         scope.launch { settings.policy.collect { evaluate() } }
     }
 
-    private fun callback(): ConnectivityManager.NetworkCallback {
-        val flags = if (Build.VERSION.SDK_INT >= 31) ConnectivityManager.NetworkCallback.FLAG_INCLUDE_LOCATION_INFO else 0
-        return object : ConnectivityManager.NetworkCallback(flags) {
-            override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
-                scope.launch { networks[network] = capabilities; evaluate() }
+    private fun callback(): ConnectivityManager.NetworkCallback =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            object : ConnectivityManager.NetworkCallback(ConnectivityManager.NetworkCallback.FLAG_INCLUDE_LOCATION_INFO) {
+                override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) = seen(network, capabilities)
+                override fun onLost(network: Network) = lost(network)
             }
-
-            override fun onLost(network: Network) {
-                scope.launch { networks.remove(network); evaluate() }
+        } else {
+            object : ConnectivityManager.NetworkCallback() {
+                override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) = seen(network, capabilities)
+                override fun onLost(network: Network) = lost(network)
             }
         }
+
+    private fun seen(network: Network, capabilities: NetworkCapabilities) {
+        scope.launch { networks[network] = capabilities; evaluate() }
+    }
+
+    private fun lost(network: Network) {
+        scope.launch { networks.remove(network); evaluate() }
     }
 
     /** Wi-Fi first, as the system routes it */

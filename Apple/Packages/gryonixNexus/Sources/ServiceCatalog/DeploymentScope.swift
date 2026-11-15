@@ -8,11 +8,14 @@ public enum DeploymentScope: String, Sendable, Hashable, Codable, CaseIterable {
 
     case meshOnly
 
+    /// The mesh is the user's own Tailscale account
+    case tailscaleOnly
+
     /// Whether Caddy issues its own certificate instead of asking ACME
     public var usesInternalTLS: Bool {
         switch self {
         case .publicInternet, .dynamicDNS: return false
-        case .localOnly, .cloudflareTunnel, .meshOnly: return true
+        case .localOnly, .cloudflareTunnel, .meshOnly, .tailscaleOnly: return true
         }
     }
 
@@ -20,14 +23,14 @@ public enum DeploymentScope: String, Sendable, Hashable, Codable, CaseIterable {
     public var publishesAddressRecords: Bool {
         switch self {
         case .publicInternet, .dynamicDNS: return true
-        case .localOnly, .cloudflareTunnel, .meshOnly: return false
+        case .localOnly, .cloudflareTunnel, .meshOnly, .tailscaleOnly: return false
         }
     }
 
     public var carriesNonWebServices: Bool {
         switch self {
         case .publicInternet, .dynamicDNS: return true
-        case .localOnly, .cloudflareTunnel, .meshOnly: return false
+        case .localOnly, .cloudflareTunnel, .meshOnly, .tailscaleOnly: return false
         }
     }
 
@@ -35,4 +38,7 @@ public enum DeploymentScope: String, Sendable, Hashable, Codable, CaseIterable {
     public var maintainsItsOwnDNSRecords: Bool { self == .dynamicDNS }
 
     public var requiresMesh: Bool { self == .meshOnly }
+
+    /// Whether the server joins Tailscale itself
+    public var joinsTailscale: Bool { self == .tailscaleOnly }
 }

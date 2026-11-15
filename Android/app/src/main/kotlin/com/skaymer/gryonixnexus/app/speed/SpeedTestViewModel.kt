@@ -11,10 +11,12 @@ import com.skaymer.gryonixnexus.servercontrol.SSHHostID
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** What the speed screen shows for one machine */
 data class SpeedState(
@@ -34,6 +36,8 @@ class SpeedTestViewModel(
     private val scope: CoroutineScope,
     private val history: SpeedTestHistory,
     private val control: suspend (Deployment) -> SSHCommandRunner,
+    /** A connection only the test uses */
+    private val own: (Deployment) -> SSHCommandRunner,
 ) {
     private val _state = MutableStateFlow(SpeedState())
     val state: StateFlow<SpeedState> = _state.asStateFlow()
@@ -54,7 +58,7 @@ class SpeedTestViewModel(
     }
 
     fun testInternet(deployment: Deployment, host: SSHHostID) = measure(deployment, host, null) {
-        val output = StoragePreparation.output(SpeedTest.INTERNET_SCRIPT, SpeedTest.DONE_MARKER, control(deployment), host, false)
+        val output = measured(deployment, SpeedTest.INTERNET_SCRIPT, host, false)
         if ("nocurl" in output) throw Refused(SpeedState.Failure.NO_CURL)
         val result = SpeedTest.parseInternet(output) ?: throw Refused(SpeedState.Failure.NO_ANSWER)
         SpeedRecord(System.currentTimeMillis(), internet = result)
@@ -63,9 +67,19 @@ class SpeedTestViewModel(
     fun testDisk(deployment: Deployment, host: SSHHostID, location: String) = measure(deployment, host, location) {
         val script = SpeedTest.diskScript(location)
         val elevated = location != SpeedTest.SYSTEM_DIRECTORY && account(deployment, host) != "root"
-        val output = StoragePreparation.output(script, SpeedTest.DONE_MARKER, control(deployment), host, elevated)
+        val output = measured(deployment, script, host, elevated)
         val result = SpeedTest.parseDisk(output) ?: throw Refused(SpeedState.Failure.NO_NUMBERS)
         SpeedRecord(System.currentTimeMillis(), location = location, disk = result)
+    }
+
+    /** Runs the script on a connection of its own */
+    private suspend fun measured(deployment: Deployment, script: String, host: SSHHostID, elevated: Boolean): String {
+        val runner = own(deployment)
+        return try {
+            StoragePreparation.detachedOutput(script, SpeedTest.DONE_MARKER, runner, host, elevated)
+        } finally {
+            withContext(NonCancellable) { runCatching { runner.disconnect() } }
+        }
     }
 
     private fun measure(deployment: Deployment, host: SSHHostID, location: String?, test: suspend () -> SpeedRecord) {

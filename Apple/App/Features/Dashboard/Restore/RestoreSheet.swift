@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 
 struct RestoreSheet: View {
     let service: any ManagedService
+    var name: String?
     let needsPassphrase: Bool
     /// Loads the server-side listing
     let loadBackups: () async throws -> [DashboardViewModel.RestorableBackup]
@@ -85,8 +86,8 @@ struct RestoreSheet: View {
                     InfoSectionHeader("From this device", note: "The file is uploaded to the server before the restore starts. Very large backups are better restored from the list above — they never have to leave the server.")
                 }
             }
-            .navigationTitle("Restore \(service.displayName)")
-            #if os(iOS)
+            .screenTitle("Restore \(name ?? service.displayName)")
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {

@@ -5,7 +5,6 @@ import ServerControl
 struct AgentBootstrapOperations {
     static let archiveName = AgentBootstrapSections.archiveName
     static let wrapperPath = AgentBootstrapSections.scriptPath
-
     enum BootstrapError: LocalizedError {
         case sourcesMissing
 
@@ -116,7 +115,7 @@ struct AgentBootstrapOperations {
         }
         let outcome = try await build.follow(runner: runner, host: host, onOutput: onOutput, onReconnect: { error in
             onPhase(UIL10n.string("The connection dropped; the server keeps building. Reconnecting…"))
-            onOutput(UIL10n.string("Connection dropped: %@", error.localizedDescription))
+            onOutput(UIL10n.string("Connection dropped: %@", LinkDropText.reason(error)))
         }, onReconnected: {
             onPhase(UIL10n.string("Connected again. The server is still building the agent."))
         })

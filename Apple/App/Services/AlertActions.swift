@@ -40,6 +40,7 @@ enum AlertActions {
     /// How long a block from an alert lasts
     static let banSeconds: TimeInterval = 24 * 3600
 
+    #if !os(tvOS)
     /// The relay names each alert's category after its kind
     nonisolated static func categories() -> Set<UNNotificationCategory> {
         let block = UNNotificationAction(identifier: AlertAction.Verb.block.rawValue,
@@ -53,6 +54,7 @@ enum AlertActions {
             UNNotificationCategory(identifier: "gnx.alert.service", actions: [restart], intentIdentifiers: []),
         ]
     }
+    #endif
 
     static func perform(_ action: AlertAction) async {
         let outcome: String
@@ -68,7 +70,7 @@ enum AlertActions {
         guard #available(macOS 15.0, *), let target = RelayServers.target(of: action.server),
               let deployment = ((try? FileDeploymentStore().load()) ?? []).first(where: { $0.id == target.deploymentID })
         else { return UIL10n.string("This server is no longer in the app.") }
-        let runner = try DashboardSessionFactory.makeRunner(deployment: deployment)
+        let runner = try await DashboardSessionFactory.makeRunnerDetached(deployment: deployment, shared: false)
         defer { Task { await runner.disconnect() } }
         let client = try await AgentConnection.client(deployment: deployment, runner: runner,
                                                       host: target.host ?? deployment.servicesHost)
@@ -89,11 +91,13 @@ enum AlertActions {
 
     /// Posts how the tap ended beside the alert
     private static func post(_ outcome: String, about action: AlertAction) async {
+        #if !os(tvOS)
         let content = UNMutableNotificationContent()
         content.title = action.host
         content.body = outcome
         content.threadIdentifier = action.server
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         try? await UNUserNotificationCenter.current().add(request)
+        #endif
     }
 }

@@ -8,6 +8,7 @@ import VPNTunnel
 /// "This device" — the tunnel THIS Mac or phone is running
 struct ThisDeviceCard: View {
     @ObservedObject var tunnel: TunnelController
+    @Binding var importing: Bool
     @ObservedObject private var pins = TunnelEndpointPins.shared
     var highlighted = false
 
@@ -33,6 +34,7 @@ struct ThisDeviceCard: View {
             footer
         }
         .listRowBackground(highlighted ? Color.accentColor.opacity(0.08) : nil)
+
         .task {
             servers.load()
             await clients.load(manageableServers)
@@ -83,7 +85,9 @@ struct ThisDeviceCard: View {
 
     @ViewBuilder
     private func detail(_ profile: TunnelProfile) -> some View {
-        ThisDeviceRows(tunnel: tunnel, clients: clients, profile: profile, servers: manageableServers)
+        ThisDeviceRows(tunnel: tunnel, clients: clients, profile: profile, servers: manageableServers) {
+            importing = true
+        }
         if tunnel.status.isActive {
             LabeledContent {
                 Text(verbatim: TunnelPresentation.traffic(tunnel.state.statistics))
@@ -100,11 +104,25 @@ struct ThisDeviceCard: View {
         }
     }
 
+    #if os(tvOS)
+    /// The remote reaches one control per row
+    @ViewBuilder private var button: some View {
+        Button {
+            Task { await tunnel.toggle() }
+        } label: {
+            Text(tunnel.status.isActive || tunnel.status == .connecting ? "Disconnect" : "Connect")
+                .font(.headline)
+                .foregroundStyle(tunnel.status.isActive ? Color.red : Color.accentColor)
+                .frame(maxWidth: .infinity)
+        }
+        .disabled(tunnel.selected == nil || tunnel.status.isBusy)
+        addTunnelMenu
+            .disabled(tunnel.status.isBusy)
+    }
+    #else
     private var button: some View {
         HStack(spacing: 0) {
-            if !manageableServers.isEmpty {
-                Color.clear.frame(width: addTunnelButtonWidth, height: 1)
-            }
+            Color.clear.frame(width: addTunnelButtonWidth, height: 1)
 
             Button {
                 Task { await tunnel.toggle() }
@@ -119,18 +137,19 @@ struct ThisDeviceCard: View {
             .foregroundStyle(tunnel.status.isActive ? Color.red : Color.accentColor)
             .disabled(tunnel.selected == nil || tunnel.status.isBusy)
 
-            if !manageableServers.isEmpty {
-                addTunnelMenu
-                    .disabled(tunnel.status.isBusy)
-            }
+            addTunnelMenu
+                .disabled(tunnel.status.isBusy)
         }
     }
+    #endif
 
     private let addTunnelButtonWidth: CGFloat = 44
 
     private var addTunnelMenu: some View {
         TunnelConfigurationMenu(tunnel: tunnel, clients: clients,
-                                servers: manageableServers, width: addTunnelButtonWidth)
+                                servers: manageableServers, width: addTunnelButtonWidth) {
+            importing = true
+        }
     }
 
     /// The chosen tunnel cannot reach its server's admin panels

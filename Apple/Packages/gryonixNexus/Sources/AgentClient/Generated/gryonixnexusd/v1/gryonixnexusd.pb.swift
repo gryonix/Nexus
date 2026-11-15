@@ -1457,6 +1457,342 @@ public nonisolated struct Gryonixnexusd_V1_AgentUpdateEvent: Sendable {
   public init() {}
 }
 
+public nonisolated struct Gryonixnexusd_V1_HomeOnlyPort: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// "tcp" or "udp".
+  public var proto: String = String()
+
+  public var port: UInt32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_SetHomeOnlyPortsRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var ports: [Gryonixnexusd_V1_HomeOnlyPort] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_SetHomeOnlyPortsResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// The ports now kept to private addresses.
+  public var ports: [Gryonixnexusd_V1_HomeOnlyPort] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_GetMcpAccessRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_SetMcpAccessRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var enabled: Bool = false
+
+  /// ed25519 public key line; read only when enabled.
+  public var publicKey: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_McpAccessState: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var enabled: Bool = false
+
+  /// Accounts the key is put on; the client connects as one of them.
+  public var users: [String] = []
+
+  /// What the key is held to, for the client's own notes.
+  public var command: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_GetAppModulesRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_AppModuleSet: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Module ids that are on, e.g. "ai", "dockerAdvanced".
+  public var on: [String] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_GetServiceNamesRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_SetServiceNameRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Catalog id of the service, e.g. "vaultwarden".
+  public var serviceID: String = String()
+
+  public var name: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_ServiceNameSet: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Service id to its given name; a service without one is absent.
+  public var names: Dictionary<String,String> = [:]
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_OdioCallRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// "GET" or "POST".
+  public var method: String = String()
+
+  /// e.g. /audio/server/volume; anything off the allowed list is refused.
+  public var path: String = String()
+
+  /// JSON body for POST, empty otherwise.
+  public var body: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_OdioCallResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// HTTP status odio-api answered with.
+  public var status: UInt32 = 0
+
+  /// Its JSON body, as is.
+  public var body: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_ListAudioOutputsRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_AudioOutput: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// ALSA device name, e.g. hw:CARD=Headphones,DEV=0.
+  public var device: String = String()
+
+  /// Card and device names as the driver reports them.
+  public var title: String = String()
+
+  /// The card's volume controls, from amixer; empty without alsa-utils.
+  public var mixers: [String] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_ListAudioOutputsResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var outputs: [Gryonixnexusd_V1_AudioOutput] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_ProbePublicPortsRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Names are not resolved here; the agent probes its own public address.
+  public var host: String = String()
+
+  public var ports: [UInt32] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_PortProbe: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var port: UInt32 = 0
+
+  public var `open`: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_ProbePublicPortsResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var ports: [Gryonixnexusd_V1_PortProbe] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_GetLocalRootCARequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_GetLocalAliasesRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_SetLocalAliasRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// The site's public name, e.g. vault.example.com.
+  public var host: String = String()
+
+  public var on: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_LocalAlias: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var host: String = String()
+
+  /// e.g. vault.local
+  public var alias: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_LocalAliasesState: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var aliases: [Gryonixnexusd_V1_LocalAlias] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_GetLocalRootCAResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// PEM text of the root certificate; empty when Caddy has none.
+  public var pem: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public nonisolated struct Gryonixnexusd_V1_GetSecurityDecisionsRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -2197,49 +2533,118 @@ public nonisolated struct Gryonixnexusd_V1_GetStateRequest: Sendable {
   public init() {}
 }
 
-public nonisolated struct Gryonixnexusd_V1_State: Sendable {
+public nonisolated struct Gryonixnexusd_V1_State: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var agentVersion: String = String()
+  public var agentVersion: String {
+    get {_storage._agentVersion}
+    set {_uniqueStorage()._agentVersion = newValue}
+  }
 
   public var host: Gryonixnexusd_V1_Host {
-    get {_host ?? Gryonixnexusd_V1_Host()}
-    set {_host = newValue}
+    get {_storage._host ?? Gryonixnexusd_V1_Host()}
+    set {_uniqueStorage()._host = newValue}
   }
   /// Returns true if `host` has been explicitly set.
-  public var hasHost: Bool {self._host != nil}
+  public var hasHost: Bool {_storage._host != nil}
   /// Clears the value of `host`. Subsequent reads from it will return its default value.
-  public mutating func clearHost() {self._host = nil}
+  public mutating func clearHost() {_uniqueStorage()._host = nil}
 
-  public var services: [Gryonixnexusd_V1_Service] = []
+  public var services: [Gryonixnexusd_V1_Service] {
+    get {_storage._services}
+    set {_uniqueStorage()._services = newValue}
+  }
 
   /// When Discover last populated/refreshed this state (Unix ms), 0 if never.
-  public var discoveredAt: Int64 = 0
+  public var discoveredAt: Int64 {
+    get {_storage._discoveredAt}
+    set {_uniqueStorage()._discoveredAt = newValue}
+  }
 
   /// Plain HTTP ports apps use in the home network, one per service.
-  public var homeDoors: [Gryonixnexusd_V1_HomeNetworkDoor] = []
+  public var homeDoors: [Gryonixnexusd_V1_HomeNetworkDoor] {
+    get {_storage._homeDoors}
+    set {_uniqueStorage()._homeDoors = newValue}
+  }
 
   /// What Wake on LAN needs, read by the agent on this host.
   public var wakeOnLan: Gryonixnexusd_V1_WakeOnLANInfo {
-    get {_wakeOnLan ?? Gryonixnexusd_V1_WakeOnLANInfo()}
-    set {_wakeOnLan = newValue}
+    get {_storage._wakeOnLan ?? Gryonixnexusd_V1_WakeOnLANInfo()}
+    set {_uniqueStorage()._wakeOnLan = newValue}
   }
   /// Returns true if `wakeOnLan` has been explicitly set.
-  public var hasWakeOnLan: Bool {self._wakeOnLan != nil}
+  public var hasWakeOnLan: Bool {_storage._wakeOnLan != nil}
   /// Clears the value of `wakeOnLan`. Subsequent reads from it will return its default value.
-  public mutating func clearWakeOnLan() {self._wakeOnLan = nil}
+  public mutating func clearWakeOnLan() {_uniqueStorage()._wakeOnLan = nil}
 
   /// This host's IPv4 address in the Tailscale mesh; empty when not joined.
-  public var meshAddress: String = String()
+  public var meshAddress: String {
+    get {_storage._meshAddress}
+    set {_uniqueStorage()._meshAddress = newValue}
+  }
+
+  /// How the agent itself is doing.
+  public var agentHealth: Gryonixnexusd_V1_AgentHealth {
+    get {_storage._agentHealth ?? Gryonixnexusd_V1_AgentHealth()}
+    set {_uniqueStorage()._agentHealth = newValue}
+  }
+  /// Returns true if `agentHealth` has been explicitly set.
+  public var hasAgentHealth: Bool {_storage._agentHealth != nil}
+  /// Clears the value of `agentHealth`. Subsequent reads from it will return its default value.
+  public mutating func clearAgentHealth() {_uniqueStorage()._agentHealth = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _host: Gryonixnexusd_V1_Host? = nil
-  fileprivate var _wakeOnLan: Gryonixnexusd_V1_WakeOnLANInfo? = nil
+  fileprivate var _storage = _StorageClass.defaultInstance
+}
+
+/// The agent's own footprint on the host.
+public nonisolated struct Gryonixnexusd_V1_AgentHealth: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Resident memory of the daemon, in bytes.
+  public var memoryBytes: UInt64 = 0
+
+  /// Highest resident memory since the daemon started.
+  public var peakMemoryBytes: UInt64 = 0
+
+  /// App connections open through the bridge right now.
+  public var openChannels: UInt32 = 0
+
+  /// When the daemon started (Unix ms).
+  public var startedAt: Int64 = 0
+
+  /// Add-on programs installed beside the core.
+  public var modules: [Gryonixnexusd_V1_AgentModule] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// An add-on program the core installed.
+public nonisolated struct Gryonixnexusd_V1_AgentModule: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var name: String = String()
+
+  public var version: String = String()
+
+  public var sizeBytes: UInt64 = 0
+
+  public var running: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
 }
 
 public nonisolated struct Gryonixnexusd_V1_WakeOnLANInfo: Sendable {
@@ -3562,6 +3967,25 @@ public nonisolated struct Gryonixnexusd_V1_MetricsHistoryPoint: Sendable {
   /// Which sensor: rapl, hwmon, ipmi, ups or pi.
   public var powerSource: String = String()
 
+  /// Swap in use and total; absent for rows written before the collector tracked swap.
+  public var swapUsedBytes: Int64 {
+    get {_swapUsedBytes ?? 0}
+    set {_swapUsedBytes = newValue}
+  }
+  /// Returns true if `swapUsedBytes` has been explicitly set.
+  public var hasSwapUsedBytes: Bool {self._swapUsedBytes != nil}
+  /// Clears the value of `swapUsedBytes`. Subsequent reads from it will return its default value.
+  public mutating func clearSwapUsedBytes() {self._swapUsedBytes = nil}
+
+  public var swapTotalBytes: Int64 {
+    get {_swapTotalBytes ?? 0}
+    set {_swapTotalBytes = newValue}
+  }
+  /// Returns true if `swapTotalBytes` has been explicitly set.
+  public var hasSwapTotalBytes: Bool {self._swapTotalBytes != nil}
+  /// Clears the value of `swapTotalBytes`. Subsequent reads from it will return its default value.
+  public mutating func clearSwapTotalBytes() {self._swapTotalBytes = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -3573,6 +3997,8 @@ public nonisolated struct Gryonixnexusd_V1_MetricsHistoryPoint: Sendable {
   fileprivate var _diskWrittenPerSecond: Double? = nil
   fileprivate var _temperatureCelsius: Double? = nil
   fileprivate var _powerWatts: Double? = nil
+  fileprivate var _swapUsedBytes: Int64? = nil
+  fileprivate var _swapTotalBytes: Int64? = nil
 }
 
 public nonisolated struct Gryonixnexusd_V1_ListSerialDevicesRequest: Sendable {
@@ -3621,6 +4047,76 @@ public nonisolated struct Gryonixnexusd_V1_SerialDevice: Sendable {
   /// The by-id name with its usb- prefix, -ifNN-portN suffix and underscores
   /// taken out, for the menu row.
   public var label: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_GetSystemSettingsRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_SystemSettings: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// IANA zone name such as Europe/Berlin.
+  public var timeZone: String = String()
+
+  public var hostName: String = String()
+
+  /// Whether time synchronisation is switched on.
+  public var ntpEnabled: Bool = false
+
+  /// Whether the clock is currently in sync.
+  public var ntpSynchronized: Bool = false
+
+  /// Every zone the host knows, for the picker.
+  public var timeZones: [String] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_SetTimeZoneRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var timeZone: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_SetHostNameRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var hostName: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_SetTimeSyncRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var enabled: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -3970,11 +4466,96 @@ public nonisolated struct Gryonixnexusd_V1_BackupSchedulePolicy: @unchecked Send
   /// Clears the value of `drives`. Subsequent reads from it will return its default value.
   public mutating func clearDrives() {_uniqueStorage()._drives = nil}
 
+  /// What backups copy. Absent on hosts whose wrapper predates it.
+  public var parts: Gryonixnexusd_V1_BackupPartChoice {
+    get {_storage._parts ?? Gryonixnexusd_V1_BackupPartChoice()}
+    set {_uniqueStorage()._parts = newValue}
+  }
+  /// Returns true if `parts` has been explicitly set.
+  public var hasParts: Bool {_storage._parts != nil}
+  /// Clears the value of `parts`. Subsequent reads from it will return its default value.
+  public mutating func clearParts() {_uniqueStorage()._parts = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
   fileprivate var _storage = _StorageClass.defaultInstance
+}
+
+/// One set of parts a backup copies.
+public nonisolated struct Gryonixnexusd_V1_BackupParts: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Photos, documents, mail and other user files.
+  public var files: Bool = false
+
+  public var settings: Bool = false
+
+  public var databases: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_BackupPartChoice: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Scheduled runs and the backup button.
+  public var regular: Gryonixnexusd_V1_BackupParts {
+    get {_regular ?? Gryonixnexusd_V1_BackupParts()}
+    set {_regular = newValue}
+  }
+  /// Returns true if `regular` has been explicitly set.
+  public var hasRegular: Bool {self._regular != nil}
+  /// Clears the value of `regular`. Subsequent reads from it will return its default value.
+  public mutating func clearRegular() {self._regular = nil}
+
+  /// The backup an update takes first.
+  public var beforeUpdate: Gryonixnexusd_V1_BackupParts {
+    get {_beforeUpdate ?? Gryonixnexusd_V1_BackupParts()}
+    set {_beforeUpdate = newValue}
+  }
+  /// Returns true if `beforeUpdate` has been explicitly set.
+  public var hasBeforeUpdate: Bool {self._beforeUpdate != nil}
+  /// Clears the value of `beforeUpdate`. Subsequent reads from it will return its default value.
+  public mutating func clearBeforeUpdate() {self._beforeUpdate = nil}
+
+  /// A service's own choice, by catalog id; the shared one applies otherwise.
+  public var services: Dictionary<String,Gryonixnexusd_V1_BackupPartChoice> = [:]
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _regular: Gryonixnexusd_V1_BackupParts? = nil
+  fileprivate var _beforeUpdate: Gryonixnexusd_V1_BackupParts? = nil
+}
+
+public nonisolated struct Gryonixnexusd_V1_SetBackupPartsRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var parts: Gryonixnexusd_V1_BackupPartChoice {
+    get {_parts ?? Gryonixnexusd_V1_BackupPartChoice()}
+    set {_parts = newValue}
+  }
+  /// Returns true if `parts` has been explicitly set.
+  public var hasParts: Bool {self._parts != nil}
+  /// Clears the value of `parts`. Subsequent reads from it will return its default value.
+  public mutating func clearParts() {self._parts = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _parts: Gryonixnexusd_V1_BackupPartChoice? = nil
 }
 
 public nonisolated struct Gryonixnexusd_V1_SetBackupScheduleRequest: Sendable {
@@ -4402,6 +4983,67 @@ public nonisolated struct Gryonixnexusd_V1_SetLockdownRequest: Sendable {
   /// doc comment on the service above.
   public var hosts: [String] = []
 
+  /// Hosts whose VPN clients are also refused; read only when
+  /// set_deny_vpn_hosts is true, so an empty list can clear the choice.
+  public var denyVpnHosts: [String] = []
+
+  public var setDenyVpnHosts: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_GetOpenAPIRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// One service's sites and the paths they answer to everyone.
+public nonisolated struct Gryonixnexusd_V1_OpenAPISite: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var serviceID: String = String()
+
+  public var paths: [String] = []
+
+  /// False when the site's shape is not one the agent can rewrite.
+  public var editable: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_OpenAPIState: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var sites: [Gryonixnexusd_V1_OpenAPISite] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_SetOpenAPIRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var serviceID: String = String()
+
+  /// Empty closes every API of the service.
+  public var paths: [String] = []
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -4690,6 +5332,23 @@ public nonisolated struct Gryonixnexusd_V1_SetSshKeyOnlyUsersRequest: Sendable {
   /// `everyone` false means nobody: the drop-in is removed and the host takes
   /// passwords again.
   public var users: [String] = []
+
+  public var loginUser: String = String()
+
+  public var appPublicKey: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_AuthorizeAppKeyRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// One of the accounts `ListSshUsers` names; anything else is refused.
+  public var user: String = String()
 
   public var loginUser: String = String()
 
@@ -5106,6 +5765,82 @@ public nonisolated struct Gryonixnexusd_V1_MeshNameList: Sendable {
   // methods supported on all messages.
 
   public var records: [Gryonixnexusd_V1_MeshName] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_SetAmneziaKernelRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var enabled: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_GetVpnSpeedFactsRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_VpnInterfaceFacts: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// `wireguard` or `amneziawg`, as the panel names them.
+  public var `protocol`: String = String()
+
+  public var interface: String = String()
+
+  public var mtu: UInt32 = 0
+
+  /// The tunnel runs in the kernel; false is a userspace program.
+  public var kernel: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_VpnSpeedFacts: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var interfaces: [Gryonixnexusd_V1_VpnInterfaceFacts] = []
+
+  public var cpuCores: UInt32 = 0
+
+  /// One-minute load average.
+  public var load: Double = 0
+
+  /// UDP packets the host dropped since it started, by reason.
+  public var udpReceiveErrors: UInt64 = 0
+
+  public var udpBufferErrors: UInt64 = 0
+
+  /// The MTU phones are given.
+  public var clientMtu: UInt32 = 0
+
+  /// AmneziaWG in the kernel: off, working, on or failed.
+  public var amneziaKernelStatus: String = String()
+
+  /// Why it failed, in the agent's words; while working, how far it got as "3/4"; empty otherwise.
+  public var amneziaKernelNote: String = String()
+
+  /// This server can build the module (Debian or Ubuntu, enough disk).
+  public var amneziaKernelPossible: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -6637,6 +7372,12 @@ public nonisolated struct Gryonixnexusd_V1_NotifyChecks: Sendable {
   /// Someone signed in over SSH, not with an app key.
   public var sshLogins: Bool = false
 
+  /// The machine stays overloaded: load twice its cores, or memory nearly gone.
+  public var unusualLoad: Bool = false
+
+  /// Minutes between widget summaries. 0 means the default, 60.
+  public var widgetRefreshMinutes: UInt32 = 0
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -6777,41 +7518,62 @@ public nonisolated struct Gryonixnexusd_V1_GetNotifySettingsRequest: Sendable {
   public init() {}
 }
 
-public nonisolated struct Gryonixnexusd_V1_SetNotifySettingsRequest: Sendable {
+public nonisolated struct Gryonixnexusd_V1_SetNotifySettingsRequest: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var channel: Gryonixnexusd_V1_NotifyChannel = .unspecified
+  public var channel: Gryonixnexusd_V1_NotifyChannel {
+    get {_storage._channel}
+    set {_uniqueStorage()._channel = newValue}
+  }
 
-  public var relayURL: String = String()
+  public var relayURL: String {
+    get {_storage._relayURL}
+    set {_uniqueStorage()._relayURL = newValue}
+  }
 
-  public var ntfyURL: String = String()
+  public var ntfyURL: String {
+    get {_storage._ntfyURL}
+    set {_uniqueStorage()._ntfyURL = newValue}
+  }
 
-  public var ntfyTopic: String = String()
+  public var ntfyTopic: String {
+    get {_storage._ntfyTopic}
+    set {_uniqueStorage()._ntfyTopic = newValue}
+  }
 
   public var checks: Gryonixnexusd_V1_NotifyChecks {
-    get {_checks ?? Gryonixnexusd_V1_NotifyChecks()}
-    set {_checks = newValue}
+    get {_storage._checks ?? Gryonixnexusd_V1_NotifyChecks()}
+    set {_uniqueStorage()._checks = newValue}
   }
   /// Returns true if `checks` has been explicitly set.
-  public var hasChecks: Bool {self._checks != nil}
+  public var hasChecks: Bool {_storage._checks != nil}
   /// Clears the value of `checks`. Subsequent reads from it will return its default value.
-  public mutating func clearChecks() {self._checks = nil}
+  public mutating func clearChecks() {_uniqueStorage()._checks = nil}
 
-  public var language: String = String()
+  public var language: String {
+    get {_storage._language}
+    set {_uniqueStorage()._language = newValue}
+  }
 
   /// Keep these checks instead of following the app defaults.
-  public var customChecks: Bool = false
+  public var customChecks: Bool {
+    get {_storage._customChecks}
+    set {_uniqueStorage()._customChecks = newValue}
+  }
 
   /// This app's SSH public key; its sign-ins never notify.
-  public var appPublicKey: String = String()
+  public var appPublicKey: String {
+    get {_storage._appPublicKey}
+    set {_uniqueStorage()._appPublicKey = newValue}
+  }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _checks: Gryonixnexusd_V1_NotifyChecks? = nil
+  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
 public nonisolated struct Gryonixnexusd_V1_RegisterNotifyDeviceRequest: Sendable {
@@ -6836,6 +7598,9 @@ public nonisolated struct Gryonixnexusd_V1_RegisterNotifyDeviceRequest: Sendable
 
   /// The device's name, shown in the list of devices.
   public var name: String = String()
+
+  /// The sound chosen per kind of alert, e.g. "backups" -> "chime"; "none" is silent.
+  public var sounds: Dictionary<String,String> = [:]
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -7356,6 +8121,98 @@ public nonisolated struct Gryonixnexusd_V1_VaultwardenTwoFactor: Sendable {
   public init() {}
 }
 
+public nonisolated struct Gryonixnexusd_V1_CheckInstallRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Catalog ids, as in InstallServiceRequest.service_id.
+  public var services: [String] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// One thing the machine lacks for one service.
+public nonisolated struct Gryonixnexusd_V1_InstallFinding: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var service: String = String()
+
+  public var severity: Gryonixnexusd_V1_InstallFinding.Severity = .unspecified
+
+  /// A stable id the app turns into its own words: "needs_newer_os",
+  /// "package_unavailable", "reduced_on_older_os", "no_sound_card".
+  public var code: String = String()
+
+  /// The values the words need, in the order the code defines.
+  public var args: [String] = []
+
+  /// The same finding in English, for logs and apps that do not know the code.
+  public var message: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public nonisolated enum Severity: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+    case unspecified // = 0
+
+    /// It installs, but without part of what the service normally brings.
+    case limited // = 1
+
+    /// It will not install here; the agent refuses before changing anything.
+    case blocked // = 2
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .unspecified
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .unspecified
+      case 1: self = .limited
+      case 2: self = .blocked
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .unspecified: return 0
+      case .limited: return 1
+      case .blocked: return 2
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [Gryonixnexusd_V1_InstallFinding.Severity] = [
+      .unspecified,
+      .limited,
+      .blocked,
+    ]
+
+  }
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_CheckInstallResult: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var findings: [Gryonixnexusd_V1_InstallFinding] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public nonisolated struct Gryonixnexusd_V1_StartInstallPlanRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -7421,6 +8278,245 @@ public nonisolated struct Gryonixnexusd_V1_InstallPlanItem: Sendable {
   public var jobID: String = String()
 
   public var failure: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_ListImagesRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_DockerImage: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var id: String = String()
+
+  public var repository: String = String()
+
+  public var tag: String = String()
+
+  public var sizeBytes: UInt64 = 0
+
+  public var containers: UInt32 = 0
+
+  public var inUse: Bool = false
+
+  public var createdSince: String = String()
+
+  /// The string RemoveImage takes: repository:tag, or the id when untagged.
+  public var reference: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_ImageInventory: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var images: [Gryonixnexusd_V1_DockerImage] = []
+
+  public var unavailableReason: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_ListVolumesRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_DockerVolume: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var name: String = String()
+
+  public var driver: String = String()
+
+  public var sizeBytes: UInt64 = 0
+
+  public var containers: UInt32 = 0
+
+  public var inUse: Bool = false
+
+  /// Belongs to a compose project of a catalog service.
+  public var managed: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_VolumeInventory: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var volumes: [Gryonixnexusd_V1_DockerVolume] = []
+
+  public var unavailableReason: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_ListNetworksRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_DockerNetwork: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var id: String = String()
+
+  public var name: String = String()
+
+  public var driver: String = String()
+
+  public var scope: String = String()
+
+  public var containers: UInt32 = 0
+
+  public var inUse: Bool = false
+
+  /// Belongs to a compose project of a catalog service.
+  public var managed: Bool = false
+
+  /// bridge, host or none: the engine's own.
+  public var builtin: Bool = false
+
+  /// No route to the outside.
+  public var `internal`: Bool = false
+
+  public var subnet: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_NetworkInventory: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var networks: [Gryonixnexusd_V1_DockerNetwork] = []
+
+  public var unavailableReason: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_RemoveNetworkRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var name: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_RemoveImageRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var reference: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_RemoveVolumeRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var name: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_DockerRemovalResult: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var removed: Bool = false
+
+  /// Why nothing was removed, or the engine's own message.
+  public var message: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_PruneUnusedRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var images: Bool = false
+
+  public var volumes: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Gryonixnexusd_V1_PruneUnusedResult: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var imagesRemoved: UInt32 = 0
+
+  public var volumesRemoved: UInt32 = 0
+
+  public var reclaimedBytes: UInt64 = 0
+
+  /// Items the engine refused, one line each.
+  public var failures: [String] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -7749,6 +8845,760 @@ nonisolated extension Gryonixnexusd_V1_AgentUpdateEvent: SwiftProtobuf.Message, 
     if lhs.text != rhs.text {return false}
     if lhs.reason != rhs.reason {return false}
     if lhs.jobID != rhs.jobID {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_HomeOnlyPort: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".HomeOnlyPort"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}proto\0\u{1}port\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.proto) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.port) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.proto.isEmpty {
+      try visitor.visitSingularStringField(value: self.proto, fieldNumber: 1)
+    }
+    if self.port != 0 {
+      try visitor.visitSingularUInt32Field(value: self.port, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_HomeOnlyPort, rhs: Gryonixnexusd_V1_HomeOnlyPort) -> Bool {
+    if lhs.proto != rhs.proto {return false}
+    if lhs.port != rhs.port {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_SetHomeOnlyPortsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetHomeOnlyPortsRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}ports\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.ports) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.ports.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.ports, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_SetHomeOnlyPortsRequest, rhs: Gryonixnexusd_V1_SetHomeOnlyPortsRequest) -> Bool {
+    if lhs.ports != rhs.ports {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_SetHomeOnlyPortsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetHomeOnlyPortsResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}ports\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.ports) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.ports.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.ports, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_SetHomeOnlyPortsResponse, rhs: Gryonixnexusd_V1_SetHomeOnlyPortsResponse) -> Bool {
+    if lhs.ports != rhs.ports {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_GetMcpAccessRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetMcpAccessRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_GetMcpAccessRequest, rhs: Gryonixnexusd_V1_GetMcpAccessRequest) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_SetMcpAccessRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetMcpAccessRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}enabled\0\u{3}public_key\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.enabled) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.publicKey) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.enabled != false {
+      try visitor.visitSingularBoolField(value: self.enabled, fieldNumber: 1)
+    }
+    if !self.publicKey.isEmpty {
+      try visitor.visitSingularStringField(value: self.publicKey, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_SetMcpAccessRequest, rhs: Gryonixnexusd_V1_SetMcpAccessRequest) -> Bool {
+    if lhs.enabled != rhs.enabled {return false}
+    if lhs.publicKey != rhs.publicKey {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_McpAccessState: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".McpAccessState"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}enabled\0\u{1}users\0\u{1}command\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.enabled) }()
+      case 2: try { try decoder.decodeRepeatedStringField(value: &self.users) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.command) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.enabled != false {
+      try visitor.visitSingularBoolField(value: self.enabled, fieldNumber: 1)
+    }
+    if !self.users.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.users, fieldNumber: 2)
+    }
+    if !self.command.isEmpty {
+      try visitor.visitSingularStringField(value: self.command, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_McpAccessState, rhs: Gryonixnexusd_V1_McpAccessState) -> Bool {
+    if lhs.enabled != rhs.enabled {return false}
+    if lhs.users != rhs.users {return false}
+    if lhs.command != rhs.command {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_GetAppModulesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetAppModulesRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_GetAppModulesRequest, rhs: Gryonixnexusd_V1_GetAppModulesRequest) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_AppModuleSet: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".AppModuleSet"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}on\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedStringField(value: &self.on) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.on.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.on, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_AppModuleSet, rhs: Gryonixnexusd_V1_AppModuleSet) -> Bool {
+    if lhs.on != rhs.on {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_GetServiceNamesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetServiceNamesRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_GetServiceNamesRequest, rhs: Gryonixnexusd_V1_GetServiceNamesRequest) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_SetServiceNameRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetServiceNameRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}service_id\0\u{1}name\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.serviceID) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.serviceID.isEmpty {
+      try visitor.visitSingularStringField(value: self.serviceID, fieldNumber: 1)
+    }
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_SetServiceNameRequest, rhs: Gryonixnexusd_V1_SetServiceNameRequest) -> Bool {
+    if lhs.serviceID != rhs.serviceID {return false}
+    if lhs.name != rhs.name {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_ServiceNameSet: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ServiceNameSet"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}names\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufString,SwiftProtobuf.ProtobufString>.self, value: &self.names) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.names.isEmpty {
+      try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufString,SwiftProtobuf.ProtobufString>.self, value: self.names, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_ServiceNameSet, rhs: Gryonixnexusd_V1_ServiceNameSet) -> Bool {
+    if lhs.names != rhs.names {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_OdioCallRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".OdioCallRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}method\0\u{1}path\0\u{1}body\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.method) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.path) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.body) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.method.isEmpty {
+      try visitor.visitSingularStringField(value: self.method, fieldNumber: 1)
+    }
+    if !self.path.isEmpty {
+      try visitor.visitSingularStringField(value: self.path, fieldNumber: 2)
+    }
+    if !self.body.isEmpty {
+      try visitor.visitSingularStringField(value: self.body, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_OdioCallRequest, rhs: Gryonixnexusd_V1_OdioCallRequest) -> Bool {
+    if lhs.method != rhs.method {return false}
+    if lhs.path != rhs.path {return false}
+    if lhs.body != rhs.body {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_OdioCallResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".OdioCallResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}status\0\u{1}body\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt32Field(value: &self.status) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.body) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.status != 0 {
+      try visitor.visitSingularUInt32Field(value: self.status, fieldNumber: 1)
+    }
+    if !self.body.isEmpty {
+      try visitor.visitSingularStringField(value: self.body, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_OdioCallResponse, rhs: Gryonixnexusd_V1_OdioCallResponse) -> Bool {
+    if lhs.status != rhs.status {return false}
+    if lhs.body != rhs.body {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_ListAudioOutputsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ListAudioOutputsRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_ListAudioOutputsRequest, rhs: Gryonixnexusd_V1_ListAudioOutputsRequest) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_AudioOutput: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".AudioOutput"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}device\0\u{1}title\0\u{1}mixers\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.device) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.title) }()
+      case 3: try { try decoder.decodeRepeatedStringField(value: &self.mixers) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.device.isEmpty {
+      try visitor.visitSingularStringField(value: self.device, fieldNumber: 1)
+    }
+    if !self.title.isEmpty {
+      try visitor.visitSingularStringField(value: self.title, fieldNumber: 2)
+    }
+    if !self.mixers.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.mixers, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_AudioOutput, rhs: Gryonixnexusd_V1_AudioOutput) -> Bool {
+    if lhs.device != rhs.device {return false}
+    if lhs.title != rhs.title {return false}
+    if lhs.mixers != rhs.mixers {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_ListAudioOutputsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ListAudioOutputsResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}outputs\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.outputs) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.outputs.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.outputs, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_ListAudioOutputsResponse, rhs: Gryonixnexusd_V1_ListAudioOutputsResponse) -> Bool {
+    if lhs.outputs != rhs.outputs {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_ProbePublicPortsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ProbePublicPortsRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}host\0\u{1}ports\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.host) }()
+      case 2: try { try decoder.decodeRepeatedUInt32Field(value: &self.ports) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.host.isEmpty {
+      try visitor.visitSingularStringField(value: self.host, fieldNumber: 1)
+    }
+    if !self.ports.isEmpty {
+      try visitor.visitPackedUInt32Field(value: self.ports, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_ProbePublicPortsRequest, rhs: Gryonixnexusd_V1_ProbePublicPortsRequest) -> Bool {
+    if lhs.host != rhs.host {return false}
+    if lhs.ports != rhs.ports {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_PortProbe: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".PortProbe"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}port\0\u{1}open\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt32Field(value: &self.port) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.`open`) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.port != 0 {
+      try visitor.visitSingularUInt32Field(value: self.port, fieldNumber: 1)
+    }
+    if self.`open` != false {
+      try visitor.visitSingularBoolField(value: self.`open`, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_PortProbe, rhs: Gryonixnexusd_V1_PortProbe) -> Bool {
+    if lhs.port != rhs.port {return false}
+    if lhs.`open` != rhs.`open` {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_ProbePublicPortsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ProbePublicPortsResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}ports\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.ports) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.ports.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.ports, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_ProbePublicPortsResponse, rhs: Gryonixnexusd_V1_ProbePublicPortsResponse) -> Bool {
+    if lhs.ports != rhs.ports {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_GetLocalRootCARequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetLocalRootCARequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_GetLocalRootCARequest, rhs: Gryonixnexusd_V1_GetLocalRootCARequest) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_GetLocalAliasesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetLocalAliasesRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_GetLocalAliasesRequest, rhs: Gryonixnexusd_V1_GetLocalAliasesRequest) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_SetLocalAliasRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetLocalAliasRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}host\0\u{1}on\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.host) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.on) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.host.isEmpty {
+      try visitor.visitSingularStringField(value: self.host, fieldNumber: 1)
+    }
+    if self.on != false {
+      try visitor.visitSingularBoolField(value: self.on, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_SetLocalAliasRequest, rhs: Gryonixnexusd_V1_SetLocalAliasRequest) -> Bool {
+    if lhs.host != rhs.host {return false}
+    if lhs.on != rhs.on {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_LocalAlias: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".LocalAlias"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}host\0\u{1}alias\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.host) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.alias) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.host.isEmpty {
+      try visitor.visitSingularStringField(value: self.host, fieldNumber: 1)
+    }
+    if !self.alias.isEmpty {
+      try visitor.visitSingularStringField(value: self.alias, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_LocalAlias, rhs: Gryonixnexusd_V1_LocalAlias) -> Bool {
+    if lhs.host != rhs.host {return false}
+    if lhs.alias != rhs.alias {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_LocalAliasesState: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".LocalAliasesState"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}aliases\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.aliases) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.aliases.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.aliases, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_LocalAliasesState, rhs: Gryonixnexusd_V1_LocalAliasesState) -> Bool {
+    if lhs.aliases != rhs.aliases {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_GetLocalRootCAResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetLocalRootCAResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}pem\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.pem) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.pem.isEmpty {
+      try visitor.visitSingularStringField(value: self.pem, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_GetLocalRootCAResponse, rhs: Gryonixnexusd_V1_GetLocalRootCAResponse) -> Bool {
+    if lhs.pem != rhs.pem {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -9233,7 +11083,126 @@ nonisolated extension Gryonixnexusd_V1_GetStateRequest: SwiftProtobuf.Message, S
 
 nonisolated extension Gryonixnexusd_V1_State: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".State"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}agent_version\0\u{1}host\0\u{1}services\0\u{3}discovered_at\0\u{3}home_doors\0\u{3}wake_on_lan\0\u{3}mesh_address\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}agent_version\0\u{1}host\0\u{1}services\0\u{3}discovered_at\0\u{3}home_doors\0\u{3}wake_on_lan\0\u{3}mesh_address\0\u{3}agent_health\0")
+
+  fileprivate class _StorageClass {
+    var _agentVersion: String = String()
+    var _host: Gryonixnexusd_V1_Host? = nil
+    var _services: [Gryonixnexusd_V1_Service] = []
+    var _discoveredAt: Int64 = 0
+    var _homeDoors: [Gryonixnexusd_V1_HomeNetworkDoor] = []
+    var _wakeOnLan: Gryonixnexusd_V1_WakeOnLANInfo? = nil
+    var _meshAddress: String = String()
+    var _agentHealth: Gryonixnexusd_V1_AgentHealth? = nil
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _agentVersion = source._agentVersion
+      _host = source._host
+      _services = source._services
+      _discoveredAt = source._discoveredAt
+      _homeDoors = source._homeDoors
+      _wakeOnLan = source._wakeOnLan
+      _meshAddress = source._meshAddress
+      _agentHealth = source._agentHealth
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularStringField(value: &_storage._agentVersion) }()
+        case 2: try { try decoder.decodeSingularMessageField(value: &_storage._host) }()
+        case 3: try { try decoder.decodeRepeatedMessageField(value: &_storage._services) }()
+        case 4: try { try decoder.decodeSingularInt64Field(value: &_storage._discoveredAt) }()
+        case 5: try { try decoder.decodeRepeatedMessageField(value: &_storage._homeDoors) }()
+        case 6: try { try decoder.decodeSingularMessageField(value: &_storage._wakeOnLan) }()
+        case 7: try { try decoder.decodeSingularStringField(value: &_storage._meshAddress) }()
+        case 8: try { try decoder.decodeSingularMessageField(value: &_storage._agentHealth) }()
+        default: break
+        }
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      if !_storage._agentVersion.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._agentVersion, fieldNumber: 1)
+      }
+      try { if let v = _storage._host {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+      } }()
+      if !_storage._services.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._services, fieldNumber: 3)
+      }
+      if _storage._discoveredAt != 0 {
+        try visitor.visitSingularInt64Field(value: _storage._discoveredAt, fieldNumber: 4)
+      }
+      if !_storage._homeDoors.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._homeDoors, fieldNumber: 5)
+      }
+      try { if let v = _storage._wakeOnLan {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+      } }()
+      if !_storage._meshAddress.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._meshAddress, fieldNumber: 7)
+      }
+      try { if let v = _storage._agentHealth {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+      } }()
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_State, rhs: Gryonixnexusd_V1_State) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._agentVersion != rhs_storage._agentVersion {return false}
+        if _storage._host != rhs_storage._host {return false}
+        if _storage._services != rhs_storage._services {return false}
+        if _storage._discoveredAt != rhs_storage._discoveredAt {return false}
+        if _storage._homeDoors != rhs_storage._homeDoors {return false}
+        if _storage._wakeOnLan != rhs_storage._wakeOnLan {return false}
+        if _storage._meshAddress != rhs_storage._meshAddress {return false}
+        if _storage._agentHealth != rhs_storage._agentHealth {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_AgentHealth: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".AgentHealth"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}memory_bytes\0\u{3}peak_memory_bytes\0\u{3}open_channels\0\u{3}started_at\0\u{1}modules\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -9241,55 +11210,86 @@ nonisolated extension Gryonixnexusd_V1_State: SwiftProtobuf.Message, SwiftProtob
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.agentVersion) }()
-      case 2: try { try decoder.decodeSingularMessageField(value: &self._host) }()
-      case 3: try { try decoder.decodeRepeatedMessageField(value: &self.services) }()
-      case 4: try { try decoder.decodeSingularInt64Field(value: &self.discoveredAt) }()
-      case 5: try { try decoder.decodeRepeatedMessageField(value: &self.homeDoors) }()
-      case 6: try { try decoder.decodeSingularMessageField(value: &self._wakeOnLan) }()
-      case 7: try { try decoder.decodeSingularStringField(value: &self.meshAddress) }()
+      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.memoryBytes) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.peakMemoryBytes) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.openChannels) }()
+      case 4: try { try decoder.decodeSingularInt64Field(value: &self.startedAt) }()
+      case 5: try { try decoder.decodeRepeatedMessageField(value: &self.modules) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.agentVersion.isEmpty {
-      try visitor.visitSingularStringField(value: self.agentVersion, fieldNumber: 1)
+    if self.memoryBytes != 0 {
+      try visitor.visitSingularUInt64Field(value: self.memoryBytes, fieldNumber: 1)
     }
-    try { if let v = self._host {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    } }()
-    if !self.services.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.services, fieldNumber: 3)
+    if self.peakMemoryBytes != 0 {
+      try visitor.visitSingularUInt64Field(value: self.peakMemoryBytes, fieldNumber: 2)
     }
-    if self.discoveredAt != 0 {
-      try visitor.visitSingularInt64Field(value: self.discoveredAt, fieldNumber: 4)
+    if self.openChannels != 0 {
+      try visitor.visitSingularUInt32Field(value: self.openChannels, fieldNumber: 3)
     }
-    if !self.homeDoors.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.homeDoors, fieldNumber: 5)
+    if self.startedAt != 0 {
+      try visitor.visitSingularInt64Field(value: self.startedAt, fieldNumber: 4)
     }
-    try { if let v = self._wakeOnLan {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
-    } }()
-    if !self.meshAddress.isEmpty {
-      try visitor.visitSingularStringField(value: self.meshAddress, fieldNumber: 7)
+    if !self.modules.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.modules, fieldNumber: 5)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Gryonixnexusd_V1_State, rhs: Gryonixnexusd_V1_State) -> Bool {
-    if lhs.agentVersion != rhs.agentVersion {return false}
-    if lhs._host != rhs._host {return false}
-    if lhs.services != rhs.services {return false}
-    if lhs.discoveredAt != rhs.discoveredAt {return false}
-    if lhs.homeDoors != rhs.homeDoors {return false}
-    if lhs._wakeOnLan != rhs._wakeOnLan {return false}
-    if lhs.meshAddress != rhs.meshAddress {return false}
+  public static func ==(lhs: Gryonixnexusd_V1_AgentHealth, rhs: Gryonixnexusd_V1_AgentHealth) -> Bool {
+    if lhs.memoryBytes != rhs.memoryBytes {return false}
+    if lhs.peakMemoryBytes != rhs.peakMemoryBytes {return false}
+    if lhs.openChannels != rhs.openChannels {return false}
+    if lhs.startedAt != rhs.startedAt {return false}
+    if lhs.modules != rhs.modules {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_AgentModule: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".AgentModule"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}version\0\u{3}size_bytes\0\u{1}running\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.version) }()
+      case 3: try { try decoder.decodeSingularUInt64Field(value: &self.sizeBytes) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.running) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
+    }
+    if !self.version.isEmpty {
+      try visitor.visitSingularStringField(value: self.version, fieldNumber: 2)
+    }
+    if self.sizeBytes != 0 {
+      try visitor.visitSingularUInt64Field(value: self.sizeBytes, fieldNumber: 3)
+    }
+    if self.running != false {
+      try visitor.visitSingularBoolField(value: self.running, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_AgentModule, rhs: Gryonixnexusd_V1_AgentModule) -> Bool {
+    if lhs.name != rhs.name {return false}
+    if lhs.version != rhs.version {return false}
+    if lhs.sizeBytes != rhs.sizeBytes {return false}
+    if lhs.running != rhs.running {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -11519,7 +13519,7 @@ nonisolated extension Gryonixnexusd_V1_MetricsHistoryResponse: SwiftProtobuf.Mes
 
 nonisolated extension Gryonixnexusd_V1_MetricsHistoryPoint: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".MetricsHistoryPoint"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}at\0\u{3}cpu_percent\0\u{3}mem_used_bytes\0\u{3}mem_total_bytes\0\u{3}disk_used_bytes\0\u{3}disk_total_bytes\0\u{3}net_received_per_second\0\u{3}net_sent_per_second\0\u{3}disk_read_per_second\0\u{3}disk_written_per_second\0\u{1}load1\0\u{3}temperature_celsius\0\u{3}power_watts\0\u{3}power_source\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}at\0\u{3}cpu_percent\0\u{3}mem_used_bytes\0\u{3}mem_total_bytes\0\u{3}disk_used_bytes\0\u{3}disk_total_bytes\0\u{3}net_received_per_second\0\u{3}net_sent_per_second\0\u{3}disk_read_per_second\0\u{3}disk_written_per_second\0\u{1}load1\0\u{3}temperature_celsius\0\u{3}power_watts\0\u{3}power_source\0\u{3}swap_used_bytes\0\u{3}swap_total_bytes\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -11541,6 +13541,8 @@ nonisolated extension Gryonixnexusd_V1_MetricsHistoryPoint: SwiftProtobuf.Messag
       case 12: try { try decoder.decodeSingularDoubleField(value: &self._temperatureCelsius) }()
       case 13: try { try decoder.decodeSingularDoubleField(value: &self._powerWatts) }()
       case 14: try { try decoder.decodeSingularStringField(value: &self.powerSource) }()
+      case 15: try { try decoder.decodeSingularInt64Field(value: &self._swapUsedBytes) }()
+      case 16: try { try decoder.decodeSingularInt64Field(value: &self._swapTotalBytes) }()
       default: break
       }
     }
@@ -11593,6 +13595,12 @@ nonisolated extension Gryonixnexusd_V1_MetricsHistoryPoint: SwiftProtobuf.Messag
     if !self.powerSource.isEmpty {
       try visitor.visitSingularStringField(value: self.powerSource, fieldNumber: 14)
     }
+    try { if let v = self._swapUsedBytes {
+      try visitor.visitSingularInt64Field(value: v, fieldNumber: 15)
+    } }()
+    try { if let v = self._swapTotalBytes {
+      try visitor.visitSingularInt64Field(value: v, fieldNumber: 16)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -11611,6 +13619,8 @@ nonisolated extension Gryonixnexusd_V1_MetricsHistoryPoint: SwiftProtobuf.Messag
     if lhs._temperatureCelsius != rhs._temperatureCelsius {return false}
     if lhs._powerWatts != rhs._powerWatts {return false}
     if lhs.powerSource != rhs.powerSource {return false}
+    if lhs._swapUsedBytes != rhs._swapUsedBytes {return false}
+    if lhs._swapTotalBytes != rhs._swapTotalBytes {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -11705,6 +13715,165 @@ nonisolated extension Gryonixnexusd_V1_SerialDevice: SwiftProtobuf.Message, Swif
     if lhs.path != rhs.path {return false}
     if lhs.target != rhs.target {return false}
     if lhs.label != rhs.label {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_GetSystemSettingsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetSystemSettingsRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_GetSystemSettingsRequest, rhs: Gryonixnexusd_V1_GetSystemSettingsRequest) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_SystemSettings: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SystemSettings"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}time_zone\0\u{3}host_name\0\u{3}ntp_enabled\0\u{3}ntp_synchronized\0\u{3}time_zones\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.timeZone) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.hostName) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.ntpEnabled) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.ntpSynchronized) }()
+      case 5: try { try decoder.decodeRepeatedStringField(value: &self.timeZones) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.timeZone.isEmpty {
+      try visitor.visitSingularStringField(value: self.timeZone, fieldNumber: 1)
+    }
+    if !self.hostName.isEmpty {
+      try visitor.visitSingularStringField(value: self.hostName, fieldNumber: 2)
+    }
+    if self.ntpEnabled != false {
+      try visitor.visitSingularBoolField(value: self.ntpEnabled, fieldNumber: 3)
+    }
+    if self.ntpSynchronized != false {
+      try visitor.visitSingularBoolField(value: self.ntpSynchronized, fieldNumber: 4)
+    }
+    if !self.timeZones.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.timeZones, fieldNumber: 5)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_SystemSettings, rhs: Gryonixnexusd_V1_SystemSettings) -> Bool {
+    if lhs.timeZone != rhs.timeZone {return false}
+    if lhs.hostName != rhs.hostName {return false}
+    if lhs.ntpEnabled != rhs.ntpEnabled {return false}
+    if lhs.ntpSynchronized != rhs.ntpSynchronized {return false}
+    if lhs.timeZones != rhs.timeZones {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_SetTimeZoneRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetTimeZoneRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}time_zone\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.timeZone) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.timeZone.isEmpty {
+      try visitor.visitSingularStringField(value: self.timeZone, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_SetTimeZoneRequest, rhs: Gryonixnexusd_V1_SetTimeZoneRequest) -> Bool {
+    if lhs.timeZone != rhs.timeZone {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_SetHostNameRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetHostNameRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}host_name\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.hostName) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.hostName.isEmpty {
+      try visitor.visitSingularStringField(value: self.hostName, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_SetHostNameRequest, rhs: Gryonixnexusd_V1_SetHostNameRequest) -> Bool {
+    if lhs.hostName != rhs.hostName {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_SetTimeSyncRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetTimeSyncRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}enabled\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.enabled) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.enabled != false {
+      try visitor.visitSingularBoolField(value: self.enabled, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_SetTimeSyncRequest, rhs: Gryonixnexusd_V1_SetTimeSyncRequest) -> Bool {
+    if lhs.enabled != rhs.enabled {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -12189,7 +14358,7 @@ nonisolated extension Gryonixnexusd_V1_GetBackupScheduleRequest: SwiftProtobuf.M
 
 nonisolated extension Gryonixnexusd_V1_BackupSchedulePolicy: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".BackupSchedulePolicy"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}schedule\0\u{1}retention\0\u{1}services\0\u{1}destination\0\u{3}destination_public_key\0\u{3}last_shipment_at\0\u{3}last_shipment_error\0\u{3}last_shipment_ok\0\u{1}drives\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}schedule\0\u{1}retention\0\u{1}services\0\u{1}destination\0\u{3}destination_public_key\0\u{3}last_shipment_at\0\u{3}last_shipment_error\0\u{3}last_shipment_ok\0\u{1}drives\0\u{1}parts\0")
 
   fileprivate class _StorageClass {
     var _schedule: String = String()
@@ -12201,6 +14370,7 @@ nonisolated extension Gryonixnexusd_V1_BackupSchedulePolicy: SwiftProtobuf.Messa
     var _lastShipmentError: String = String()
     var _lastShipmentOk: Bool = false
     var _drives: Gryonixnexusd_V1_BackupDrives? = nil
+    var _parts: Gryonixnexusd_V1_BackupPartChoice? = nil
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -12220,6 +14390,7 @@ nonisolated extension Gryonixnexusd_V1_BackupSchedulePolicy: SwiftProtobuf.Messa
       _lastShipmentError = source._lastShipmentError
       _lastShipmentOk = source._lastShipmentOk
       _drives = source._drives
+      _parts = source._parts
     }
   }
 
@@ -12247,6 +14418,7 @@ nonisolated extension Gryonixnexusd_V1_BackupSchedulePolicy: SwiftProtobuf.Messa
         case 7: try { try decoder.decodeSingularStringField(value: &_storage._lastShipmentError) }()
         case 8: try { try decoder.decodeSingularBoolField(value: &_storage._lastShipmentOk) }()
         case 9: try { try decoder.decodeSingularMessageField(value: &_storage._drives) }()
+        case 10: try { try decoder.decodeSingularMessageField(value: &_storage._parts) }()
         default: break
         }
       }
@@ -12286,6 +14458,9 @@ nonisolated extension Gryonixnexusd_V1_BackupSchedulePolicy: SwiftProtobuf.Messa
       try { if let v = _storage._drives {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
       } }()
+      try { if let v = _storage._parts {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -12304,10 +14479,129 @@ nonisolated extension Gryonixnexusd_V1_BackupSchedulePolicy: SwiftProtobuf.Messa
         if _storage._lastShipmentError != rhs_storage._lastShipmentError {return false}
         if _storage._lastShipmentOk != rhs_storage._lastShipmentOk {return false}
         if _storage._drives != rhs_storage._drives {return false}
+        if _storage._parts != rhs_storage._parts {return false}
         return true
       }
       if !storagesAreEqual {return false}
     }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_BackupParts: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".BackupParts"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}files\0\u{1}settings\0\u{1}databases\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.files) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.settings) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.databases) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.files != false {
+      try visitor.visitSingularBoolField(value: self.files, fieldNumber: 1)
+    }
+    if self.settings != false {
+      try visitor.visitSingularBoolField(value: self.settings, fieldNumber: 2)
+    }
+    if self.databases != false {
+      try visitor.visitSingularBoolField(value: self.databases, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_BackupParts, rhs: Gryonixnexusd_V1_BackupParts) -> Bool {
+    if lhs.files != rhs.files {return false}
+    if lhs.settings != rhs.settings {return false}
+    if lhs.databases != rhs.databases {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_BackupPartChoice: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".BackupPartChoice"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}regular\0\u{3}before_update\0\u{1}services\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._regular) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._beforeUpdate) }()
+      case 3: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufString,Gryonixnexusd_V1_BackupPartChoice>.self, value: &self.services) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._regular {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try { if let v = self._beforeUpdate {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    if !self.services.isEmpty {
+      try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufString,Gryonixnexusd_V1_BackupPartChoice>.self, value: self.services, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_BackupPartChoice, rhs: Gryonixnexusd_V1_BackupPartChoice) -> Bool {
+    if lhs._regular != rhs._regular {return false}
+    if lhs._beforeUpdate != rhs._beforeUpdate {return false}
+    if lhs.services != rhs.services {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_SetBackupPartsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetBackupPartsRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}parts\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._parts) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._parts {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_SetBackupPartsRequest, rhs: Gryonixnexusd_V1_SetBackupPartsRequest) -> Bool {
+    if lhs._parts != rhs._parts {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -13094,7 +15388,7 @@ nonisolated extension Gryonixnexusd_V1_LockdownState: SwiftProtobuf.Message, Swi
 
 nonisolated extension Gryonixnexusd_V1_SetLockdownRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SetLockdownRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}mode\0\u{1}hosts\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}mode\0\u{1}hosts\0\u{3}deny_vpn_hosts\0\u{3}set_deny_vpn_hosts\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -13104,6 +15398,8 @@ nonisolated extension Gryonixnexusd_V1_SetLockdownRequest: SwiftProtobuf.Message
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.mode) }()
       case 2: try { try decoder.decodeRepeatedStringField(value: &self.hosts) }()
+      case 3: try { try decoder.decodeRepeatedStringField(value: &self.denyVpnHosts) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.setDenyVpnHosts) }()
       default: break
       }
     }
@@ -13116,12 +15412,144 @@ nonisolated extension Gryonixnexusd_V1_SetLockdownRequest: SwiftProtobuf.Message
     if !self.hosts.isEmpty {
       try visitor.visitRepeatedStringField(value: self.hosts, fieldNumber: 2)
     }
+    if !self.denyVpnHosts.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.denyVpnHosts, fieldNumber: 3)
+    }
+    if self.setDenyVpnHosts != false {
+      try visitor.visitSingularBoolField(value: self.setDenyVpnHosts, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Gryonixnexusd_V1_SetLockdownRequest, rhs: Gryonixnexusd_V1_SetLockdownRequest) -> Bool {
     if lhs.mode != rhs.mode {return false}
     if lhs.hosts != rhs.hosts {return false}
+    if lhs.denyVpnHosts != rhs.denyVpnHosts {return false}
+    if lhs.setDenyVpnHosts != rhs.setDenyVpnHosts {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_GetOpenAPIRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetOpenAPIRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_GetOpenAPIRequest, rhs: Gryonixnexusd_V1_GetOpenAPIRequest) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_OpenAPISite: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".OpenAPISite"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}service_id\0\u{1}paths\0\u{1}editable\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.serviceID) }()
+      case 2: try { try decoder.decodeRepeatedStringField(value: &self.paths) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.editable) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.serviceID.isEmpty {
+      try visitor.visitSingularStringField(value: self.serviceID, fieldNumber: 1)
+    }
+    if !self.paths.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.paths, fieldNumber: 2)
+    }
+    if self.editable != false {
+      try visitor.visitSingularBoolField(value: self.editable, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_OpenAPISite, rhs: Gryonixnexusd_V1_OpenAPISite) -> Bool {
+    if lhs.serviceID != rhs.serviceID {return false}
+    if lhs.paths != rhs.paths {return false}
+    if lhs.editable != rhs.editable {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_OpenAPIState: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".OpenAPIState"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}sites\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.sites) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.sites.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.sites, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_OpenAPIState, rhs: Gryonixnexusd_V1_OpenAPIState) -> Bool {
+    if lhs.sites != rhs.sites {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_SetOpenAPIRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetOpenAPIRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}service_id\0\u{1}paths\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.serviceID) }()
+      case 2: try { try decoder.decodeRepeatedStringField(value: &self.paths) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.serviceID.isEmpty {
+      try visitor.visitSingularStringField(value: self.serviceID, fieldNumber: 1)
+    }
+    if !self.paths.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.paths, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_SetOpenAPIRequest, rhs: Gryonixnexusd_V1_SetOpenAPIRequest) -> Bool {
+    if lhs.serviceID != rhs.serviceID {return false}
+    if lhs.paths != rhs.paths {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -13613,6 +16041,46 @@ nonisolated extension Gryonixnexusd_V1_SetSshKeyOnlyUsersRequest: SwiftProtobuf.
   public static func ==(lhs: Gryonixnexusd_V1_SetSshKeyOnlyUsersRequest, rhs: Gryonixnexusd_V1_SetSshKeyOnlyUsersRequest) -> Bool {
     if lhs.everyone != rhs.everyone {return false}
     if lhs.users != rhs.users {return false}
+    if lhs.loginUser != rhs.loginUser {return false}
+    if lhs.appPublicKey != rhs.appPublicKey {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_AuthorizeAppKeyRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".AuthorizeAppKeyRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}user\0\u{3}login_user\0\u{3}app_public_key\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.user) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.loginUser) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.appPublicKey) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.user.isEmpty {
+      try visitor.visitSingularStringField(value: self.user, fieldNumber: 1)
+    }
+    if !self.loginUser.isEmpty {
+      try visitor.visitSingularStringField(value: self.loginUser, fieldNumber: 2)
+    }
+    if !self.appPublicKey.isEmpty {
+      try visitor.visitSingularStringField(value: self.appPublicKey, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_AuthorizeAppKeyRequest, rhs: Gryonixnexusd_V1_AuthorizeAppKeyRequest) -> Bool {
+    if lhs.user != rhs.user {return false}
     if lhs.loginUser != rhs.loginUser {return false}
     if lhs.appPublicKey != rhs.appPublicKey {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -14346,6 +16814,170 @@ nonisolated extension Gryonixnexusd_V1_MeshNameList: SwiftProtobuf.Message, Swif
 
   public static func ==(lhs: Gryonixnexusd_V1_MeshNameList, rhs: Gryonixnexusd_V1_MeshNameList) -> Bool {
     if lhs.records != rhs.records {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_SetAmneziaKernelRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetAmneziaKernelRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}enabled\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.enabled) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.enabled != false {
+      try visitor.visitSingularBoolField(value: self.enabled, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_SetAmneziaKernelRequest, rhs: Gryonixnexusd_V1_SetAmneziaKernelRequest) -> Bool {
+    if lhs.enabled != rhs.enabled {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_GetVpnSpeedFactsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetVpnSpeedFactsRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_GetVpnSpeedFactsRequest, rhs: Gryonixnexusd_V1_GetVpnSpeedFactsRequest) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_VpnInterfaceFacts: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".VpnInterfaceFacts"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}protocol\0\u{1}interface\0\u{1}mtu\0\u{1}kernel\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.`protocol`) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.interface) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.mtu) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.kernel) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.`protocol`.isEmpty {
+      try visitor.visitSingularStringField(value: self.`protocol`, fieldNumber: 1)
+    }
+    if !self.interface.isEmpty {
+      try visitor.visitSingularStringField(value: self.interface, fieldNumber: 2)
+    }
+    if self.mtu != 0 {
+      try visitor.visitSingularUInt32Field(value: self.mtu, fieldNumber: 3)
+    }
+    if self.kernel != false {
+      try visitor.visitSingularBoolField(value: self.kernel, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_VpnInterfaceFacts, rhs: Gryonixnexusd_V1_VpnInterfaceFacts) -> Bool {
+    if lhs.`protocol` != rhs.`protocol` {return false}
+    if lhs.interface != rhs.interface {return false}
+    if lhs.mtu != rhs.mtu {return false}
+    if lhs.kernel != rhs.kernel {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_VpnSpeedFacts: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".VpnSpeedFacts"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}interfaces\0\u{3}cpu_cores\0\u{1}load\0\u{3}udp_receive_errors\0\u{3}udp_buffer_errors\0\u{3}client_mtu\0\u{3}amnezia_kernel_status\0\u{3}amnezia_kernel_note\0\u{3}amnezia_kernel_possible\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.interfaces) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.cpuCores) }()
+      case 3: try { try decoder.decodeSingularDoubleField(value: &self.load) }()
+      case 4: try { try decoder.decodeSingularUInt64Field(value: &self.udpReceiveErrors) }()
+      case 5: try { try decoder.decodeSingularUInt64Field(value: &self.udpBufferErrors) }()
+      case 6: try { try decoder.decodeSingularUInt32Field(value: &self.clientMtu) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.amneziaKernelStatus) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.amneziaKernelNote) }()
+      case 9: try { try decoder.decodeSingularBoolField(value: &self.amneziaKernelPossible) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.interfaces.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.interfaces, fieldNumber: 1)
+    }
+    if self.cpuCores != 0 {
+      try visitor.visitSingularUInt32Field(value: self.cpuCores, fieldNumber: 2)
+    }
+    if self.load.bitPattern != 0 {
+      try visitor.visitSingularDoubleField(value: self.load, fieldNumber: 3)
+    }
+    if self.udpReceiveErrors != 0 {
+      try visitor.visitSingularUInt64Field(value: self.udpReceiveErrors, fieldNumber: 4)
+    }
+    if self.udpBufferErrors != 0 {
+      try visitor.visitSingularUInt64Field(value: self.udpBufferErrors, fieldNumber: 5)
+    }
+    if self.clientMtu != 0 {
+      try visitor.visitSingularUInt32Field(value: self.clientMtu, fieldNumber: 6)
+    }
+    if !self.amneziaKernelStatus.isEmpty {
+      try visitor.visitSingularStringField(value: self.amneziaKernelStatus, fieldNumber: 7)
+    }
+    if !self.amneziaKernelNote.isEmpty {
+      try visitor.visitSingularStringField(value: self.amneziaKernelNote, fieldNumber: 8)
+    }
+    if self.amneziaKernelPossible != false {
+      try visitor.visitSingularBoolField(value: self.amneziaKernelPossible, fieldNumber: 9)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_VpnSpeedFacts, rhs: Gryonixnexusd_V1_VpnSpeedFacts) -> Bool {
+    if lhs.interfaces != rhs.interfaces {return false}
+    if lhs.cpuCores != rhs.cpuCores {return false}
+    if lhs.load != rhs.load {return false}
+    if lhs.udpReceiveErrors != rhs.udpReceiveErrors {return false}
+    if lhs.udpBufferErrors != rhs.udpBufferErrors {return false}
+    if lhs.clientMtu != rhs.clientMtu {return false}
+    if lhs.amneziaKernelStatus != rhs.amneziaKernelStatus {return false}
+    if lhs.amneziaKernelNote != rhs.amneziaKernelNote {return false}
+    if lhs.amneziaKernelPossible != rhs.amneziaKernelPossible {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -17217,7 +19849,7 @@ nonisolated extension Gryonixnexusd_V1_WatchTunnelActivityRequest: SwiftProtobuf
 
 nonisolated extension Gryonixnexusd_V1_NotifyChecks: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".NotifyChecks"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}raid\0\u{1}smart\0\u{3}disk_space\0\u{3}disk_space_percent\0\u{1}services\0\u{1}backups\0\u{3}agent_update\0\u{1}operations\0\u{3}ssh_logins\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}raid\0\u{1}smart\0\u{3}disk_space\0\u{3}disk_space_percent\0\u{1}services\0\u{1}backups\0\u{3}agent_update\0\u{1}operations\0\u{3}ssh_logins\0\u{3}unusual_load\0\u{3}widget_refresh_minutes\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -17234,6 +19866,8 @@ nonisolated extension Gryonixnexusd_V1_NotifyChecks: SwiftProtobuf.Message, Swif
       case 7: try { try decoder.decodeSingularBoolField(value: &self.agentUpdate) }()
       case 8: try { try decoder.decodeSingularBoolField(value: &self.operations) }()
       case 9: try { try decoder.decodeSingularBoolField(value: &self.sshLogins) }()
+      case 10: try { try decoder.decodeSingularBoolField(value: &self.unusualLoad) }()
+      case 11: try { try decoder.decodeSingularUInt32Field(value: &self.widgetRefreshMinutes) }()
       default: break
       }
     }
@@ -17267,6 +19901,12 @@ nonisolated extension Gryonixnexusd_V1_NotifyChecks: SwiftProtobuf.Message, Swif
     if self.sshLogins != false {
       try visitor.visitSingularBoolField(value: self.sshLogins, fieldNumber: 9)
     }
+    if self.unusualLoad != false {
+      try visitor.visitSingularBoolField(value: self.unusualLoad, fieldNumber: 10)
+    }
+    if self.widgetRefreshMinutes != 0 {
+      try visitor.visitSingularUInt32Field(value: self.widgetRefreshMinutes, fieldNumber: 11)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -17280,6 +19920,8 @@ nonisolated extension Gryonixnexusd_V1_NotifyChecks: SwiftProtobuf.Message, Swif
     if lhs.agentUpdate != rhs.agentUpdate {return false}
     if lhs.operations != rhs.operations {return false}
     if lhs.sshLogins != rhs.sshLogins {return false}
+    if lhs.unusualLoad != rhs.unusualLoad {return false}
+    if lhs.widgetRefreshMinutes != rhs.widgetRefreshMinutes {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -17526,66 +20168,116 @@ nonisolated extension Gryonixnexusd_V1_SetNotifySettingsRequest: SwiftProtobuf.M
   public static let protoMessageName: String = _protobuf_package + ".SetNotifySettingsRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}channel\0\u{3}relay_url\0\u{3}ntfy_url\0\u{3}ntfy_topic\0\u{1}checks\0\u{1}language\0\u{3}custom_checks\0\u{3}app_public_key\0")
 
+  fileprivate class _StorageClass {
+    var _channel: Gryonixnexusd_V1_NotifyChannel = .unspecified
+    var _relayURL: String = String()
+    var _ntfyURL: String = String()
+    var _ntfyTopic: String = String()
+    var _checks: Gryonixnexusd_V1_NotifyChecks? = nil
+    var _language: String = String()
+    var _customChecks: Bool = false
+    var _appPublicKey: String = String()
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _channel = source._channel
+      _relayURL = source._relayURL
+      _ntfyURL = source._ntfyURL
+      _ntfyTopic = source._ntfyTopic
+      _checks = source._checks
+      _language = source._language
+      _customChecks = source._customChecks
+      _appPublicKey = source._appPublicKey
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularEnumField(value: &self.channel) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.relayURL) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.ntfyURL) }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self.ntfyTopic) }()
-      case 5: try { try decoder.decodeSingularMessageField(value: &self._checks) }()
-      case 6: try { try decoder.decodeSingularStringField(value: &self.language) }()
-      case 7: try { try decoder.decodeSingularBoolField(value: &self.customChecks) }()
-      case 8: try { try decoder.decodeSingularStringField(value: &self.appPublicKey) }()
-      default: break
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularEnumField(value: &_storage._channel) }()
+        case 2: try { try decoder.decodeSingularStringField(value: &_storage._relayURL) }()
+        case 3: try { try decoder.decodeSingularStringField(value: &_storage._ntfyURL) }()
+        case 4: try { try decoder.decodeSingularStringField(value: &_storage._ntfyTopic) }()
+        case 5: try { try decoder.decodeSingularMessageField(value: &_storage._checks) }()
+        case 6: try { try decoder.decodeSingularStringField(value: &_storage._language) }()
+        case 7: try { try decoder.decodeSingularBoolField(value: &_storage._customChecks) }()
+        case 8: try { try decoder.decodeSingularStringField(value: &_storage._appPublicKey) }()
+        default: break
+        }
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if self.channel != .unspecified {
-      try visitor.visitSingularEnumField(value: self.channel, fieldNumber: 1)
-    }
-    if !self.relayURL.isEmpty {
-      try visitor.visitSingularStringField(value: self.relayURL, fieldNumber: 2)
-    }
-    if !self.ntfyURL.isEmpty {
-      try visitor.visitSingularStringField(value: self.ntfyURL, fieldNumber: 3)
-    }
-    if !self.ntfyTopic.isEmpty {
-      try visitor.visitSingularStringField(value: self.ntfyTopic, fieldNumber: 4)
-    }
-    try { if let v = self._checks {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
-    } }()
-    if !self.language.isEmpty {
-      try visitor.visitSingularStringField(value: self.language, fieldNumber: 6)
-    }
-    if self.customChecks != false {
-      try visitor.visitSingularBoolField(value: self.customChecks, fieldNumber: 7)
-    }
-    if !self.appPublicKey.isEmpty {
-      try visitor.visitSingularStringField(value: self.appPublicKey, fieldNumber: 8)
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      if _storage._channel != .unspecified {
+        try visitor.visitSingularEnumField(value: _storage._channel, fieldNumber: 1)
+      }
+      if !_storage._relayURL.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._relayURL, fieldNumber: 2)
+      }
+      if !_storage._ntfyURL.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._ntfyURL, fieldNumber: 3)
+      }
+      if !_storage._ntfyTopic.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._ntfyTopic, fieldNumber: 4)
+      }
+      try { if let v = _storage._checks {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+      } }()
+      if !_storage._language.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._language, fieldNumber: 6)
+      }
+      if _storage._customChecks != false {
+        try visitor.visitSingularBoolField(value: _storage._customChecks, fieldNumber: 7)
+      }
+      if !_storage._appPublicKey.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._appPublicKey, fieldNumber: 8)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Gryonixnexusd_V1_SetNotifySettingsRequest, rhs: Gryonixnexusd_V1_SetNotifySettingsRequest) -> Bool {
-    if lhs.channel != rhs.channel {return false}
-    if lhs.relayURL != rhs.relayURL {return false}
-    if lhs.ntfyURL != rhs.ntfyURL {return false}
-    if lhs.ntfyTopic != rhs.ntfyTopic {return false}
-    if lhs._checks != rhs._checks {return false}
-    if lhs.language != rhs.language {return false}
-    if lhs.customChecks != rhs.customChecks {return false}
-    if lhs.appPublicKey != rhs.appPublicKey {return false}
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._channel != rhs_storage._channel {return false}
+        if _storage._relayURL != rhs_storage._relayURL {return false}
+        if _storage._ntfyURL != rhs_storage._ntfyURL {return false}
+        if _storage._ntfyTopic != rhs_storage._ntfyTopic {return false}
+        if _storage._checks != rhs_storage._checks {return false}
+        if _storage._language != rhs_storage._language {return false}
+        if _storage._customChecks != rhs_storage._customChecks {return false}
+        if _storage._appPublicKey != rhs_storage._appPublicKey {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -17593,7 +20285,7 @@ nonisolated extension Gryonixnexusd_V1_SetNotifySettingsRequest: SwiftProtobuf.M
 
 nonisolated extension Gryonixnexusd_V1_RegisterNotifyDeviceRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".RegisterNotifyDeviceRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}platform\0\u{1}token\0\u{3}app_version\0\u{1}locale\0\u{1}muted\0\u{3}device_proof\0\u{1}name\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}platform\0\u{1}token\0\u{3}app_version\0\u{1}locale\0\u{1}muted\0\u{3}device_proof\0\u{1}name\0\u{1}sounds\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -17608,6 +20300,7 @@ nonisolated extension Gryonixnexusd_V1_RegisterNotifyDeviceRequest: SwiftProtobu
       case 5: try { try decoder.decodeRepeatedStringField(value: &self.muted) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.deviceProof) }()
       case 7: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 8: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufString,SwiftProtobuf.ProtobufString>.self, value: &self.sounds) }()
       default: break
       }
     }
@@ -17635,6 +20328,9 @@ nonisolated extension Gryonixnexusd_V1_RegisterNotifyDeviceRequest: SwiftProtobu
     if !self.name.isEmpty {
       try visitor.visitSingularStringField(value: self.name, fieldNumber: 7)
     }
+    if !self.sounds.isEmpty {
+      try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufString,SwiftProtobuf.ProtobufString>.self, value: self.sounds, fieldNumber: 8)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -17646,6 +20342,7 @@ nonisolated extension Gryonixnexusd_V1_RegisterNotifyDeviceRequest: SwiftProtobu
     if lhs.muted != rhs.muted {return false}
     if lhs.deviceProof != rhs.deviceProof {return false}
     if lhs.name != rhs.name {return false}
+    if lhs.sounds != rhs.sounds {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -18633,6 +21330,120 @@ nonisolated extension Gryonixnexusd_V1_VaultwardenTwoFactor: SwiftProtobuf.Messa
   }
 }
 
+nonisolated extension Gryonixnexusd_V1_CheckInstallRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CheckInstallRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}services\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedStringField(value: &self.services) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.services.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.services, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_CheckInstallRequest, rhs: Gryonixnexusd_V1_CheckInstallRequest) -> Bool {
+    if lhs.services != rhs.services {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_InstallFinding: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".InstallFinding"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}service\0\u{1}severity\0\u{1}code\0\u{1}args\0\u{1}message\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.service) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.severity) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.code) }()
+      case 4: try { try decoder.decodeRepeatedStringField(value: &self.args) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.message) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.service.isEmpty {
+      try visitor.visitSingularStringField(value: self.service, fieldNumber: 1)
+    }
+    if self.severity != .unspecified {
+      try visitor.visitSingularEnumField(value: self.severity, fieldNumber: 2)
+    }
+    if !self.code.isEmpty {
+      try visitor.visitSingularStringField(value: self.code, fieldNumber: 3)
+    }
+    if !self.args.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.args, fieldNumber: 4)
+    }
+    if !self.message.isEmpty {
+      try visitor.visitSingularStringField(value: self.message, fieldNumber: 5)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_InstallFinding, rhs: Gryonixnexusd_V1_InstallFinding) -> Bool {
+    if lhs.service != rhs.service {return false}
+    if lhs.severity != rhs.severity {return false}
+    if lhs.code != rhs.code {return false}
+    if lhs.args != rhs.args {return false}
+    if lhs.message != rhs.message {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_InstallFinding.Severity: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0SEVERITY_UNSPECIFIED\0\u{1}SEVERITY_LIMITED\0\u{1}SEVERITY_BLOCKED\0")
+}
+
+nonisolated extension Gryonixnexusd_V1_CheckInstallResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CheckInstallResult"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}findings\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.findings) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.findings.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.findings, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_CheckInstallResult, rhs: Gryonixnexusd_V1_CheckInstallResult) -> Bool {
+    if lhs.findings != rhs.findings {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 nonisolated extension Gryonixnexusd_V1_StartInstallPlanRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".StartInstallPlanRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}services\0\u{1}purpose\0")
@@ -18793,6 +21604,568 @@ nonisolated extension Gryonixnexusd_V1_InstallPlanItem: SwiftProtobuf.Message, S
     if lhs.state != rhs.state {return false}
     if lhs.jobID != rhs.jobID {return false}
     if lhs.failure != rhs.failure {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_ListImagesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ListImagesRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_ListImagesRequest, rhs: Gryonixnexusd_V1_ListImagesRequest) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_DockerImage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".DockerImage"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}repository\0\u{1}tag\0\u{3}size_bytes\0\u{1}containers\0\u{3}in_use\0\u{3}created_since\0\u{1}reference\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.repository) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.tag) }()
+      case 4: try { try decoder.decodeSingularUInt64Field(value: &self.sizeBytes) }()
+      case 5: try { try decoder.decodeSingularUInt32Field(value: &self.containers) }()
+      case 6: try { try decoder.decodeSingularBoolField(value: &self.inUse) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.createdSince) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.reference) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
+    }
+    if !self.repository.isEmpty {
+      try visitor.visitSingularStringField(value: self.repository, fieldNumber: 2)
+    }
+    if !self.tag.isEmpty {
+      try visitor.visitSingularStringField(value: self.tag, fieldNumber: 3)
+    }
+    if self.sizeBytes != 0 {
+      try visitor.visitSingularUInt64Field(value: self.sizeBytes, fieldNumber: 4)
+    }
+    if self.containers != 0 {
+      try visitor.visitSingularUInt32Field(value: self.containers, fieldNumber: 5)
+    }
+    if self.inUse != false {
+      try visitor.visitSingularBoolField(value: self.inUse, fieldNumber: 6)
+    }
+    if !self.createdSince.isEmpty {
+      try visitor.visitSingularStringField(value: self.createdSince, fieldNumber: 7)
+    }
+    if !self.reference.isEmpty {
+      try visitor.visitSingularStringField(value: self.reference, fieldNumber: 8)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_DockerImage, rhs: Gryonixnexusd_V1_DockerImage) -> Bool {
+    if lhs.id != rhs.id {return false}
+    if lhs.repository != rhs.repository {return false}
+    if lhs.tag != rhs.tag {return false}
+    if lhs.sizeBytes != rhs.sizeBytes {return false}
+    if lhs.containers != rhs.containers {return false}
+    if lhs.inUse != rhs.inUse {return false}
+    if lhs.createdSince != rhs.createdSince {return false}
+    if lhs.reference != rhs.reference {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_ImageInventory: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ImageInventory"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}images\0\u{3}unavailable_reason\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.images) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.unavailableReason) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.images.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.images, fieldNumber: 1)
+    }
+    if !self.unavailableReason.isEmpty {
+      try visitor.visitSingularStringField(value: self.unavailableReason, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_ImageInventory, rhs: Gryonixnexusd_V1_ImageInventory) -> Bool {
+    if lhs.images != rhs.images {return false}
+    if lhs.unavailableReason != rhs.unavailableReason {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_ListVolumesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ListVolumesRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_ListVolumesRequest, rhs: Gryonixnexusd_V1_ListVolumesRequest) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_DockerVolume: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".DockerVolume"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}driver\0\u{3}size_bytes\0\u{1}containers\0\u{3}in_use\0\u{1}managed\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.driver) }()
+      case 3: try { try decoder.decodeSingularUInt64Field(value: &self.sizeBytes) }()
+      case 4: try { try decoder.decodeSingularUInt32Field(value: &self.containers) }()
+      case 5: try { try decoder.decodeSingularBoolField(value: &self.inUse) }()
+      case 6: try { try decoder.decodeSingularBoolField(value: &self.managed) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
+    }
+    if !self.driver.isEmpty {
+      try visitor.visitSingularStringField(value: self.driver, fieldNumber: 2)
+    }
+    if self.sizeBytes != 0 {
+      try visitor.visitSingularUInt64Field(value: self.sizeBytes, fieldNumber: 3)
+    }
+    if self.containers != 0 {
+      try visitor.visitSingularUInt32Field(value: self.containers, fieldNumber: 4)
+    }
+    if self.inUse != false {
+      try visitor.visitSingularBoolField(value: self.inUse, fieldNumber: 5)
+    }
+    if self.managed != false {
+      try visitor.visitSingularBoolField(value: self.managed, fieldNumber: 6)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_DockerVolume, rhs: Gryonixnexusd_V1_DockerVolume) -> Bool {
+    if lhs.name != rhs.name {return false}
+    if lhs.driver != rhs.driver {return false}
+    if lhs.sizeBytes != rhs.sizeBytes {return false}
+    if lhs.containers != rhs.containers {return false}
+    if lhs.inUse != rhs.inUse {return false}
+    if lhs.managed != rhs.managed {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_VolumeInventory: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".VolumeInventory"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}volumes\0\u{3}unavailable_reason\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.volumes) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.unavailableReason) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.volumes.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.volumes, fieldNumber: 1)
+    }
+    if !self.unavailableReason.isEmpty {
+      try visitor.visitSingularStringField(value: self.unavailableReason, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_VolumeInventory, rhs: Gryonixnexusd_V1_VolumeInventory) -> Bool {
+    if lhs.volumes != rhs.volumes {return false}
+    if lhs.unavailableReason != rhs.unavailableReason {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_ListNetworksRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ListNetworksRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_ListNetworksRequest, rhs: Gryonixnexusd_V1_ListNetworksRequest) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_DockerNetwork: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".DockerNetwork"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}name\0\u{1}driver\0\u{1}scope\0\u{1}containers\0\u{3}in_use\0\u{1}managed\0\u{1}builtin\0\u{1}internal\0\u{1}subnet\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.driver) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.scope) }()
+      case 5: try { try decoder.decodeSingularUInt32Field(value: &self.containers) }()
+      case 6: try { try decoder.decodeSingularBoolField(value: &self.inUse) }()
+      case 7: try { try decoder.decodeSingularBoolField(value: &self.managed) }()
+      case 8: try { try decoder.decodeSingularBoolField(value: &self.builtin) }()
+      case 9: try { try decoder.decodeSingularBoolField(value: &self.`internal`) }()
+      case 10: try { try decoder.decodeSingularStringField(value: &self.subnet) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
+    }
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 2)
+    }
+    if !self.driver.isEmpty {
+      try visitor.visitSingularStringField(value: self.driver, fieldNumber: 3)
+    }
+    if !self.scope.isEmpty {
+      try visitor.visitSingularStringField(value: self.scope, fieldNumber: 4)
+    }
+    if self.containers != 0 {
+      try visitor.visitSingularUInt32Field(value: self.containers, fieldNumber: 5)
+    }
+    if self.inUse != false {
+      try visitor.visitSingularBoolField(value: self.inUse, fieldNumber: 6)
+    }
+    if self.managed != false {
+      try visitor.visitSingularBoolField(value: self.managed, fieldNumber: 7)
+    }
+    if self.builtin != false {
+      try visitor.visitSingularBoolField(value: self.builtin, fieldNumber: 8)
+    }
+    if self.`internal` != false {
+      try visitor.visitSingularBoolField(value: self.`internal`, fieldNumber: 9)
+    }
+    if !self.subnet.isEmpty {
+      try visitor.visitSingularStringField(value: self.subnet, fieldNumber: 10)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_DockerNetwork, rhs: Gryonixnexusd_V1_DockerNetwork) -> Bool {
+    if lhs.id != rhs.id {return false}
+    if lhs.name != rhs.name {return false}
+    if lhs.driver != rhs.driver {return false}
+    if lhs.scope != rhs.scope {return false}
+    if lhs.containers != rhs.containers {return false}
+    if lhs.inUse != rhs.inUse {return false}
+    if lhs.managed != rhs.managed {return false}
+    if lhs.builtin != rhs.builtin {return false}
+    if lhs.`internal` != rhs.`internal` {return false}
+    if lhs.subnet != rhs.subnet {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_NetworkInventory: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".NetworkInventory"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}networks\0\u{3}unavailable_reason\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.networks) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.unavailableReason) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.networks.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.networks, fieldNumber: 1)
+    }
+    if !self.unavailableReason.isEmpty {
+      try visitor.visitSingularStringField(value: self.unavailableReason, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_NetworkInventory, rhs: Gryonixnexusd_V1_NetworkInventory) -> Bool {
+    if lhs.networks != rhs.networks {return false}
+    if lhs.unavailableReason != rhs.unavailableReason {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_RemoveNetworkRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".RemoveNetworkRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_RemoveNetworkRequest, rhs: Gryonixnexusd_V1_RemoveNetworkRequest) -> Bool {
+    if lhs.name != rhs.name {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_RemoveImageRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".RemoveImageRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}reference\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.reference) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.reference.isEmpty {
+      try visitor.visitSingularStringField(value: self.reference, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_RemoveImageRequest, rhs: Gryonixnexusd_V1_RemoveImageRequest) -> Bool {
+    if lhs.reference != rhs.reference {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_RemoveVolumeRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".RemoveVolumeRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_RemoveVolumeRequest, rhs: Gryonixnexusd_V1_RemoveVolumeRequest) -> Bool {
+    if lhs.name != rhs.name {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_DockerRemovalResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".DockerRemovalResult"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}removed\0\u{1}message\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.removed) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.message) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.removed != false {
+      try visitor.visitSingularBoolField(value: self.removed, fieldNumber: 1)
+    }
+    if !self.message.isEmpty {
+      try visitor.visitSingularStringField(value: self.message, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_DockerRemovalResult, rhs: Gryonixnexusd_V1_DockerRemovalResult) -> Bool {
+    if lhs.removed != rhs.removed {return false}
+    if lhs.message != rhs.message {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_PruneUnusedRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".PruneUnusedRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}images\0\u{1}volumes\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.images) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.volumes) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.images != false {
+      try visitor.visitSingularBoolField(value: self.images, fieldNumber: 1)
+    }
+    if self.volumes != false {
+      try visitor.visitSingularBoolField(value: self.volumes, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_PruneUnusedRequest, rhs: Gryonixnexusd_V1_PruneUnusedRequest) -> Bool {
+    if lhs.images != rhs.images {return false}
+    if lhs.volumes != rhs.volumes {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Gryonixnexusd_V1_PruneUnusedResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".PruneUnusedResult"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}images_removed\0\u{3}volumes_removed\0\u{3}reclaimed_bytes\0\u{1}failures\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt32Field(value: &self.imagesRemoved) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.volumesRemoved) }()
+      case 3: try { try decoder.decodeSingularUInt64Field(value: &self.reclaimedBytes) }()
+      case 4: try { try decoder.decodeRepeatedStringField(value: &self.failures) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.imagesRemoved != 0 {
+      try visitor.visitSingularUInt32Field(value: self.imagesRemoved, fieldNumber: 1)
+    }
+    if self.volumesRemoved != 0 {
+      try visitor.visitSingularUInt32Field(value: self.volumesRemoved, fieldNumber: 2)
+    }
+    if self.reclaimedBytes != 0 {
+      try visitor.visitSingularUInt64Field(value: self.reclaimedBytes, fieldNumber: 3)
+    }
+    if !self.failures.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.failures, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Gryonixnexusd_V1_PruneUnusedResult, rhs: Gryonixnexusd_V1_PruneUnusedResult) -> Bool {
+    if lhs.imagesRemoved != rhs.imagesRemoved {return false}
+    if lhs.volumesRemoved != rhs.volumesRemoved {return false}
+    if lhs.reclaimedBytes != rhs.reclaimedBytes {return false}
+    if lhs.failures != rhs.failures {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

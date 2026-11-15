@@ -1,6 +1,6 @@
 import Foundation
 import UserNotifications
-#if os(iOS)
+#if os(iOS) || os(tvOS)
 import UIKit
 #else
 import AppKit
@@ -19,7 +19,7 @@ final class PushRegistration: ObservableObject {
 
     /// What the server's list of devices calls this one
     static var deviceName: String {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         UIDevice.current.model
         #else
         Host.current().localizedName ?? "Mac"
@@ -37,7 +37,7 @@ final class PushRegistration: ObservableObject {
         }
         return await withCheckedContinuation { continuation in
             waiters.append(continuation)
-            #if os(iOS)
+            #if os(iOS) || os(tvOS)
             UIApplication.shared.registerForRemoteNotifications()
             #else
             NSApplication.shared.registerForRemoteNotifications()
@@ -74,28 +74,71 @@ final class PushRegistration: ObservableObject {
 final class ForegroundNotifications: NSObject, UNUserNotificationCenterDelegate {
     static let shared = ForegroundNotifications()
 
-    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification)
-        async -> UNNotificationPresentationOptions {
-        [.banner, .list, .sound]
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler:
+                                    @escaping (UNNotificationPresentationOptions) -> Void) {
+        let gnx = notification.request.content.userInfo["gnx"] as? [String: Any]
+        let options: UNNotificationPresentationOptions = Self.isRunReport(gnx) ? [.list] : [.banner, .list, .sound]
+        DispatchQueue.main.async { completionHandler(options) }
     }
 
-    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
-        let info = response.notification.request.content.userInfo
-        guard let gnx = info["gnx"] as? [String: Any] else { return }
-        if let action = AlertAction(action: response.actionIdentifier, gnx: gnx) {
+    /// A run start or end the open app already shows
+    static func isRunReport(_ gnx: [String: Any]?) -> Bool {
+        (gnx?["kind"] as? String)?.hasPrefix("gnx.alert.operation") == true
+    }
+
+    #if !os(tvOS)
+    /// UIKit takes the completion only on the main thread
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        let content = response.notification.request.content
+        let info = content.userInfo
+        let actionIdentifier = response.actionIdentifier
+        let (title, body) = (content.title, content.body)
+        Task {
+            await Self.handle(info["gnx"] as? [String: Any], actionIdentifier: actionIdentifier, title: title, body: body)
+            DispatchQueue.main.async { completionHandler() }
+        }
+    }
+    #endif
+
+    private static func open(_ destination: AlertDestination?, card: AlertCard?) async {
+        guard let destination else { return }
+        if let card {
+            await AppNavigator.shared.openServer(destination.deploymentID, at: destination.tab, showing: card)
+        } else {
+            await AppNavigator.shared.openServer(destination.deploymentID, at: destination.tab, service: destination.service)
+        }
+    }
+
+    private static func handle(_ gnx: [String: Any]?, actionIdentifier: String, title: String, body: String) async {
+        guard let gnx else { return }
+        if let action = AlertAction(action: actionIdentifier, gnx: gnx) {
             await AlertActions.perform(action)
-        } else if let jobID = gnx["job_id"] as? String {
-            await RunningJobsWatcher.shared.follow(jobID: jobID)
+            return
+        }
+        switch AlertTap(gnx: gnx, title: title, body: body) {
+        case .run(let jobID, let fallback, let card):
+            if await RunningJobsWatcher.shared.open(jobID: jobID, on: fallback?.deploymentID) { return }
+            await open(fallback, card: card)
+        case .card(let destination, let card):
+            await open(destination, card: card)
+        case .server(let destination):
+            await open(destination, card: nil)
+        case .nothing:
+            break
         }
     }
 }
 
-#if os(iOS)
+#if os(iOS) || os(tvOS)
 final class PushAppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions options: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = ForegroundNotifications.shared
+        #if !os(tvOS)
         UNUserNotificationCenter.current().setNotificationCategories(AlertActions.categories())
+        #endif
         // Background launches have no screen to ask for the token
         Task { @MainActor in
             let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
@@ -111,11 +154,30 @@ final class PushAppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
         Task { @MainActor in PushRegistration.shared.failed(error) }
     }
+
+    func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+                     fetchCompletionHandler completion: @escaping (UIBackgroundFetchResult) -> Void) {
+        completion(WidgetPush.received(userInfo) ? .newData : .noData)
+    }
 }
 #else
 final class PushAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        MainActor.assumeIsolated {
+            DockPresence.note("will finish launching")
+            // Adds the Dock icon before any window appears
+            MenuBarSettings.shared.applyActivationPolicy(activating: !LaunchSettings.shared.startsInBackground)
+        }
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
-        Task { @MainActor in DockPresence.shared.start() }
+        Task { @MainActor in
+            DockPresence.shared.start()
+            // Creates the store before the launch connect
+            _ = LicenseStore.shared
+            LaunchSettings.shared.applyAtLaunch()
+            DockPresence.note("did finish launching")
+        }
         UNUserNotificationCenter.current().delegate = ForegroundNotifications.shared
         UNUserNotificationCenter.current().setNotificationCategories(AlertActions.categories())
     }

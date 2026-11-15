@@ -11,7 +11,7 @@ final class AgentUpdateOffer: ObservableObject {
 
     struct Outdated: Identifiable, Equatable, Sendable {
         /// Where the newer version comes from
-        enum Source: Equatable, Sendable { case bundled, published }
+        enum Source: String, Codable, Equatable, Sendable { case bundled, published }
 
         let deployment: Deployment
         let installed: String
@@ -41,10 +41,13 @@ final class AgentUpdateOffer: ObservableObject {
     typealias Probe = @Sendable (Deployment, String) async -> Check
     /// False while the licence is still loading
     typealias Ready = @MainActor () async -> Bool
+    /// The version an update would install
+    typealias Target = @MainActor () async -> String
 
     private let fleet: Fleet
     private let probe: Probe
     private let ready: Ready
+    private let target: Target
     private let deadline: Duration
     private let retryDelay: Duration
     private let presentWithin: Duration
@@ -55,6 +58,9 @@ final class AgentUpdateOffer: ObservableObject {
     private var retries = 0
     private var presentation: Task<Void, Never>?
     private var appeared = false
+    /// Servers whose update runs right now
+    private var updating: Set<UUID> = []
+    private let pending: PendingAgentUpdates
     private static let recheckAfter: TimeInterval = 120
     private static let maxRetries = 4
     private static let presentAttempts = 20
@@ -62,12 +68,16 @@ final class AgentUpdateOffer: ObservableObject {
     init(fleet: @escaping Fleet = AgentUpdateOffer.storedFleet,
          probe: @escaping Probe = AgentUpdateOffer.check,
          ready: @escaping Ready = AgentUpdateOffer.licenceReady,
+         target: @escaping Target = AgentUpdateOffer.chosenTarget,
          deadline: Duration = .seconds(45),
          retryDelay: Duration = .seconds(15),
-         presentWithin: Duration = .seconds(3)) {
+         presentWithin: Duration = .seconds(3),
+         pending: PendingAgentUpdates = PendingAgentUpdates()) {
+        self.pending = pending
         self.fleet = fleet
         self.probe = probe
         self.ready = ready
+        self.target = target
         self.deadline = deadline
         self.retryDelay = retryDelay
         self.presentWithin = presentWithin
@@ -83,6 +93,11 @@ final class AgentUpdateOffer: ObservableObject {
         return LicenseStore.shared.status.isActive
     }
 
+    /// The chosen branch's version, or the one this app carries
+    private static func chosenTarget() async -> String {
+        await DashboardViewModel.chosenAgentSource.offeredVersion(shipped: AgentBootstrapOperations.shippedVersion)
+    }
+
     private static func storedFleet() -> [Deployment] {
         #if DEBUG
         if ProcessInfo.processInfo.environment["GRYONIXNEXUS_DEMO_AGENT_OFFER"] != nil,
@@ -95,6 +110,7 @@ final class AgentUpdateOffer: ObservableObject {
 
     /// Each time the app is opened
     func checkOnLaunch() async {
+        resumePending()
         guard !checking, offer == nil, presentation == nil, !dismissedThisRun else { return }
         if !foundOutdated, let lastChecked, Date().timeIntervalSince(lastChecked) < Self.recheckAfter { return }
         guard #available(macOS 15.0, *) else { return }
@@ -104,7 +120,7 @@ final class AgentUpdateOffer: ObservableObject {
             retryLater()
             return
         }
-        let checks = await checkAll(shipped: AgentBootstrapOperations.shippedVersion)
+        let checks = await checkAll(shipped: await target())
         take(checks)
         let silent = checks.contains { if case .unreachable = $0.1 { true } else { false } }
         lastChecked = silent ? nil : Date()
@@ -114,7 +130,9 @@ final class AgentUpdateOffer: ObservableObject {
     /// The window opens with the first outdated server
     private func take(_ checks: [(UUID, Check)]) {
         for (id, check) in checks { findings[id] = check }
-        let outdated = checks.compactMap(\.1.outdated).sorted { $0.deployment.name < $1.deployment.name }
+        let outdated = checks.compactMap(\.1.outdated)
+            .filter { !updating.contains($0.id) }
+            .sorted { $0.deployment.name < $1.deployment.name }
         foundOutdated = !outdated.isEmpty
         guard foundOutdated, !dismissedThisRun else { return }
         let next = Offer(version: Self.highest(outdated), servers: outdated)
@@ -238,17 +256,51 @@ final class AgentUpdateOffer: ObservableObject {
         foundOutdated = false
         lastChecked = Date()
         self.offer = nil
-        Task {
-            for server in offer.servers { await update(server) }
+        pending.add(offer.servers.map(PendingAgentUpdates.Entry.init))
+        run(offer.servers, resumed: false)
+    }
+
+    /// Resumes updates left running when the app closed
+    private func resumePending() {
+        let known = fleet()
+        let servers = pending.load().compactMap { entry -> Outdated? in
+            guard !updating.contains(entry.deploymentID),
+                  let deployment = known.first(where: { $0.id == entry.deploymentID }) else { return nil }
+            return Outdated(deployment: deployment, installed: entry.installed,
+                            target: entry.target, source: entry.source)
+        }
+        pending.keep(Set(known.map(\.id)))
+        guard !servers.isEmpty else { return }
+        run(servers, resumed: true)
+    }
+
+    /// Every server at once, each remembered until it ends
+    private func run(_ servers: [Outdated], resumed: Bool) {
+        servers.forEach { updating.insert($0.id) }
+        for server in servers {
+            Task {
+                await update(server, resumed: resumed)
+                updating.remove(server.id)
+                pending.remove(server.id)
+            }
         }
     }
 
-    private func update(_ server: Outdated) async {
+    private func update(_ server: Outdated, resumed: Bool = false) async {
         let deployment = server.deployment
         let state = LongOperationState(title: UIL10n.string("Updating the agent"),
-                                       progressText: UIL10n.string("Connecting…"))
+                                       progressText: resumed
+                                           ? UIL10n.string("Picking up the update where it was…")
+                                           : UIL10n.string("Connecting…"))
         state.retry = { [weak self] in Task { await self?.update(server) } }
-        RunningOperationsRegistry.shared.adopt(state, serverName: deployment.name, deployment: deployment)
+        RunningOperationsRegistry.shared.adopt(state, serverName: deployment.name, deployment: deployment,
+                                               onLockScreen: false)
+        if resumed, await Self.settled(deployment, target: server.target) == .current {
+            state.progress = 1
+            state.progressText = UIL10n.string("The agent is updated.")
+            state.isFinished = true
+            return
+        }
         do {
             let runner = try await DashboardSessionFactory.makeRunnerDetached(deployment: deployment, shared: false)
             defer { Task { await runner.disconnect() } }
@@ -265,6 +317,17 @@ final class AgentUpdateOffer: ObservableObject {
             state.errorMessage = DashboardViewModel.message(for: error)
         }
         state.isFinished = true
+    }
+
+    /// The check, waiting out an agent that is restarting
+    private static func settled(_ deployment: Deployment, target: String) async -> Check {
+        var check = await Self.check(deployment, shipped: target)
+        for _ in 0..<3 {
+            guard case .unreachable = check else { break }
+            try? await Task.sleep(for: .seconds(15))
+            check = await Self.check(deployment, shipped: target)
+        }
+        return check
     }
 
     /// Asks each agent to fetch and apply its published update
@@ -302,16 +365,21 @@ extension AgentUpdateOffer {
     /// Every machine at once, builds side by side
     static func installEverywhere(_ deployment: Deployment, runner: any SSHCommandRunner & RemoteFileBrowser,
                                   state: LongOperationState) async -> [String] {
-        await withTaskGroup(of: String?.self) { group in
-            for host in deployment.agentHosts {
+        let hosts = deployment.agentHosts
+        let machines = AgentBuildMachines(state: state,
+                                          names: hosts.map { DashboardViewModel.hostDisplayName($0, in: deployment) })
+        return await withTaskGroup(of: String?.self) { group in
+            for host in hosts {
                 let name = DashboardViewModel.hostDisplayName(host, in: deployment)
                 group.addTask { @MainActor in
                     do {
-                        try await install(on: host, named: name, runner: runner, state: state)
+                        try await install(on: host, named: name, runner: runner, machines: machines)
                         return nil
                     } catch let error as AgentUpdateNeedsAccess {
+                        machines.finished(name, ok: false)
                         return error.localizedDescription
                     } catch {
+                        machines.finished(name, ok: false)
                         return "\(name): \(DashboardViewModel.message(for: error))"
                     }
                 }
@@ -324,20 +392,19 @@ extension AgentUpdateOffer {
 
     /// One machine's agent, rebuilt from the shipped sources
     static func install(on host: SSHHostID, named name: String, runner: any SSHCommandRunner & RemoteFileBrowser,
-                        state: LongOperationState, reinstall: Bool = false) async throws {
-        let probe = try await runner.run(SudoAccess.probeCommand(allowing: AgentBootstrapSections.scriptPath),
-                                         on: host, timeout: .seconds(20))
-        guard SudoAccess.isReady(probe.stdout) else { throw AgentUpdateNeedsAccess(host: name) }
-        let build = AgentBuildProgress(state: state)
+                        machines: AgentBuildMachines, reinstall: Bool = false,
+                        checksSudo: Bool = true) async throws {
+        machines.started(name)
+        if checksSudo {
+            let probe = try await runner.run(SudoAccess.probeCommand(allowing: AgentBootstrapSections.scriptPath),
+                                             on: host, timeout: .seconds(20))
+            guard SudoAccess.isReady(probe.stdout) else { throw AgentUpdateNeedsAccess(host: name) }
+        }
         try await AgentBootstrapOperations.install(
             runner: runner, host: host, source: DashboardViewModel.chosenAgentSource, reinstall: reinstall,
-            onPhase: { phase in Task { @MainActor in state.progressText = phase } },
-            onOutput: { line in
-                Task { @MainActor in
-                    state.log = OutputTail.tail(state.log + line + "\n", maxCharacters: OutputTail.logCharacters)
-                    build.line(line)
-                }
-            })
+            onPhase: { phase in Task { @MainActor in machines.phase(phase, of: name) } },
+            onOutput: { line in Task { @MainActor in machines.output(line, of: name) } })
+        machines.finished(name, ok: true)
     }
 }
 
@@ -370,8 +437,8 @@ struct AgentUpdateOfferView: View {
                     Text("Each server builds the new agent itself; this takes a few minutes and the services keep running.")
                 }
             }
-            .navigationTitle(Text("Agent \(offer.version) is available"))
-            #if os(iOS)
+            .screenTitle(Text("Agent \(offer.version) is available"))
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .safeAreaInset(edge: .bottom) {

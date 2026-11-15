@@ -37,6 +37,14 @@ struct SectionToolbar<Actions: View, MenuItems: View>: ViewModifier {
     private var hasOwnItems: Bool { MenuItems.self != EmptyView.self }
 
     func body(content: Content) -> some View {
+        #if os(tvOS)
+        // The TV shows them beside the title
+        content.tvHeaderActions {
+            actions()
+            RunningProcessButton()
+            if hasOwnItems || hasSections { menu }
+        }
+        #else
         content
             #if os(iOS)
             .toolbarTitleDisplayMode(.inlineLarge)
@@ -48,6 +56,7 @@ struct SectionToolbar<Actions: View, MenuItems: View>: ViewModifier {
                     if hasOwnItems || hasSections { menu }
                 }
             }
+        #endif
     }
 
     private var menu: some View {
@@ -58,7 +67,7 @@ struct SectionToolbar<Actions: View, MenuItems: View>: ViewModifier {
                 sectionItems
             }
         } label: {
-            Label("More", systemImage: "ellipsis")
+            ToolbarIcon("More", systemImage: "ellipsis")
         }
         .toolbarGlassButtonStyle()
     }

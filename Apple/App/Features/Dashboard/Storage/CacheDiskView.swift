@@ -45,8 +45,8 @@ struct CacheDiskView: View {
             if let projects { CacheDiskMoves(projects: projects, bound: bound) }
             actions
         }
-        .navigationTitle("Cache disk")
-        #if os(iOS)
+        .screenTitle("Cache disk")
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .task {
@@ -211,17 +211,19 @@ private struct CacheDiskMoves: View {
                     .foregroundStyle(.secondary)
             }
             ForEach(projects, id: \.directory) { project in
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(verbatim: (project.directory as NSString).lastPathComponent)
                     ForEach(project.hotPaths, id: \.self) { path in
                         Label {
                             Text(verbatim: path).font(.caption.monospaced())
                         } icon: {
                             Image(systemName: bound.contains(path) ? "bolt.fill" : "internaldrive")
+                                .font(.caption)
                         }
                         .foregroundStyle(bound.contains(path) ? .green : .secondary)
                     }
                 }
+                .padding(.vertical, 2)
             }
         }
     }

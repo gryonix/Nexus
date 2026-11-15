@@ -74,6 +74,11 @@ extension DemoAgentState {
                                                           containers: machine.containers)
             return await backupPolicy(machine, services: asked.services,
                                       retention: asked.retention).demoPayload
+        case "/gryonixnexusd.v1.Backup/SetBackupParts":
+            let asked = try Gryonixnexusd_V1_SetBackupPartsRequest(serializedBytes: request)
+            var answer = await backupPolicy(machine)
+            answer.parts = asked.parts
+            return answer.demoPayload
         case "/gryonixnexusd.v1.Backup/SetBackupDestination", "/gryonixnexusd.v1.Backup/SetBackupDrives":
             return await backupPolicy(machine).demoPayload
         case "/gryonixnexusd.v1.Update/GetUpdatePolicy":
@@ -99,7 +104,19 @@ extension DemoAgentState {
         answer.services = services ?? machine.containers
         answer.destinationPublicKey = "ssh-ed25519 DEMO+BACKUP+DESTINATION+KEY"
         answer.drives = Self.demoDrives
+        answer.parts = Self.demoParts
         return answer
+    }
+
+    /// The wrapper's default parts
+    private static var demoParts: Gryonixnexusd_V1_BackupPartChoice {
+        var choice = Gryonixnexusd_V1_BackupPartChoice()
+        choice.regular.files = true
+        choice.regular.settings = true
+        choice.regular.databases = true
+        choice.beforeUpdate.settings = true
+        choice.beforeUpdate.databases = true
+        return choice
     }
 
     /// One fictional USB drive, plugged in and half full
@@ -154,6 +171,7 @@ extension DemoAgentState {
             answer.installedVersion = DemoAgentOffer.installedVersion
             answer.updateAvailable = DemoAgentOffer.publishedVersion != nil
             answer.availableVersion = DemoAgentOffer.publishedVersion ?? ""
+            answer.autoUpdate = memory(machine).agentAutoUpdate
             return answer.demoPayload
         case "/gryonixnexusd.v1.Jobs/ListJobs":
             var list = Gryonixnexusd_V1_JobList()

@@ -1,5 +1,7 @@
 package com.skaymer.gryonixnexus.app.servers
 
+import com.skaymer.gryonixnexus.app.widgets.WidgetFeed
+
 import com.skaymer.gryonixnexus.R
 import com.skaymer.gryonixnexus.app.notify.OperationNotice
 import com.skaymer.gryonixnexus.app.notify.OperationKind
@@ -27,6 +29,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class UpdateRun(
@@ -77,16 +80,16 @@ class UpdatesViewModel(
         scope.launch {
             try {
                 val schedule = updates(deployment).loadSchedule()
-                _state.value = _state.value.copy(
+                _state.update { it.copy(
                     schedule = schedule,
                     hasLoadedSchedule = true,
                     errorMessage = null,
-                )
+                ) }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (failure: Exception) {
                 release(deployment)
-                _state.value = _state.value.copy(errorMessage = reason(failure))
+                _state.update { it.copy(errorMessage = reason(failure)) }
             }
             loadRunLog(deployment)
         }
@@ -96,7 +99,7 @@ class UpdatesViewModel(
     fun check(deployment: Deployment) {
         job?.cancel()
         job = scope.launch {
-            _state.value = _state.value.copy(checking = true)
+            _state.update { it.copy(checking = true) }
             try {
                 val reported = updates(deployment).check()
                 val answers = reported.associate { it.service to it.status }.toMutableMap()
@@ -105,27 +108,28 @@ class UpdatesViewModel(
                     val service = ServiceRegistry.service(id) ?: continue
                     answers[id] = statusForUnreported(service, deployment.serviceContext)
                 }
-                _state.value = _state.value.copy(
+                _state.update { it.copy(
                     reports = answers,
                     checking = false,
                     errorMessage = null,
-                )
+                ) }
+                WidgetFeed.updates(deployment, answers.values.count { it is ServiceUpdateStatus.Available }, answers.size)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (failure: Exception) {
                 release(deployment)
-                _state.value = _state.value.copy(
+                _state.update { it.copy(
                     reports = emptyMap(),
                     checking = false,
                     errorMessage = reason(failure),
-                )
+                ) }
             }
         }
     }
 
     fun run(deployment: Deployment, service: ServiceID) {
         scope.launch {
-            _state.value = _state.value.copy(run = UpdateRun(service = service))
+            _state.update { it.copy(run = UpdateRun(service = service)) }
             val name = ServiceRegistry.service(service)?.displayName ?: service.rawValue
             val notice = OperationNotices.start(
                 R.string.updates_updating, name, server = deployment.name, kind = OperationKind.UPDATE,
@@ -153,7 +157,7 @@ class UpdatesViewModel(
                 notice.finish(text, run.errorMessage, retry = { run(deployment, service) })
             }
             runNotice = null
-            _state.value = _state.value.copy(reports = _state.value.reports - service)
+            _state.update { it.copy(reports = it.reports - service) }
             loadRunLog(deployment)
         }
     }
@@ -162,26 +166,26 @@ class UpdatesViewModel(
 
     /** Dismisses a finished run's log */
     fun clearRun() {
-        _state.value = _state.value.copy(run = null)
+        _state.update { it.copy(run = null) }
     }
 
     /** Writes a new schedule to the server */
     fun save(deployment: Deployment, settings: AutoUpdateSettings) {
         scope.launch {
-            _state.value = _state.value.copy(isSaving = true)
+            _state.update { it.copy(isSaving = true) }
             try {
                 updates(deployment).save(settings)
-                _state.value = _state.value.copy(
+                _state.update { it.copy(
                     schedule = settings,
                     hasLoadedSchedule = true,
                     isSaving = false,
                     errorMessage = null,
-                )
+                ) }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (failure: Exception) {
                 release(deployment)
-                _state.value = _state.value.copy(isSaving = false, errorMessage = reason(failure))
+                _state.update { it.copy(isSaving = false, errorMessage = reason(failure)) }
             }
         }
     }
@@ -194,7 +198,8 @@ class UpdatesViewModel(
 
     private suspend fun loadRunLog(deployment: Deployment) {
         try {
-            _state.value = _state.value.copy(runLog = updates(deployment).loadStatus())
+            val log = updates(deployment).loadStatus()
+            _state.update { it.copy(runLog = log) }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
@@ -204,14 +209,14 @@ class UpdatesViewModel(
 
     private fun append(chunk: String) {
         runNotice?.update(OperationNotices.lastLine(chunk))
-        val run = _state.value.run ?: return
-        val log = OutputTail.tail(WrapperLogText.readable(ANSIStripper.strip(run.log + chunk)))
-        _state.value = _state.value.copy(run = run.copy(log = log))
+        _state.update { current ->
+            val run = current.run ?: return@update current
+            current.copy(run = run.copy(log = OutputTail.tail(WrapperLogText.readable(ANSIStripper.strip(run.log + chunk)))))
+        }
     }
 
     private fun finish(change: (UpdateRun) -> UpdateRun) {
-        val run = _state.value.run ?: return
-        _state.value = _state.value.copy(run = change(run))
+        _state.update { current -> current.run?.let { current.copy(run = change(it)) } ?: current }
     }
 
     /** Anything but a reply the agent itself sent */

@@ -9,7 +9,11 @@ import gryonixnexusd.v1.PairRequest
 import gryonixnexusd.v1.PairResponse
 import gryonixnexusd.v1.Service
 import gryonixnexusd.v1.ServiceStatus
+import gryonixnexusd.v1.SetHostNameRequest
+import gryonixnexusd.v1.SetTimeSyncRequest
+import gryonixnexusd.v1.SetTimeZoneRequest
 import gryonixnexusd.v1.State
+import gryonixnexusd.v1.SystemSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.toList
@@ -86,6 +90,35 @@ class AgentClientTest {
     }
 
     // ------------------------------------------------------------------ pair
+
+    @Test
+    fun `system settings decode and the setters send their values`() = runTest {
+        val reply = bytes(
+            SystemSettings(
+                time_zone = "Europe/Berlin", host_name = "orion", ntp_enabled = true,
+                ntp_synchronized = true, time_zones = listOf("Europe/Berlin", "UTC"),
+            ),
+        )
+        val transport = Mock(onUnary = { _, _ -> reply })
+        val client = AgentClient(transport)
+
+        val got = client.getSystemSettings()
+        client.setTimeZone("UTC")
+        client.setHostName("draco")
+        client.setTimeSync(false)
+
+        assertEquals("Europe/Berlin", got.time_zone)
+        assertEquals("orion", got.host_name)
+        assertTrue(got.ntp_enabled && got.ntp_synchronized)
+        assertEquals(2, got.time_zones.size)
+        assertEquals(
+            listOf("GetSystemSettings", "SetTimeZone", "SetHostName", "SetTimeSync").map { "/gryonixnexusd.v1.Control/$it" },
+            transport.paths,
+        )
+        assertEquals("UTC", SetTimeZoneRequest.ADAPTER.decode(transport.requests[1]).time_zone)
+        assertEquals("draco", SetHostNameRequest.ADAPTER.decode(transport.requests[2]).host_name)
+        assertEquals(false, SetTimeSyncRequest.ADAPTER.decode(transport.requests[3]).enabled)
+    }
 
     @Test
     fun `pair sends its fields and returns the device`() = runTest {

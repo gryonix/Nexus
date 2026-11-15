@@ -239,6 +239,7 @@ public struct NextcloudService: ManagedService {
                 plan: .archive(ArchiveBackupPlan(
                     composeProject: Self.composeProject,
                     dataPath: "\(path)/data",
+                    dataPart: .files,
                     databases: [BackupDatabase(engine: .mysql, service: "db",
                                                fileName: "nextcloud.sql")],
                     quiesceServices: ["app"],

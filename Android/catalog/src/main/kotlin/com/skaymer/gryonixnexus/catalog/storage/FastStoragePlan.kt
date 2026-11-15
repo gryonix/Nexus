@@ -56,7 +56,7 @@ data class FastStoragePlan(
         "    echo \"\$target already holds data, left in place\"",
         "    return 0",
         "  fi",
-        "  grep -qF \" \$target none bind\" /etc/fstab || echo \"\$source \$target none bind,nofail,x-systemd.requires-mounts-for=\$FAST 0 0\" >> /etc/fstab",
+        "  grep -qF \" \$target none bind\" /etc/fstab || echo \"\$source \$target none bind,nofail,x-systemd.requires-mounts-for=\$FAST,x-systemd.after=zfs-mount.service 0 0\" >> /etc/fstab",
         "  mount \"\$target\"",
         "}",
     )
@@ -108,7 +108,7 @@ data class FastStoragePlan(
         )
 
         internal fun bindLine(source: String, target: String) =
-            "grep -qF \" $target none bind\" /etc/fstab || echo \"$source $target none bind,nofail,x-systemd.requires-mounts-for=\$FAST 0 0\" >> /etc/fstab"
+            "grep -qF \" $target none bind\" /etc/fstab || echo \"$source $target none bind,nofail,x-systemd.requires-mounts-for=\$FAST,x-systemd.after=zfs-mount.service 0 0\" >> /etc/fstab"
 
         internal fun quoted(value: String) = "'" + value.replace("'", "'\\''") + "'"
     }

@@ -4,6 +4,8 @@ public enum DetachedJobs {
     /// What kind of run this is
     public enum Kind: String, Sendable, CaseIterable {
         case update, backup, restore, uninstall, control
+        /// A measurement whose output the screen reads itself
+        case measure
     }
 
     /// One run on the host

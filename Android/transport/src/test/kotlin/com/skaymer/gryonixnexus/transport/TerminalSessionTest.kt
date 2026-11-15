@@ -272,6 +272,63 @@ class TerminalSessionTest {
         assertFailsWith<ServerControlError.HostKeyMismatch> { terminal.start(80, 24) }
     }
 
+    // ----------------------------------------------------------- The routes
+
+    private fun closedPort(): Int = java.net.ServerSocket(0).use { it.localPort }
+
+    @Test
+    fun `a route that refuses lets the next one answer`() = runBlocking {
+        val refused = TerminalEndpoint("127.0.0.1", closedPort(), kind = TerminalEndpoint.Kind.LOCAL_NETWORK)
+        val terminal = TerminalSession(listOf(refused, endpoint()), login())
+        val events = CopyOnWriteArrayList<TerminalEvent>()
+        val collector = collecting(terminal, events)
+
+        terminal.start(columns = 80, rows = 24)
+        await(events) { text(it).contains("ready") }
+
+        assertEquals(TerminalEndpoint.Kind.DIRECT, terminal.connectedRoute?.kind)
+        terminal.close()
+        collector.cancel()
+    }
+
+    @Test
+    fun `when no route answers each is named with its reason`() = runBlocking {
+        val first = TerminalEndpoint("127.0.0.1", closedPort(), kind = TerminalEndpoint.Kind.RELAY)
+        val second = TerminalEndpoint("127.0.0.1", closedPort(), kind = TerminalEndpoint.Kind.TUNNEL_ADDRESS)
+        val terminal = TerminalSession(listOf(first, second), login())
+
+        val failure = assertFailsWith<TerminalRoutesFailed> { terminal.start(80, 24) }
+
+        assertEquals(listOf(first, second), failure.attempts.map { it.first })
+        assertTrue(failure.message!!.startsWith("127.0.0.1:${first.port}: "), failure.message)
+        assertNull(terminal.connectedRoute)
+    }
+
+    @Test
+    fun `a wrong host key stops at the first route`() = runBlocking {
+        val wrong = endpoint().copy(pinnedHostKey = "ssh-ed25519 AAAAsomethingelse")
+        val terminal = TerminalSession(listOf(wrong, endpoint()), login())
+
+        assertFailsWith<ServerControlError.HostKeyMismatch> { terminal.start(80, 24) }
+        assertNull(terminal.connectedRoute)
+    }
+
+    @Test
+    fun `only a route that did not answer lets the next one try`() {
+        assertTrue(TerminalSession.mayTryAnotherRoute(java.net.ConnectException("refused")))
+        assertTrue(TerminalSession.mayTryAnotherRoute(ServerControlError.ConnectionFailed("x")))
+        assertTrue(!TerminalSession.mayTryAnotherRoute(ServerControlError.HostKeyMismatch("h")))
+        assertTrue(!TerminalSession.mayTryAnotherRoute(net.schmizz.sshj.userauth.UserAuthException("no")))
+        assertTrue(!TerminalSession.mayTryAnotherRoute(IllegalStateException("bug")))
+    }
+
+    @Test
+    fun `the summary names the path outermost first`() {
+        val hop = TerminalEndpoint.Hop("203.0.113.4", 22, null, login())
+        assertEquals("203.0.113.4:22 → 10.8.0.2:22", TerminalEndpoint("10.8.0.2", 22, parent = hop).summary)
+        assertEquals("192.168.1.5:2222", TerminalEndpoint("192.168.1.5", 2222).summary)
+    }
+
     // ------------------------------------------------------------- The jump
 
     @Test

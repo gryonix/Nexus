@@ -2,6 +2,7 @@ import AgentControl
 import Foundation
 import ServerControl
 import ServerControlSSH
+import VPNTunnel
 
 struct ServerHostMetricsState: Equatable {
     var snapshot: HostMetricsSnapshot?
@@ -20,6 +21,7 @@ struct ServerHostMetricsState: Equatable {
 @MainActor
 final class ServerCardMetrics: ObservableObject {
     @Published private(set) var hosts: [SSHHostID: ServerHostMetricsState] = [:]
+    var onRecord: (() -> Void)?
 
     func state(for host: SSHHostID) -> ServerHostMetricsState {
         hosts[host] ?? ServerHostMetricsState()
@@ -28,6 +30,12 @@ final class ServerCardMetrics: ObservableObject {
     /// The only way in
     func record(_ state: ServerHostMetricsState, for host: SSHHostID) {
         hosts[host] = state
+        onRecord?()
+    }
+
+    /// Every machine answered with an error
+    var isUnreachable: Bool {
+        !hosts.isEmpty && hosts.values.allSatisfy { $0.errorMessage != nil }
     }
 }
 
@@ -38,8 +46,44 @@ final class ServerMetricsStore: ObservableObject {
     func card(for deploymentID: UUID) -> ServerCardMetrics {
         if let existing = cards[deploymentID] { return existing }
         let fresh = ServerCardMetrics()
+        fresh.onRecord = { [weak self] in self?.refreshOffline() }
         cards[deploymentID] = fresh
         return fresh
+    }
+
+    @Published private(set) var offlineIDs: Set<UUID> = []
+
+    private func refreshOffline() {
+        let now = Set(cards.filter { $0.value.isUnreachable }.keys)
+        if now != offlineIDs { offlineIDs = now }
+    }
+
+    private var storedCache: (at: Date, servers: [UUID: FleetSnapshot.Server])?
+
+    private func storedServers() -> [UUID: FleetSnapshot.Server] {
+        if let cache = storedCache, Date().timeIntervalSince(cache.at) < 5 { return cache.servers }
+        let servers = Dictionary(
+            (FleetSnapshotStore().read()?.servers ?? []).map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first })
+        storedCache = (Date(), servers)
+        return servers
+    }
+
+    /// What each server's readings say about its health
+    func healthFacts(for deployments: [Deployment]) -> [ServerHealthFacts] {
+        let stored = storedServers()
+        return deployments.map { deployment in
+            let live = cards[deployment.id]?.hosts.values.compactMap(\.liveSnapshot).first
+            let known = stored[deployment.id]
+            let disk = live.map { $0.diskTotalBytes > 0 ? $0.diskUsedFraction : nil }
+                ?? known?.metrics?.diskPercent.map { $0 / 100 }
+            return ServerHealthFacts(
+                id: deployment.id,
+                unreachable: offlineIDs.contains(deployment.id),
+                diskFraction: disk ?? nil,
+                servicesDown: known?.services?.needingAttention,
+                updatesPending: known?.updates?.waiting)
+        }
     }
 
     private struct Poller {
@@ -96,8 +140,12 @@ final class ServerMetricsStore: ObservableObject {
         cards = cards.filter { wanted[$0.key] != nil }
 
         for deployment in deployments where pollers[deployment.id] == nil {
-            start(deployment)
+            if MetricsDisplaySettings.collectOnOpen { start(deployment) } else { publishCachedOnly(deployment) }
         }
+    }
+
+    private func publishCachedOnly(_ deployment: Deployment) {
+        publishCached(deployment, hosts: deployment.nodes.map(\.sshHost))
     }
 
     func restartPoller(for deploymentID: UUID) {

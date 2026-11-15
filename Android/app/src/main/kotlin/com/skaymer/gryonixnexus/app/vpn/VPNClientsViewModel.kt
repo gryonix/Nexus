@@ -1,5 +1,7 @@
 package com.skaymer.gryonixnexus.app.vpn
 
+import com.skaymer.gryonixnexus.app.widgets.WidgetFeed
+
 import com.skaymer.gryonixnexus.agentcontrol.VPNClientConfiguration
 import com.skaymer.gryonixnexus.agentcontrol.VPNClientDevice
 import com.skaymer.gryonixnexus.agentcontrol.VPNDNSDefaults
@@ -27,7 +29,12 @@ data class VPNClientsState(
     val dnsDefaults: VPNDNSDefaults = VPNDNSDefaults(),
     /** The DNS relay's resolver order, when the agent keeps one */
     val dnsPriority: VPNDNSPriority? = null,
+    /** True once the chosen DNS came from the server */
+    val dnsKnown: Boolean = false,
 ) {
+    /** The order entry the devices' chosen DNS takes */
+    val chosenDNSEntry: String get() = VPNDNSPriorityEditing.chosenEntry(defaultDNS, dnsDefaults.localAddress)
+
     val defaultDNS: List<String> get() = dnsDefaults.dns
 
     val localDNS: LocalDNS get() = LocalDNS(dnsDefaults.localAddress, dnsDefaults.localServices)
@@ -51,6 +58,7 @@ class VPNClientsViewModel(
     private val ownDevices: OwnVpnDevices = OwnVpnDevices.inMemory(),
     private val notices: VPNClientNotices = VPNClientNotices(),
     private val localMemory: LocalDNSMemory = LocalDNSMemory.inMemory(),
+    private val onRemoved: (serverId: String, clientId: String) -> Unit = { _, _ -> },
 ) {
     private val _state = MutableStateFlow(VPNClientsState())
     val state: StateFlow<VPNClientsState> = _state.asStateFlow()
@@ -68,6 +76,7 @@ class VPNClientsViewModel(
                     isBusy = true,
                     dnsDefaults = _state.value.dnsDefaults,
                     dnsPriority = _state.value.dnsPriority,
+                    dnsKnown = _state.value.dnsKnown,
                 )
             }
             else _state.value.copy(isBusy = true, errorMessage = null)
@@ -77,7 +86,7 @@ class VPNClientsViewModel(
     }
 
     fun add(deployment: Deployment, protocol: ServiceID, name: String, dns: List<String> = emptyList()) {
-        if (!LicensePrompt.allow()) return
+        if (!LicensePrompt.allow(deployment)) return
         job?.cancel()
         _state.value = _state.value.copy(isBusy = true, errorMessage = null, notice = null)
         job = scope.launch {
@@ -96,7 +105,8 @@ class VPNClientsViewModel(
     fun loadDefaultDNS(deployment: Deployment) {
         scope.launch {
             val loaded = runCatching { operations(deployment).defaultDNS() }.getOrNull() ?: return@launch
-            _state.value = _state.value.copy(dnsDefaults = VPNRelayRouting.withHomeResolvers(deployment, loaded))
+            _state.value = _state.value.copy(dnsDefaults = VPNRelayRouting.withHomeResolvers(deployment, loaded), dnsKnown = true)
+            keepChosenFirst(deployment)
         }
     }
 
@@ -104,7 +114,8 @@ class VPNClientsViewModel(
         scope.launch {
             try {
                 val saved = operations(deployment).setDefaultDNS(dns)
-                _state.value = _state.value.copy(dnsDefaults = VPNRelayRouting.withHomeResolvers(deployment, saved))
+                _state.value = _state.value.copy(dnsDefaults = VPNRelayRouting.withHomeResolvers(deployment, saved), dnsKnown = true)
+                keepChosenFirst(deployment)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (failure: Exception) {
@@ -123,7 +134,17 @@ class VPNClientsViewModel(
                 null
             }
             _state.value = _state.value.copy(dnsPriority = loaded)
+            keepChosenFirst(deployment)
         }
+    }
+
+    /** Puts the devices' chosen DNS first in the relay order */
+    private fun keepChosenFirst(deployment: Deployment) {
+        val current = _state.value
+        val order = current.dnsPriority?.resolvers ?: return
+        if (!current.dnsKnown) return
+        val pinned = VPNDNSPriorityEditing.pin(order, current.chosenDNSEntry)
+        if (pinned != order) setDNSPriority(deployment, pinned)
     }
 
     fun setDNSPriority(deployment: Deployment, resolvers: List<String>) {
@@ -143,7 +164,25 @@ class VPNClientsViewModel(
         _state.value = _state.value.copy(isBusy = true, errorMessage = null, notice = null)
         job = scope.launch {
             run(deployment, notice = notices.removed) { it.remove(protocol, clientID) }
+            if (_state.value.errorMessage == null) onRemoved(deployment.id, clientID)
         }
+    }
+
+    /** Removes own devices on the server, returns failures */
+    suspend fun removeOwnDevices(deployment: Deployment): List<String> {
+        val failures = mutableListOf<String>()
+        for (protocol in ServiceID.VPN_PROTOCOLS) {
+            val clientId = ownDevices.clientId(deployment.id, protocol.rawValue) ?: continue
+            try {
+                operations(deployment).remove(protocol, clientId)
+                onRemoved(deployment.id, clientId)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                failures += reason(failure)
+            }
+        }
+        return failures
     }
 
     /** One device's configuration, for showing and copying */
@@ -151,7 +190,7 @@ class VPNClientsViewModel(
         deployment: Deployment,
         protocol: ServiceID,
         clientID: String,
-    ): VPNClientConfiguration? = if (!LicensePrompt.allow()) null else try {
+    ): VPNClientConfiguration? = if (!LicensePrompt.allow(deployment)) null else try {
         operations(deployment).configuration(protocol, clientID)
     } catch (cancelled: CancellationException) {
         throw cancelled
@@ -167,7 +206,7 @@ class VPNClientsViewModel(
         protocol: ServiceID,
         label: String,
         dns: List<String> = emptyList(),
-    ): VPNClientConfiguration? = if (!LicensePrompt.allow()) null else try {
+    ): VPNClientConfiguration? = if (!LicensePrompt.allow(deployment)) null else try {
         val operations = operations(deployment)
         val known = operations.list(protocol).toList()
         val knownIds = known.map { it.id }.toSet()
@@ -252,6 +291,7 @@ class VPNClientsViewModel(
                 notice = notice,
                 hasAnswered = true,
             )
+            _state.value.protocol?.let { WidgetFeed.devices(deployment, it, devices.map { device -> device.name }, null) }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failure: Exception) {
@@ -261,6 +301,7 @@ class VPNClientsViewModel(
                 errorMessage = reason(failure),
                 hasAnswered = true,
             )
+            _state.value.protocol?.let { WidgetFeed.devices(deployment, it, null, reason(failure)) }
         }
     }
 

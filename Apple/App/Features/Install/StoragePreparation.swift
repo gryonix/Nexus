@@ -135,6 +135,22 @@ enum StoragePreparation {
         _ = try await output(of: step, runner: runner, elevated: username != "root")
     }
 
+    /// Runs the script detached, reading on across dropped links
+    static func detachedOutput(of step: StorageStep, runner: any SSHCommandRunner, host: SSHHostID,
+                               elevated: Bool) async throws -> String {
+        let output: String
+        do {
+            output = try await DetachedScript.output(of: step.script, elevated: elevated, subject: "speed",
+                                                     on: host, runner: runner)
+        } catch ServerControlError.commandFailed(_, _, let stderr) {
+            throw Failure(detail: step.title + "\n" + stderr)
+        }
+        guard output.contains(step.doneMarker) else {
+            throw Failure(detail: step.title + "\n" + output.split(separator: "\n").suffix(6).joined(separator: "\n"))
+        }
+        return output
+    }
+
     /// Runs the script on `host` and returns its output
     static func output(of step: StorageStep, runner: any SSHCommandRunner, host: SSHHostID = .vps,
                        elevated: Bool) async throws -> String {

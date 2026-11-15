@@ -37,7 +37,7 @@ struct BackupsHubView: View {
         .formRowButtons()
         #endif
         .bottomBarClearance()
-        .navigationTitle("Backups")
+        .screenTitle("Backups")
         .raisedNavigationTitle()
         .refreshable { await refresh() }
         .task { await backups.load() }
@@ -68,6 +68,7 @@ struct BackupsHubView: View {
     private func refreshSettings() async {
         await viewModel.loadAutoBackup()
         await viewModel.loadBackupDestination()
+        await viewModel.loadBackupParts()
     }
 
     private var backUpNowButton: some View {
@@ -96,7 +97,7 @@ struct BackupsHubView: View {
         if !restorable.isEmpty {
             Menu {
                 ForEach(restorable, id: \.id) { service in
-                    Button(service.displayName) { requests.restore(service.id) }
+                    Button(viewModel.title(of: service)) { requests.restore(service.id) }
                 }
             } label: {
                 Label("Restore", systemImage: "clock.arrow.circlepath")
@@ -118,6 +119,15 @@ struct BackupsHubView: View {
                         .foregroundStyle(.secondary)
                 } label: {
                     Label("Scheduled backups", systemImage: "clock.arrow.2.circlepath")
+                }
+            }
+            NavigationLink {
+                BackupPartsView(viewModel: viewModel, scope: .regular)
+            } label: {
+                LabeledContent {
+                    Text(BackupPartText.summary(viewModel.backupParts.choice.regular)).foregroundStyle(.secondary)
+                } label: {
+                    Label("What to copy", systemImage: "checklist")
                 }
             }
             NavigationLink {

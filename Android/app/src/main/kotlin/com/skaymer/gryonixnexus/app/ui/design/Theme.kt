@@ -101,7 +101,7 @@ private fun GryonixColors.materialScheme() = if (isDark) {
     )
 }
 
-/** The corner radii the iPhone app is cut with */
+/** Corner radii */
 val GryonixShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
     small = RoundedCornerShape(10.dp),
@@ -128,22 +128,21 @@ private fun sf(
     lineHeightStyle = TightLineHeight,
 )
 
+/** Material 3 type scale */
 val GryonixTypography = Typography(
-    displayLarge = sf(34, 41, FontWeight.Bold, -0.4),
-    displayMedium = sf(28, 34, FontWeight.Bold, -0.3),
-    displaySmall = sf(22, 28, FontWeight.Bold, -0.2),
-    headlineLarge = sf(34, 41, FontWeight.Bold, -0.4),
-    headlineMedium = sf(28, 34, FontWeight.SemiBold, -0.3),
-    headlineSmall = sf(20, 25, FontWeight.SemiBold, -0.2),
-    titleLarge = sf(17, 22, FontWeight.SemiBold, -0.4),
-    titleMedium = sf(17, 22, FontWeight.SemiBold, -0.4),
-    titleSmall = sf(15, 20, FontWeight.SemiBold, -0.2),
-    // Body 17, subheadline 15, footnote 13.
-    bodyLarge = sf(17, 22, tracking = -0.4),
-    bodyMedium = sf(15, 20, tracking = -0.2),
-    bodySmall = sf(13, 18, tracking = -0.1),
-    // What a control is labelled with, then caption1 and caption2.
-    labelLarge = sf(17, 22, tracking = -0.4),
-    labelMedium = sf(12, 16),
-    labelSmall = sf(11, 13),
+    displayLarge = sf(34, 42, FontWeight.Bold),
+    displayMedium = sf(28, 36, FontWeight.Bold),
+    displaySmall = sf(24, 32, FontWeight.SemiBold),
+    headlineLarge = sf(32, 40, FontWeight.SemiBold),
+    headlineMedium = sf(28, 36, FontWeight.SemiBold),
+    headlineSmall = sf(22, 28, FontWeight.SemiBold),
+    titleLarge = sf(22, 28, FontWeight.Medium),
+    titleMedium = sf(16, 24, FontWeight.Medium, 0.15),
+    titleSmall = sf(14, 20, FontWeight.Medium, 0.1),
+    bodyLarge = sf(16, 24, tracking = 0.15),
+    bodyMedium = sf(14, 20, tracking = 0.25),
+    bodySmall = sf(12, 16, tracking = 0.4),
+    labelLarge = sf(14, 20, FontWeight.Medium, 0.1),
+    labelMedium = sf(12, 16, FontWeight.Medium, 0.5),
+    labelSmall = sf(11, 16, FontWeight.Medium, 0.5),
 )

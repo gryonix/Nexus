@@ -16,9 +16,7 @@ public struct TunnelActivityTicket: Codable, Equatable, Sendable {
     }
 
     public static func url(groupIdentifier: String = AppGroup.identifier) -> URL? {
-        FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: groupIdentifier)?
-            .appendingPathComponent(fileName)
+        AppGroup.writableURL(groupIdentifier)?.appendingPathComponent(fileName)
     }
 
     public static func load(from url: URL? = url()) -> TunnelActivityTicket? {

@@ -8,7 +8,8 @@ import UniformTypeIdentifiers
 struct NotificationsSheet: View {
     @ObservedObject var viewModel: DashboardViewModel
     @ObservedObject private var push = PushRegistration.shared
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dismiss) private var dismissSheet
+    @Environment(\.sidePaneClose) private var paneClose
     @State private var settings: Gryonixnexusd_V1_NotifySettings?
     @State private var draft = Gryonixnexusd_V1_SetNotifySettingsRequest()
     @State private var isWorking = false
@@ -19,7 +20,7 @@ struct NotificationsSheet: View {
     @State private var followsApp = false
 
     var body: some View {
-        NavigationStack {
+        SheetStack {
             CardList {
                 channelSection
                 eventsSection
@@ -30,6 +31,7 @@ struct NotificationsSheet: View {
                 actionsSection
                 transferSection
             }
+            #if !os(tvOS)
             .fileExporter(isPresented: Binding(get: { exporting != nil }, set: { if !$0 { exporting = nil } }),
                           document: exporting, contentType: .json,
                           defaultFilename: "gryonixPush-\(viewModel.deployment.name)") { result in
@@ -37,14 +39,15 @@ struct NotificationsSheet: View {
                     message = QuickActionResult(message: error.localizedDescription, isError: true)
                 }
             }
+            #endif
             .fileImporter(isPresented: $isImporting, allowedContentTypes: [.json]) { result in
                 importFile(result)
             }
-            .navigationTitle(Text("Notifications"))
+            .screenTitle(Text("Notifications"))
             .raisedNavigationTitle()
             .disabled(isWorking)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { closePage() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { run { try await save() } }.disabled(!canSave)
                 }
@@ -204,7 +207,8 @@ struct NotificationsSheet: View {
                                                    locale: ContentLanguageSetting.current.rawValue,
                                                    muted: NotifyPreferences.current().muted,
                                                    proof: DevicePushProof.proof,
-                                                   name: PushRegistration.deviceName)
+                                                   name: PushRegistration.deviceName,
+                                                   sounds: NotifySounds.chosen())
         if let settings {
             PushRelays.remember(settings.relayURL)
             await viewModel.mirrorNotify(settings)
@@ -253,7 +257,7 @@ struct NotifyRelayFields: View {
         TextField("Relay address", text: $url, prompt: Text(verbatim: "https://push.example.com"))
             .textContentType(.URL)
             .autocorrectionDisabled()
-            #if os(iOS)
+            #if os(iOS) || os(tvOS)
             .textInputAutocapitalization(.never)
             #endif
     }
@@ -267,14 +271,14 @@ struct NotifyNtfyFields: View {
         TextField("ntfy server", text: $url, prompt: Text(verbatim: "https://ntfy.sh"))
             .textContentType(.URL)
             .autocorrectionDisabled()
-            #if os(iOS)
+            #if os(iOS) || os(tvOS)
             .textInputAutocapitalization(.never)
             #endif
         HStack {
             TextField("Topic", text: $topic)
                 .font(.body.monospaced())
                 .autocorrectionDisabled()
-                #if os(iOS)
+                #if os(iOS) || os(tvOS)
                 .textInputAutocapitalization(.never)
                 #endif
             Button("New") { topic = NotifyDraft.randomTopic() }
@@ -316,5 +320,13 @@ struct NotifyStatusSection: View {
                 Text("Status")
             }
         }
+    }
+}
+
+@available(macOS 15.0, *)
+private extension NotificationsSheet {
+    /// Closes the column page, or the sheet
+    func closePage() {
+        if let paneClose { paneClose() } else { dismissSheet() }
     }
 }

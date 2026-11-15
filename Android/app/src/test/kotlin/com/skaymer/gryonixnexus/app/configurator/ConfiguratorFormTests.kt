@@ -19,6 +19,20 @@ class ConfiguratorFormTests {
         publicIP: String = "203.0.113.10"
     ) = ConfiguratorForm(topology = topology, domain = domain, publicIP = publicIP)
 
+    @Test
+    fun `only scenarios without a public address ask for the network address`() {
+        val onNetwork = DeploymentScope.entries.filter { form().copy(scope = it).addressIsOnNetwork }
+        assertEquals(
+            setOf(
+                DeploymentScope.LOCAL_ONLY, DeploymentScope.CLOUDFLARE_TUNNEL, DeploymentScope.MESH_ONLY,
+                DeploymentScope.TAILSCALE_ONLY,
+            ),
+            onNetwork.toSet(),
+        )
+        val relay = form(topology = Topology.VPS_RELAY_WITH_HOME_BACKEND)
+        assertTrue(DeploymentScope.entries.none { relay.copy(scope = it).addressIsOnNetwork })
+    }
+
     /** The mail host is DERIVED */
     @Test
     fun `the mail hostname is derived from the domain`() {

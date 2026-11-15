@@ -10,6 +10,7 @@ struct NotifyEventToggles: View {
     @Binding var agentUpdate: Bool
     @Binding var operations: Bool
     @Binding var sshLogins: Bool
+    @Binding var unusualLoad: Bool
 
     var body: some View {
         Toggle("Disks and RAID", isOn: $disks)
@@ -23,6 +24,7 @@ struct NotifyEventToggles: View {
         Toggle("A new agent version", isOn: $agentUpdate)
         Toggle("A long operation finished", isOn: $operations)
         Toggle("Someone signed in over SSH", isOn: $sshLogins)
+        Toggle("The server stays overloaded", isOn: $unusualLoad)
     }
 }
 
@@ -41,6 +43,7 @@ extension NotifyEventToggles {
         let percent = Binding(get: { (50...99).contains(Int(checks.wrappedValue.diskSpacePercent)) ? Int(checks.wrappedValue.diskSpacePercent) : 90 },
                               set: { checks.wrappedValue.diskSpacePercent = UInt32($0) })
         self.init(disks: disks, spacePercent: percent, services: flag(\.services), backups: flag(\.backups),
-                  agentUpdate: flag(\.agentUpdate), operations: flag(\.operations), sshLogins: flag(\.sshLogins))
+                  agentUpdate: flag(\.agentUpdate), operations: flag(\.operations), sshLogins: flag(\.sshLogins),
+                  unusualLoad: flag(\.unusualLoad))
     }
 }

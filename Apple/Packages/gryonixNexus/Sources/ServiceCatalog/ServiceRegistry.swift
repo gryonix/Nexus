@@ -55,8 +55,11 @@ public enum ServiceRegistry {
         N8NService(),
         HomeAssistantService(),
         MosquittoService(),
-        Zigbee2MQTTService()
-    ]
+        Zigbee2MQTTService(),
+        ShairportSyncService(),
+        UxPlayService(),
+        OdioService()
+    ] + PackagedAudioService.all
 
     public static func expanded(_ selection: Set<ServiceID>,
                                 scope: DeploymentScope,
@@ -65,6 +68,7 @@ public enum ServiceRegistry {
         if !ids.isDisjoint(with: ServiceID.vpnProtocols) { ids.insert(.vpnPanel) }
         if scope == .cloudflareTunnel { ids.insert(.cloudflared) }
         if scope.requiresMesh { ids.insert(.headscale) }
+        if scope.joinsTailscale { ids.insert(.tailscaleNode) }
         if !ids.isDisjoint(with: ServiceID.gameServers) { ids.insert(.craftyController) }
         // Zigbee publishes to the broker, so one brings both
         if ids.contains(.zigbee2MQTT) { ids.insert(.mosquitto) }

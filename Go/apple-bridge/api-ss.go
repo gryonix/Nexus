@@ -1,6 +1,7 @@
 package main
 
 // Shadowsocks 2022 entry points, copied into WireGuardKitGo at build time.
+// One client per listen address; stop closes them all.
 
 import "C"
 import (
@@ -14,17 +15,18 @@ import (
 const ssMemoryLimit = 30 << 20
 
 var (
-	ssLock   sync.Mutex
-	ssClient *ss2022.Client
+	ssLock    sync.Mutex
+	ssClients = map[string]*ss2022.Client{}
 )
 
 //export GryonixSSStart
 func GryonixSSStart(listen, server, method, password, user, pass *C.char) *C.char {
 	ssLock.Lock()
 	defer ssLock.Unlock()
-	if ssClient != nil {
-		_ = ssClient.Close()
-		ssClient = nil
+	address := C.GoString(listen)
+	if old := ssClients[address]; old != nil {
+		_ = old.Close()
+		delete(ssClients, address)
 	}
 	debug.SetMemoryLimit(ssMemoryLimit)
 	m, err := ss2022.NewMethod(C.GoString(method), C.GoString(password))
@@ -35,11 +37,11 @@ func GryonixSSStart(listen, server, method, password, user, pass *C.char) *C.cha
 	if err != nil {
 		return C.CString(err.Error())
 	}
-	client, err := ss2022.ListenWithLogin(C.GoString(listen), C.GoString(server), m, login)
+	client, err := ss2022.ListenWithLogin(address, C.GoString(server), m, login)
 	if err != nil {
 		return C.CString(err.Error())
 	}
-	ssClient = client
+	ssClients[address] = client
 	return C.CString("")
 }
 
@@ -47,9 +49,9 @@ func GryonixSSStart(listen, server, method, password, user, pass *C.char) *C.cha
 func GryonixSSStop() *C.char {
 	ssLock.Lock()
 	defer ssLock.Unlock()
-	if ssClient != nil {
-		_ = ssClient.Close()
-		ssClient = nil
+	for address, client := range ssClients {
+		_ = client.Close()
+		delete(ssClients, address)
 	}
 	return C.CString("")
 }

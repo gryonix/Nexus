@@ -23,8 +23,8 @@ struct MetricsHistoryView: View {
                 InfoSectionHeader("Metrics history", note: "History is collected on the server; longer ranges fill in over time.")
             }
         }
-        .navigationTitle("Metrics history")
-        #if os(iOS)
+        .screenTitle("Metrics history")
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .task { await viewModel.start() }
@@ -444,6 +444,16 @@ extension Array where Element == MetricsHistoryPoint {
 
 /// One chart pane
 struct HistoryChart: View, Equatable {
+    /// The TV's larger type fits two value labels, not five
+    private var yLabelValues: AxisMarkValues {
+        #if os(tvOS)
+        let mid = (yDomain.lowerBound + yDomain.upperBound) / 2
+        return .stride(by: Swift.max(yDomain.upperBound - mid, 0.0001) * 0.999)
+        #else
+        return .automatic(desiredCount: 5)
+        #endif
+    }
+
     static func == (lhs: HistoryChart, rhs: HistoryChart) -> Bool {
         lhs.range == rhs.range
             && lhs.showsLegend == rhs.showsLegend
@@ -548,7 +558,7 @@ struct HistoryChart: View, Equatable {
         .chartXScale(domain: xDomain)
         .chartYScale(domain: yDomain)
         .chartYAxis {
-            AxisMarks(position: .trailing) { value in
+            AxisMarks(position: .trailing, values: yLabelValues) { value in
                 AxisGridLine()
                 AxisValueLabel {
                     if let doubleValue = value.as(Double.self) {
@@ -573,6 +583,7 @@ struct HistoryChart: View, Equatable {
                 Rectangle()
                     .fill(Color.clear)
                     .contentShape(Rectangle())
+                    #if !os(tvOS)
                     .gesture(
                         DragGesture(minimumDistance: 0)
                             .onChanged { drag in
@@ -581,6 +592,7 @@ struct HistoryChart: View, Equatable {
                             }
                             .onEnded { _ in selectedDate = nil }
                     )
+                    #endif
             }
         }
     }
@@ -616,6 +628,10 @@ struct HistoryChart: View, Equatable {
             case .memory:
                 out.append(Series(name: "Memory", key: "mem", color: HistoryMetric.memory.tint,
                                   values: values { $0.memUsedFraction * 100 }))
+                if hasSwap {
+                    out.append(Series(name: "Swap", key: "swap", color: .orange,
+                                      values: values { $0.swapUsedFraction.map { $0 * 100 } }))
+                }
             case .disk where !diskLines.isEmpty:
                 out += diskSeries
             case .disk:
@@ -643,6 +659,10 @@ struct HistoryChart: View, Equatable {
             }
         }
         return out
+    }
+
+    private var hasSwap: Bool {
+        points.contains { ($0.swapTotalBytes ?? 0) > 0 }
     }
 
     private static let diskColors: [Color] = [.teal, .indigo, .orange, .pink, .green, .purple, .brown]
@@ -754,7 +774,7 @@ struct HistoryChart: View, Equatable {
     }
 
     private var tooltipBackground: Color {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         Color(.secondarySystemGroupedBackground)
         #else
         Color(nsColor: .windowBackgroundColor)

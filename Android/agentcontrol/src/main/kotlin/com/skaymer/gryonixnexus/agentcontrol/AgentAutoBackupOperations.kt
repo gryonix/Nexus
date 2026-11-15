@@ -1,6 +1,7 @@
 package com.skaymer.gryonixnexus.agentcontrol
 
 import com.skaymer.gryonixnexus.agentclient.AgentClient
+import com.skaymer.gryonixnexus.catalog.BackupPart
 import com.skaymer.gryonixnexus.servercontrol.AutoBackupManaging
 import com.skaymer.gryonixnexus.servercontrol.AutoBackupSettings
 import com.skaymer.gryonixnexus.servercontrol.BackupDestinationSettings
@@ -9,8 +10,13 @@ import com.skaymer.gryonixnexus.servercontrol.BackupDestinationTestResult
 import com.skaymer.gryonixnexus.servercontrol.BackupDriveSettings
 import com.skaymer.gryonixnexus.servercontrol.BackupDriveStatus
 import com.skaymer.gryonixnexus.servercontrol.BackupDrivesState
+import com.skaymer.gryonixnexus.servercontrol.BackupPartChoice
+import com.skaymer.gryonixnexus.servercontrol.BackupPartsChange
+import com.skaymer.gryonixnexus.servercontrol.BackupPartsState
 import gryonixnexusd.v1.BackupDriveMode
 import gryonixnexusd.v1.BackupDrives
+import gryonixnexusd.v1.BackupParts
+import gryonixnexusd.v1.BackupPartChoice as WireBackupPartChoice
 import gryonixnexusd.v1.BackupSchedulePolicy
 import com.skaymer.gryonixnexus.servercontrol.CommandCatalog
 
@@ -85,6 +91,38 @@ class AgentAutoBackupOperations(
         }
         mapping { client.setBackupDrives(BackupDrives(mode = mode, encrypt = settings.encrypt, uuids = settings.uuids)) }
     }
+
+    override suspend fun loadParts(): BackupPartsState = parts(mapping { client.getBackupSchedule() })
+
+    override suspend fun saveParts(change: BackupPartsChange) {
+        val shared = change.shared?.let { wire(it) } ?: WireBackupPartChoice()
+        val wire = shared.copy(services = change.services.mapValues { (_, choice) -> wire(choice) })
+        mapping { client.setBackupParts(wire) }
+    }
+
+    /** The policy's parts half; an older agent sends none */
+    internal fun parts(policy: BackupSchedulePolicy): BackupPartsState {
+        val wire = policy.parts ?: return BackupPartsState(supported = false)
+        return BackupPartsState(choice(wire), services = wire.services.mapValues { (_, own) -> choice(own) })
+    }
+
+    private fun choice(wire: WireBackupPartChoice): BackupPartChoice =
+        BackupPartChoice(regular = parts(wire.regular), beforeUpdate = parts(wire.before_update))
+
+    private fun wire(choice: BackupPartChoice): WireBackupPartChoice =
+        WireBackupPartChoice(regular = wire(choice.regular), before_update = wire(choice.beforeUpdate))
+
+    private fun parts(wire: BackupParts?): Set<BackupPart> = buildSet {
+        if (wire?.files == true) add(BackupPart.FILES)
+        if (wire?.settings == true) add(BackupPart.SETTINGS)
+        if (wire?.databases == true) add(BackupPart.DATABASES)
+    }
+
+    private fun wire(parts: Set<BackupPart>): BackupParts = BackupParts(
+        files = BackupPart.FILES in parts,
+        settings = BackupPart.SETTINGS in parts,
+        databases = BackupPart.DATABASES in parts,
+    )
 
     /** The policy's drive half; an older agent sends none */
     internal fun drives(policy: BackupSchedulePolicy): BackupDrivesState {

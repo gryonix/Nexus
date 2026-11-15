@@ -1,8 +1,8 @@
 package com.skaymer.gryonixnexus.catalog.services
 
 import com.skaymer.gryonixnexus.catalog.AIServicesNetwork
-
 import com.skaymer.gryonixnexus.catalog.ArchiveBackupPlan
+import com.skaymer.gryonixnexus.catalog.BackupPart
 import com.skaymer.gryonixnexus.catalog.BackupPlan
 import com.skaymer.gryonixnexus.catalog.BackupSpec
 import com.skaymer.gryonixnexus.catalog.BackupWrapperSpec
@@ -13,7 +13,6 @@ import com.skaymer.gryonixnexus.catalog.ManagedService
 import com.skaymer.gryonixnexus.catalog.PrivilegedCommand
 import com.skaymer.gryonixnexus.catalog.RestoreSpec
 import com.skaymer.gryonixnexus.catalog.SH
-import com.skaymer.gryonixnexus.catalog.embedding
 import com.skaymer.gryonixnexus.catalog.ServiceActions
 import com.skaymer.gryonixnexus.catalog.ServiceCategory
 import com.skaymer.gryonixnexus.catalog.ServiceCommand
@@ -27,6 +26,7 @@ import com.skaymer.gryonixnexus.catalog.StatusProbe
 import com.skaymer.gryonixnexus.catalog.UninstallSpec
 import com.skaymer.gryonixnexus.catalog.UpdateSpec
 import com.skaymer.gryonixnexus.catalog.WebIngress
+import com.skaymer.gryonixnexus.catalog.embedding
 
 class QdrantService : ManagedService {
     override val id = ServiceID.QDRANT
@@ -118,6 +118,7 @@ class QdrantService : ManagedService {
                 plan = BackupPlan.Archive(ArchiveBackupPlan(
                     composeProject = COMPOSE_PROJECT,
                     dataPath = "$path/storage",
+                    dataPart = BackupPart.FILES,
                     databases = emptyList(),
                     quiesceServices = listOf(CONTAINER),
                     encryptsByDefault = true,

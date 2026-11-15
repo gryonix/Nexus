@@ -23,9 +23,11 @@ class AgentAdminLockdown(
         )
     }
 
-    override suspend fun set(hosts: List<String>): AdminLockdownState {
+    override suspend fun set(hosts: List<String>): AdminLockdownState = set(hosts, null)
+
+    override suspend fun set(hosts: List<String>, denyVPN: List<String>?): AdminLockdownState {
         if (hosts.isEmpty()) return set(false)
-        val invalid = hosts.filterNot { CommandCatalog.AdminLockdown.isValidHost(it) }
+        val invalid = (hosts + denyVPN.orEmpty()).filterNot { CommandCatalog.AdminLockdown.isValidHost(it) }
         if (invalid.isNotEmpty()) {
             throw ServerControlError.CommandFailed(
                 "lockdown",
@@ -33,7 +35,7 @@ class AgentAdminLockdown(
                 "These names cannot be guarded: ${invalid.joinToString(", ")}. Nothing was changed.",
             )
         }
-        return mapping { state(client.setLockdown(LockdownMode.LOCKDOWN_MODE_ONLY, hosts)) }
+        return mapping { state(client.setLockdown(LockdownMode.LOCKDOWN_MODE_ONLY, hosts, denyVPN)) }
     }
 
     // --------------------------------------------------------------- Helpers

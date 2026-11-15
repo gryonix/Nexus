@@ -1,3 +1,4 @@
+import AIAssistant
 import AgentClient
 import ServerControl
 import ServiceCatalog
@@ -16,22 +17,30 @@ struct ServiceLogsSheet: View {
     let source: Source
 
     @StateObject private var model = ServiceLogsModel()
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dismiss) private var dismissSheet
+    @Environment(\.sidePaneClose) private var paneClose
 
     var body: some View {
-        NavigationStack {
+        SheetStack {
             VStack(spacing: 0) {
                 header
                 Divider()
                 logBody
             }
-            .navigationTitle(service.displayName)
-            #if os(iOS)
+            .screenTitle(ServiceOwnNames.shared.title(service, server: deployment.id))
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
+                    Button("Close") { closePage() }
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    AIExplainButton(context: {
+                        AIExplain.service(name: service.displayName, server: deployment.name,
+                                          logs: model.plainText())
+                    }, after: { closePage() })
+                    .disabled(model.entries.isEmpty)
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button {
@@ -79,7 +88,9 @@ struct ServiceLogsSheet: View {
                     Label("Follow", systemImage: "arrow.down.to.line")
                         .font(.caption)
                 }
+                #if !os(tvOS)
                 .toggleStyle(.button)
+                #endif
                 .controlSize(.small)
             } else {
                 Button {
@@ -180,7 +191,7 @@ struct ServiceLogsSheet: View {
     private func copyToClipboard(_ string: String) {
         #if os(iOS)
         UIPasteboard.general.string = string
-        #else
+        #elseif os(macOS)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(string, forType: .string)
         #endif
@@ -329,5 +340,12 @@ final class ServiceLogsModel: ObservableObject {
 
     private func finish(_ errorMessage: String?) {
         status = errorMessage.map { Status.failed($0) } ?? .ended
+    }
+}
+
+private extension ServiceLogsSheet {
+    /// Closes the column page, or the sheet
+    func closePage() {
+        if let paneClose { paneClose() } else { dismissSheet() }
     }
 }

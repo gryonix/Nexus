@@ -10,17 +10,19 @@ struct VPNSectionView: View {
     @State private var path = NavigationPath()
     @ObservedObject private var navigator = AppNavigator.shared
     @ObservedObject private var tunnel = TunnelController.shared
+    @State private var importing = false
+    @ObservedObject private var modules = ModuleSettings.shared
 
     var body: some View {
         NavigationStack(path: $path) {
             Group {
-                if manageable.isEmpty && panelOnly.isEmpty && tunnel.profiles.isEmpty {
+                if manageable.isEmpty && panelOnly.isEmpty && tunnel.profiles.isEmpty && !modules.isOn(.vpnAdvanced) {
                     emptyState
                 } else {
                     list
                 }
             }
-            .navigationTitle("VPN")
+            .screenTitle("VPN")
             .sectionToolbar(.vpn)
             .navigationDestination(for: Deployment.self) { deployment in
                 VPNClientsHost(deployment: deployment)
@@ -45,6 +47,7 @@ struct VPNSectionView: View {
             .refreshableWithShortcut { servers.load() }
         }
         .popToRootOnReselect(.vpn) { path = NavigationPath() }
+        .sheet(isPresented: $importing) { ImportTunnelSheet(tunnel: tunnel) }
     }
 
     /// Pushes one server's devices screen
@@ -64,7 +67,7 @@ struct VPNSectionView: View {
 
     private var list: some View {
         CardList {
-            ThisDeviceCard(tunnel: tunnel, highlighted: navigator.focusTunnel)
+            ThisDeviceCard(tunnel: tunnel, importing: $importing, highlighted: navigator.focusTunnel)
 
             if !manageable.isEmpty {
                 Section {
@@ -91,6 +94,27 @@ struct VPNSectionView: View {
                     }
                 } header: {
                     InfoSectionHeader("Managed in the panel") { Text(panelOnlyReason) }
+                }
+            }
+
+            if modules.isOn(.vpnAdvanced) { advancedSection }
+        }
+    }
+
+    private var advancedSection: some View {
+        Section {
+            NavigationLink {
+                AdvancedVPNView(model: AdvancedVPNModel.shared, tunnel: tunnel)
+            } label: {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("VPN advanced settings")
+                        Text("Subscriptions, rules, server groups, DNS, ad blocking and traffic statistics for this device's VPN.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "slider.horizontal.3").foregroundStyle(Color.accentColor)
                 }
             }
         }
@@ -163,6 +187,8 @@ struct VPNSectionView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
+            Button("Add a configuration…") { importing = true }
+                .secondaryActionButtonStyle()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -193,7 +219,7 @@ struct LiveActivitySection: View {
         Section {
             VPNLiveActivityRows()
         } header: {
-            InfoSectionHeader("Live Activity & Dynamic Island", note: VPNLiveActivityRows.note)
+            InfoSectionHeader(DynamicIsland.settingsTitle, note: VPNLiveActivityRows.note)
         }
     }
 }
@@ -202,13 +228,19 @@ struct LiveActivitySection: View {
 struct VPNLiveActivityRows: View {
     @ObservedObject private var settings = LiveActivitySettings.shared
 
-    static let note: LocalizedStringKey = "While the VPN is on, the connection stays on the Lock Screen and in the Dynamic Island. iOS shows both together: each has its own look, but they turn on and off as one."
+    static var note: LocalizedStringKey {
+        DynamicIsland.isOnThisDevice
+            ? "While the VPN is on, the connection stays on the Lock Screen and in the Dynamic Island. iOS shows both together: each has its own look, but they turn on and off as one."
+            : "While the VPN is on, the connection stays on the Lock Screen."
+    }
 
     var body: some View {
         Toggle("Show while the VPN is on", isOn: $settings.showsVPNSession)
         if settings.showsVPNSession {
             NavigationLink("Lock Screen") { VPNLockScreenSettingsView() }
-            NavigationLink("Dynamic Island") { VPNIslandSettingsView() }
+            if DynamicIsland.isOnThisDevice {
+                NavigationLink("Dynamic Island") { VPNIslandSettingsView() }
+            }
         }
     }
 }
@@ -222,13 +254,17 @@ struct OnDemandSection: View {
         Section {
             Toggle("Connect automatically", isOn: $settings.isEnabled)
             if settings.isEnabled {
+                #if !os(tvOS)
                 scopePicker
                 if settings.scope != .cellularOnly { networks }
+                #endif
             }
         } header: {
             InfoSectionHeader("Automatic", note: "The system brings the tunnel up on its own, before anything else connects — including after a restart, without the app being opened.")
         } footer: {
+            #if !os(tvOS)
             if settings.isEnabled, settings.scope != .cellularOnly { Text(networksNote) }
+            #endif
         }
     }
 

@@ -108,7 +108,7 @@ struct DNSProviderPublishSection: View {
 
             SecureField(model.providerKind.tokenFieldLabel, text: $model.token)
                 .textContentType(.password)
-                #if os(iOS)
+                #if os(iOS) || os(tvOS)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 #endif

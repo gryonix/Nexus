@@ -66,6 +66,12 @@ class ServiceOperations(
                 DockerPSParser.find(probe.name, all)?.let { listOf(it) }
                     ?: listOf(ContainerStatus(probe.name, "not running"))
             }
+
+            is StatusProbe.SystemdUnits -> {
+                val output = runSucceeding(probe.list.command, timeout(ServiceCommand.TimeoutClass.QUICK))
+                SystemdShowParser.parse(output)
+                    .ifEmpty { listOf(ContainerStatus(service.displayName, "not running")) }
+            }
         }
     }
 

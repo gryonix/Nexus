@@ -88,6 +88,7 @@ class WakeOnLANViewModelTests {
         save = { saved += it },
         agentReading = { reading },
         sendFromPhone = { _, broadcast, _ -> sent += broadcast; true },
+        network = UnconfinedTestDispatcher(scope.testScheduler),
     )
 
     @Test

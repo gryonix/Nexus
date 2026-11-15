@@ -35,11 +35,18 @@ data class RunningJob(
     val failure: String? = null,
     val host: SSHHostID? = null,
     val kind: OperationKind = OperationKind.OTHER,
+    /** The last lines the run printed */
+    val log: String = "",
 ) {
     /** What identifies this run on the strip */
     val key: String get() = "$id@${host ?: "agent"}"
 
-    fun withLine(text: String): RunningJob = copy(line = text, stage = WrapperLogText.stage(text) ?: stage)
+    fun withLine(text: String): RunningJob =
+        copy(line = text, stage = WrapperLogText.stage(text) ?: stage, log = (log + text + "\n").takeLast(LOG_KEPT))
+
+    private companion object {
+        const val LOG_KEPT = 20_000
+    }
 }
 
 class RunningJobs(
@@ -99,6 +106,16 @@ class RunningJobs(
         }
     }
 
+    /** Lists the run a tapped alert names, finished or not */
+    fun adoptNamed(jobID: String, deploymentID: String) {
+        scope.launch {
+            val deployment = deployments().firstOrNull { it.id.toString() == deploymentID } ?: return@launch
+            val ops = runCatching { operations(deployment) }.getOrNull() ?: return@launch
+            val job = runCatching { ops.jobs() }.getOrNull()?.let { named(jobID, it) } ?: return@launch
+            if (_jobs.value.none { it.id == jobID }) attach(job, deployment, ops)
+        }
+    }
+
     private suspend fun adopt(deployment: Deployment) {
         val ops = runCatching { operations(deployment) }.getOrNull() ?: return
         val running = runCatching { ops.jobs(runningOnly = true) }.getOrNull() ?: return
@@ -121,7 +138,7 @@ class RunningJobs(
             }.getOrNull() ?: continue
             for (job in listed) {
                 val key = "${job.id}@$host"
-                if (!job.isRunning || _jobs.value.any { it.key == key }) continue
+                if (!job.isRunning || job.kind == DetachedJobs.Kind.MEASURE || _jobs.value.any { it.key == key }) continue
                 attachDetached(job, deployment, runner, host)
             }
         }
@@ -211,6 +228,25 @@ class RunningJobs(
         _jobs.value = _jobs.value.map { if (it.key == key) change(it) else it }
     }
 
+    private val _opened = MutableStateFlow<String?>(null)
+
+    val opened: StateFlow<String?> = _opened
+
+    fun open(keyOrID: String) {
+        _opened.value = keyOrID
+    }
+
+    fun close() {
+        _opened.value = null
+    }
+
+    /** Asks the server to stop an agent run */
+    fun stop(job: RunningJob) {
+        val deployment = deployments().firstOrNull { it.id.toString() == job.deploymentID } ?: return
+        if (job.host != null || job.finished) return
+        scope.launch { runCatching { operations(deployment).cancel(job.id) } }
+    }
+
     fun dismiss(key: String) {
         _jobs.value = _jobs.value.filterNot { it.key == key && it.finished }
     }
@@ -221,6 +257,9 @@ class RunningJobs(
 
         /** A service run inside a plan shows there */
         fun shownAlone(job: AgentJob): Boolean = job.partOf.isEmpty()
+
+        /** The listed run with this id, running or ended */
+        fun named(jobID: String, jobs: List<AgentJob>): AgentJob? = jobs.firstOrNull { it.id == jobID }
 
         /** The machines whose detached-job journals are worth reading */
         fun journalHosts(deployment: Deployment): List<SSHHostID> =
@@ -235,6 +274,7 @@ class RunningJobs(
                 DetachedJobs.Kind.RESTORE -> "Restoring $subject"
                 DetachedJobs.Kind.UNINSTALL -> "Removing $subject"
                 DetachedJobs.Kind.CONTROL -> "Working on $subject"
+                DetachedJobs.Kind.MEASURE -> "Speed test"
             }
         }
 

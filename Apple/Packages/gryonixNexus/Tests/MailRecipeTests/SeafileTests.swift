@@ -88,7 +88,7 @@ final class SeafileTests: XCTestCase {
         XCTAssertFalse(body.contains("'/opt/seafile' 'db'"),
                        "a tar of a live MariaDB directory is a corrupt backup")
         let restore = try XCTUnwrap(script.range(of: "restore_seafile()").map {
-            String(script[$0.lowerBound...].prefix(3000))
+            String(script[$0.lowerBound...].prefix(5000))
         }, "missing the generated seafile restore body")
         for database in ["ccnet_db", "seafile_db", "seahub_db"] {
             XCTAssertTrue(restore.contains("gd_load_mysql 'seafile' 'db' "

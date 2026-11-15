@@ -1,29 +1,78 @@
 import ServerControl
 import SwiftUI
 
+/// How the server is reached: routing, its machines, its DNS
 struct GeneralStatusSection: View {
     @ObservedObject var viewModel: DashboardViewModel
+    let onUpdate: (Deployment) -> Void
+    let onDynamicDNS: () -> Void
 
     var body: some View {
-        Section("Connection") {
-            StatusRow(title: "Traffic routing",
-                      state: viewModel.forwarding,
-                      health: { $0 ? .ok : .critical },
-                      text: { UIL10n.string($0 ? "on" : "off") })
-            if viewModel.onFallbackAddress {
-                Label("Reached through the fallback address", systemImage: "arrow.triangle.branch")
-                    .foregroundStyle(.orange)
-                    .font(.callout)
+        Section {
+            if viewModel.isRelay { relayRows }
+            NavigationLink {
+                DeploymentNodesView(deployment: viewModel.deployment, onUpdate: onUpdate)
+            } label: {
+                Label("Servers", systemImage: "server.rack")
             }
-            StatusRow(title: "Server online",
-                      state: viewModel.vpsPing,
-                      health: { $0.isAlive ? .ok : .critical },
-                      text: { UIL10n.string($0.isAlive ? "responding" : "not responding") })
-            StatusRow(title: "Local server link",
-                      state: viewModel.tunnelPing,
-                      health: { $0.isAlive ? .ok : .critical },
-                      text: { UIL10n.string($0.isAlive ? "responding" : "not responding") })
+            #if os(tvOS)
+            if viewModel.canManageDynamicDNS, let state = viewModel.dynamicDNS {
+                LabeledContent {
+                    Text(state.enabled ? "On" : "Off")
+                } label: {
+                    Label("Dynamic DNS", systemImage: "arrow.triangle.2.circlepath")
+                }
+            }
+            #else
+            if viewModel.canManageDynamicDNS {
+                Button(action: onDynamicDNS) {
+                    HStack {
+                        Label("Dynamic DNS", systemImage: "arrow.triangle.2.circlepath")
+                        Spacer()
+                        if let state = viewModel.dynamicDNS {
+                            Text(state.enabled ? "On" : "Off").foregroundStyle(.secondary)
+                        }
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .infoNote("Dynamic DNS", "On a connection whose address changes, the server updates its own DNS records on a timer — it keeps working while this app is closed.")
+            }
+            #endif
+        } header: {
+            Text("Connection")
         }
+    }
+
+    @ViewBuilder private var relayRows: some View {
+        StatusRow(title: "Traffic routing",
+                  state: viewModel.forwarding,
+                  health: { $0 ? .ok : .critical },
+                  text: { UIL10n.string($0 ? "on" : "off") })
+        if viewModel.canProvisionRelay {
+            Button {
+                Task { await viewModel.provisionRelay() }
+            } label: {
+                Label("Configure the relay", systemImage: "arrow.left.arrow.right")
+            }
+            .infoNote("Configure the relay", "The relay forwards this deployment's ports into the tunnel. Configure it after installing or removing services, so its firewall matches what the local server now runs.")
+        }
+        if viewModel.onFallbackAddress {
+            Label("Reached through the fallback address", systemImage: "arrow.triangle.branch")
+                .foregroundStyle(.orange)
+                .font(.callout)
+        }
+        StatusRow(title: "Server online",
+                  state: viewModel.vpsPing,
+                  health: { $0.isAlive ? .ok : .critical },
+                  text: { UIL10n.string($0.isAlive ? "responding" : "not responding") })
+        StatusRow(title: "Local server link",
+                  state: viewModel.tunnelPing,
+                  health: { $0.isAlive ? .ok : .critical },
+                  text: { UIL10n.string($0.isAlive ? "responding" : "not responding") })
     }
 }
 

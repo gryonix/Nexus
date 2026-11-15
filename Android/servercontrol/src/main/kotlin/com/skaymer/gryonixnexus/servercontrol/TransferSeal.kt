@@ -83,5 +83,5 @@ object TransferSeal {
 
     private fun encode(bytes: ByteArray): String = Base64.getEncoder().encodeToString(bytes)
 
-    private fun randomBytes(count: Int): ByteArray = ByteArray(count).also { SecureRandom().nextBytes(it) }
+    fun randomBytes(count: Int): ByteArray = ByteArray(count).also { SecureRandom().nextBytes(it) }
 }

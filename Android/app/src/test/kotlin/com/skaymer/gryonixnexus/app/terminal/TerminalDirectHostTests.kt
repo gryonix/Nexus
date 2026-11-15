@@ -78,4 +78,13 @@ class TerminalDirectHostTests {
         file.writeText("""[{"id":"a","host":"10.0.0.5","username":"root","somethingNewer":1}]""")
         assertEquals("10.0.0.5", TerminalDirectHostStore(file).load().single().host)
     }
+
+    @Test
+    fun `the chosen way through a server is kept`() {
+        val host = TerminalDirectHost(host = "192.168.1.40", username = "root", via = TerminalVia("srv", "home"))
+        store().upsert(host)
+        assertEquals(TerminalVia("srv", "home"), store().load().single().via)
+        store().upsert(host.copy(via = null))
+        assertEquals(null, store().load().single().via)
+    }
 }

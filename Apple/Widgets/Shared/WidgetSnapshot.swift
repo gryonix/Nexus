@@ -75,6 +75,11 @@ extension FleetSnapshot {
     }
 }
 
+/// Kinds the app asks the system to reload
+enum WidgetKinds {
+    static let vpnControl = "gryonixNexus.Control"
+}
+
 /// Reads the snapshot for a timeline provider
 enum WidgetSnapshotReader {
     static func entry(store: FleetSnapshotStore = FleetSnapshotStore()) -> TunnelEntry {
@@ -84,4 +89,9 @@ enum WidgetSnapshotReader {
     static var placeholder: TunnelEntry {
         TunnelEntry(date: Date(), snapshot: .placeholder, isPlaceholder: true)
     }
+}
+
+extension TimelineReloadPolicy {
+    /// Reads the shared snapshot again within a quarter hour
+    static var rereadSoon: TimelineReloadPolicy { .after(Date().addingTimeInterval(15 * 60)) }
 }

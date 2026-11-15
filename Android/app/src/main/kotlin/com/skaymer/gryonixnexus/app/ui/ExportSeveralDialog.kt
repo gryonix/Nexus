@@ -19,15 +19,17 @@ fun ExportSeveralDialog(
     deployments: List<Deployment>,
     onDismiss: () -> Unit,
     onChosen: (List<Deployment>) -> Unit,
+    title: String = stringResource(R.string.export_several),
+    actionTitle: String = stringResource(R.string.export_server_confirm),
 ) {
     var chosen by remember { mutableStateOf(emptySet<String>()) }
 
     IOSSheet(
-        title = stringResource(R.string.export_several),
+        title = title,
         onClose = onDismiss,
         closeLabel = stringResource(R.string.group_cancel),
         action = SheetAction(
-            title = stringResource(R.string.export_server_confirm),
+            title = actionTitle,
             enabled = chosen.isNotEmpty(),
             destructive = true,
             onSelect = { onChosen(deployments.filter { it.id in chosen }) },

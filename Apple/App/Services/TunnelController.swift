@@ -6,7 +6,9 @@ import ServerControl
 import ServiceCatalog
 import VPNProfile
 import VPNTunnel
+#if !os(tvOS)
 import WidgetKit
+#endif
 #if os(macOS)
 import SystemExtensions
 #endif
@@ -37,10 +39,10 @@ final class TunnelController: ObservableObject {
 
     static let log = Logger(subsystem: "com.skaymer.gryonixnexus", category: "tunnel")
 
-    private let engine: any TunnelEngine
-    private let profileStore: TunnelProfileStore
+    let engine: any TunnelEngine
+    let profileStore: TunnelProfileStore
     private let sessionLog: TunnelSessionLog
-    private let secrets: any TunnelSecretStoring
+    let secrets: any TunnelSecretStoring
     private let snapshots: FleetSnapshotStore
     private let liveActivity: any TunnelActivityPresenting
     private let activitySettings: LiveActivitySettings
@@ -281,6 +283,23 @@ final class TunnelController: ObservableObject {
         }
     }
 
+    /// Adds a configuration of an unmanaged server
+    @discardableResult
+    func importForeign(_ detected: ForeignTunnelConfig.Detected, name: String) throws -> TunnelProfile {
+        let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let shown = title.isEmpty ? detected.suggestedName : title
+        let proxy = detected.protocolID == .shadowsocks || detected.protocolID == .xrayReality
+        let profile = try adopt(configurationText: detected.text, protocolID: detected.protocolID,
+                                serverID: UUID(), serverName: shown,
+                                deviceID: ForeignTunnelConfig.deviceID, deviceName: shown,
+                                dns: proxy ? Self.importedProxyDNS : [])
+        selectedID = profile.id
+        return profile
+    }
+
+    /// Resolvers for an imported link, which names none
+    static let importedProxyDNS = ["1.1.1.1", "1.0.0.1"]
+
     /// Is this exact device already a tunnel here?
     func hasProfile(serverID: UUID, protocolID: ServiceID, deviceID: String) -> Bool {
         profiles.contains {
@@ -299,6 +318,28 @@ final class TunnelController: ObservableObject {
 
     func removeProfiles(forServer serverID: UUID) async {
         for profile in profileStore.profiles(forServer: serverID) {
+            await remove(profile)
+        }
+    }
+
+    /// Imported tunnels with their secrets, for iCloud
+    func importedForSync() -> [SyncedTunnel] {
+        profiles.filter(\.isForeign).compactMap { profile in
+            secrets.secret(for: profile.secretAccount).map { SyncedTunnel(profile: profile, secret: $0) }
+        }
+    }
+
+    /// Stores a tunnel another device imported
+    func adoptSynced(_ tunnel: SyncedTunnel) throws {
+        try secrets.store(tunnel.secret, for: tunnel.profile.secretAccount)
+        _ = try profileStore.store(tunnel.profile)
+        reloadProfiles()
+    }
+
+    /// Tunnels built on one removed device
+    func removeProfiles(forServer serverID: UUID, protocolID: ServiceID, deviceID: String) async {
+        for profile in profileStore.profiles(forServer: serverID)
+        where profile.protocolID == protocolID && profile.deviceID == deviceID {
             await remove(profile)
         }
     }
@@ -508,7 +549,7 @@ final class TunnelController: ObservableObject {
         }
     }
 
-    private func reloadProfiles() {
+    func reloadProfiles() {
         profiles = profileStore.load()
         selectedID = profileStore.selectedID
         writeSnapshot()
@@ -530,6 +571,7 @@ final class TunnelController: ObservableObject {
     private func apply(_ new: TunnelEngineState) {
         let previous = state
         state = new
+        TunnelStatusMark.shared.follow(new.status)
         recordSession(from: previous, to: new)
         writeSnapshot(statusChanged: previous.status != new.status)
         dropServerLinksOnRouteChange(from: previous, to: new)
@@ -662,8 +704,24 @@ extension TunnelController: TunnelIntentTarget {
 /// Asking the widgets to redraw, in one place
 enum WidgetRefresh {
     static func reload() {
-        #if !targetEnvironment(simulator)
+        #if !targetEnvironment(simulator) && !os(tvOS)
         WidgetCenter.shared.reloadAllTimelines()
+        if #available(iOS 18.0, macOS 26.0, *) {
+            ControlCenter.shared.reloadControls(ofKind: WidgetKinds.vpnControl)
+        }
         #endif
+    }
+}
+
+/// The tunnel's status alone, for icons that ignore traffic
+@MainActor
+final class TunnelStatusMark: ObservableObject {
+    static let shared = TunnelStatusMark()
+
+    @Published private(set) var status: TunnelStatus = .off
+
+    func follow(_ status: TunnelStatus) {
+        guard status != self.status else { return }
+        self.status = status
     }
 }

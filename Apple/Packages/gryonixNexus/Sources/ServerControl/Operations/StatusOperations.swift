@@ -118,15 +118,16 @@ public struct StatusOperations: Sendable {
     }
 
     /// Guards only the given vhosts
-    public func setAdminLockdown(hosts: [String], on host: SSHHostID) async throws -> AdminLockdownState {
+    public func setAdminLockdown(hosts: [String], denyVPN: [String]? = nil,
+                                 on host: SSHHostID) async throws -> AdminLockdownState {
         if hosts.isEmpty { return try await setAdminLockdown(false, on: host) }
-        let invalid = hosts.filter { !CommandCatalog.AdminLockdown.isValidHost($0) }
+        let invalid = (hosts + (denyVPN ?? [])).filter { !CommandCatalog.AdminLockdown.isValidHost($0) }
         guard invalid.isEmpty else {
             throw ServerControlError.commandFailed(
                 command: "lockdown", exitCode: nil,
                 stderr: "These names cannot be guarded: \(invalid.joined(separator: ", ")). Nothing was changed.")
         }
-        let output = try await runSucceeding(CommandCatalog.AdminLockdown.only(hosts: hosts),
+        let output = try await runSucceeding(CommandCatalog.AdminLockdown.only(hosts: hosts, denyVPN: denyVPN),
                                              on: host, timeout: config.restartTimeout)
         return Self.parseLockdownAnswer(output)
     }

@@ -447,8 +447,9 @@ final class DashboardAccessTests: XCTestCase {
     func testGitLabArchivesItsSecretsAndSkipsItsLogs() throws {
         let (_, home) = try scripts(from: try inputB(dashboardAccess: access(),
                                                      services: [.gitlab]))
-        let body = try XCTUnwrap(home.range(of: "backup_gitlab() {").map {
-            String(home[$0.lowerBound...].prefix(while: { $0 != "\u{7D}" }))
+        let body = try XCTUnwrap(home.range(of: "backup_gitlab() {").map { start in
+            let rest = home[start.lowerBound...]
+            return String(rest[..<(rest.range(of: "\n}\n")?.lowerBound ?? rest.endIndex)])
         })
         XCTAssertTrue(body.contains("--exclude 'gitlab-ce/logs'"),
                       "the log tree must stay out of the archive")

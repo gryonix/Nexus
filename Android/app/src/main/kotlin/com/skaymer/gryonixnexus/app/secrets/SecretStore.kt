@@ -15,6 +15,8 @@ interface SecretStore {
     fun setSecret(account: String, value: ByteArray)
     fun deleteSecret(account: String)
 
+    fun accounts(prefix: String): List<String> = emptyList()
+
     fun string(account: String): String? = secret(account)?.toString(Charsets.UTF_8)
     fun setString(account: String, value: String) = setSecret(account, value.toByteArray())
 }
@@ -44,6 +46,8 @@ class KeystoreSecretStore(private val prefs: SharedPreferences) : SecretStore {
     override fun deleteSecret(account: String) {
         prefs.edit().remove(account).apply()
     }
+
+    override fun accounts(prefix: String): List<String> = prefs.all.keys.filter { it.startsWith(prefix) }
 
     private fun key(): SecretKey = synchronized(KEY_LOCK) {
         val keystore = KeyStore.getInstance(KEYSTORE).apply { load(null) }

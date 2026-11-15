@@ -49,7 +49,10 @@ enum AgentConnection {
             dropLink: { await runner.invalidate(target) }))
         let deploymentID = deployment.id
         client.onJobStarted = { jobID in
-            Task { @MainActor in LiveActivityJobs.shared.jobStarted(jobID, on: deploymentID) }
+            Task { @MainActor in
+                RunningOperationsRegistry.shared.bind(jobID: jobID, deploymentID: deploymentID)
+                LiveActivityJobs.shared.jobStarted(jobID, on: deploymentID)
+            }
         }
         return client
     }

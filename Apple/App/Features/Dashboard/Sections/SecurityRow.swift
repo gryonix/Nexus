@@ -20,6 +20,29 @@ struct SecurityRow<Control: View>: View {
     let open: () -> Void
     @ViewBuilder let control: () -> Control
 
+    #if os(tvOS)
+    @State private var hasSwitch = false
+
+    /// One control for the remote: the switch, labelled
+    var body: some View {
+        ZStack {
+            if !hasSwitch { plainRow }
+            control()
+                .environment(\.securityRowLabel, AnyView(plainRow))
+        }
+        .onPreferenceChange(SecuritySwitchShown.self) { hasSwitch = $0 }
+    }
+
+    private var plainRow: some View {
+        HStack(spacing: 10) {
+            name
+            Spacer(minLength: 8)
+            if let status {
+                Text(status).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+            }
+        }
+    }
+    #else
     var body: some View {
         HStack(spacing: 10) {
             Button(action: open) { name }
@@ -38,6 +61,7 @@ struct SecurityRow<Control: View>: View {
         .contentShape(Rectangle())
         .onTapGesture(perform: open)
     }
+    #endif
 
     private var name: some View {
         Label {
@@ -69,8 +93,30 @@ struct SecuritySwitch: View {
     let set: (Bool) -> Void
 
     var body: some View {
+        #if os(tvOS)
+        Toggle(isOn: Binding(get: { isOn }, set: set)) { rowLabel }
+            .disabled(!isEnabled)
+            .preference(key: SecuritySwitchShown.self, value: true)
+        #else
         Toggle(String(""), isOn: Binding(get: { isOn }, set: set))
             .labelsHidden()
             .disabled(!isEnabled)
+        #endif
     }
+
+    #if os(tvOS)
+    @Environment(\.securityRowLabel) private var rowLabel
+    #endif
 }
+
+#if os(tvOS)
+/// A switch inside the row replaces its plain label
+struct SecuritySwitchShown: PreferenceKey {
+    static let defaultValue = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
+}
+
+extension EnvironmentValues {
+    @Entry var securityRowLabel = AnyView(EmptyView())
+}
+#endif

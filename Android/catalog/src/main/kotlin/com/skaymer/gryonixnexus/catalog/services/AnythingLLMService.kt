@@ -1,8 +1,8 @@
 package com.skaymer.gryonixnexus.catalog.services
 
 import com.skaymer.gryonixnexus.catalog.AIServicesNetwork
-
 import com.skaymer.gryonixnexus.catalog.ArchiveBackupPlan
+import com.skaymer.gryonixnexus.catalog.BackupPart
 import com.skaymer.gryonixnexus.catalog.BackupPlan
 import com.skaymer.gryonixnexus.catalog.BackupSpec
 import com.skaymer.gryonixnexus.catalog.BackupWrapperSpec
@@ -13,12 +13,11 @@ import com.skaymer.gryonixnexus.catalog.ManagedService
 import com.skaymer.gryonixnexus.catalog.PrivilegedCommand
 import com.skaymer.gryonixnexus.catalog.RestoreSpec
 import com.skaymer.gryonixnexus.catalog.SH
-import com.skaymer.gryonixnexus.catalog.ServiceDefaultHostnames
-import com.skaymer.gryonixnexus.catalog.embedding
 import com.skaymer.gryonixnexus.catalog.ServiceActions
 import com.skaymer.gryonixnexus.catalog.ServiceCategory
 import com.skaymer.gryonixnexus.catalog.ServiceCommand
 import com.skaymer.gryonixnexus.catalog.ServiceContext
+import com.skaymer.gryonixnexus.catalog.ServiceDefaultHostnames
 import com.skaymer.gryonixnexus.catalog.ServiceID
 import com.skaymer.gryonixnexus.catalog.ServicePower
 import com.skaymer.gryonixnexus.catalog.ServiceResources
@@ -28,6 +27,7 @@ import com.skaymer.gryonixnexus.catalog.StatusProbe
 import com.skaymer.gryonixnexus.catalog.UninstallSpec
 import com.skaymer.gryonixnexus.catalog.UpdateSpec
 import com.skaymer.gryonixnexus.catalog.WebIngress
+import com.skaymer.gryonixnexus.catalog.embedding
 
 class AnythingLLMService : ManagedService {
     override val id = ServiceID.ANYTHING_LLM
@@ -219,6 +219,7 @@ class AnythingLLMService : ManagedService {
                 plan = BackupPlan.Archive(ArchiveBackupPlan(
                     composeProject = COMPOSE_PROJECT,
                     dataPath = path,
+                    dataPart = BackupPart.FILES,
                     databases = emptyList(),
                     // SQLite and a vector index, both written continuously.
                     quiesceServices = listOf(CONTAINER),

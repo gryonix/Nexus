@@ -12,10 +12,12 @@ final class AgentSourceTests: XCTestCase {
                      "the app uploads its own archive — there is nothing to fetch")
     }
 
-    func testOnlyTheTwoKnownBranchesExist() {
+    func testTheKnownBranches() {
         XCTAssertEqual(AgentSource.repositoryMain.branch, "main")
         XCTAssertEqual(AgentSource.repositoryBeta.branch, "beta")
         XCTAssertEqual(AgentSource.repositoryWip.branch, "wip")
+        XCTAssertEqual(AgentSource.allCases.compactMap(\.branch), ["main", "beta", "wip"])
+        XCTAssertEqual(AgentSource.named("repositoryWip"), .repositoryWip)
         // Anything else falls back to the app's own sources
         XCTAssertEqual(AgentSource.named("../../etc"), .app)
         XCTAssertEqual(AgentSource.named(""), .app)
@@ -48,5 +50,25 @@ final class AgentSourceTests: XCTestCase {
         let script = try XCTUnwrap(AgentSource.repositoryBeta.fetchScript(archivePath: archive))
         XCTAssertTrue(script.contains("[ -d \"$ROOT/Agent/gryonixnexusd\" ]"), script)
         XCTAssertTrue(script.contains("set -eu"), "a failing step must end the script")
+    }
+
+    /// The branch's version is the crate's own, not a dependency's
+    func testTheBranchVersionIsTheCratesFirstVersionLine() {
+        let manifest = """
+        [package]
+        name = "gryonixnexusd"
+        version = "26.10.21"
+        edition = "2021"
+
+        [dependencies]
+        tokio = { version = "1", features = ["full"] }
+        """
+        XCTAssertEqual(AgentSource.crateVersion(in: manifest), "26.10.21")
+        XCTAssertNil(AgentSource.crateVersion(in: "[package]\nname = \"x\""))
+    }
+
+    func testTheAppsOwnSourcesReadNoBranch() async {
+        let offered = await AgentSource.app.offeredVersion(shipped: "26.10.20")
+        XCTAssertEqual(offered, "26.10.20", "the app's own sources offer what the app carries")
     }
 }

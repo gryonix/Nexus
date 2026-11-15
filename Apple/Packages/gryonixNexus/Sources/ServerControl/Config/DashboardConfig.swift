@@ -6,6 +6,8 @@ public struct DashboardConfig: Sendable, Hashable, Codable {
     public var sshPort: Int
     /// Same login on both machines; also the sudoers subject
     public var sshUser: String
+    /// Login on the home machine; empty means `sshUser`
+    public var homeSSHUser: String
     public var homeWGAddress: String
     public var wgInterface: String
 
@@ -27,6 +29,7 @@ public struct DashboardConfig: Sendable, Hashable, Codable {
         vpsHost: String = "",
         sshPort: Int = 22,
         sshUser: String = "",
+        homeSSHUser: String = "",
         homeWGAddress: String = "10.8.0.2",
         wgInterface: String = "wg0",
         mailcowPath: String = "/opt/mailcow-dockerized",
@@ -43,6 +46,7 @@ public struct DashboardConfig: Sendable, Hashable, Codable {
         self.vpsHost = vpsHost
         self.sshPort = sshPort
         self.sshUser = sshUser
+        self.homeSSHUser = homeSSHUser
         self.homeWGAddress = homeWGAddress
         self.wgInterface = wgInterface
         self.mailcowPath = mailcowPath

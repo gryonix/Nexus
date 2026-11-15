@@ -11,6 +11,8 @@ struct NotificationSettingsView: View {
     @AppStorage(NotifyPreferences.Key.appUpdate) private var appUpdate = true
     @AppStorage(NotifyPreferences.Key.operations) private var operations = false
     @AppStorage(NotifyPreferences.Key.sshLogins) private var sshLogins = true
+    @AppStorage(NotifyPreferences.Key.unusualLoad) private var unusualLoad = true
+    @AppStorage(NotifyPreferences.Key.widgetMinutes) private var widgetMinutes = 60
 
     @ObservedObject private var push = PushRegistration.shared
     @State private var channel = NotifyChannelDefault.current()
@@ -23,9 +25,11 @@ struct NotificationSettingsView: View {
         Form {
             channelSection
             eventsSection
+            NotifySoundsSection { channelChanged = true }
+            widgetsSection
             thisDeviceSection
         }
-        .navigationTitle("Push notifications")
+        .screenTitle("Push notifications")
         .onChange(of: channel) { _, chosen in
             chosen.save()
             channelChanged = true
@@ -57,11 +61,29 @@ struct NotificationSettingsView: View {
         }
     }
 
+    private var widgetsSection: some View {
+        Section {
+            WrappingPicker("Update widgets", selection: $widgetMinutes) {
+                ForEach(NotifyPreferences.widgetMinuteChoices, id: \.self) { minutes in
+                    Text(verbatim: Self.spelled(minutes: minutes)).tag(minutes)
+                }
+            }
+        } header: {
+            InfoSectionHeader("Widgets", note: "How often each server sends fresh readings to the widgets on this device. It needs gryonixPush, and the system may deliver them less often to save battery.")
+        }
+        .onChange(of: widgetMinutes) { channelChanged = true }
+    }
+
+    /// A span of minutes in the reader's language
+    static func spelled(minutes: Int) -> String {
+        Duration.seconds(minutes * 60).formatted(.units(allowed: [.hours, .minutes], width: .wide))
+    }
+
     private var eventsSection: some View {
         Section {
             NotifyEventToggles(disks: $disks, spacePercent: $spacePercent, services: $services,
                                backups: $backups, agentUpdate: $agentUpdate, operations: $operations,
-                               sshLogins: $sshLogins)
+                               sshLogins: $sshLogins, unusualLoad: $unusualLoad)
             Toggle("A new app version", isOn: $appUpdate)
         } header: {
             InfoSectionHeader("Notify me about", note: "These are the defaults for every server, and each server picks them up the next time the app connects to it. A server can keep its own choice under Agent → Notifications.")
@@ -93,6 +115,47 @@ struct NotificationSettingsView: View {
                     }
                 }
                 .dangerTint()
+            }
+        }
+    }
+}
+
+/// A sound for each kind of alert
+private struct NotifySoundsSection: View {
+    let onChange: () -> Void
+
+    var body: some View {
+        Section {
+            ForEach(NotifySoundGroup.allCases) { group in
+                NotifySoundPicker(group: group, onChange: onChange)
+            }
+        } header: {
+            InfoSectionHeader("Sounds", note: "Each kind of alert can play its own sound on this device. Default is the system's notification sound.")
+        }
+    }
+}
+
+private struct NotifySoundPicker: View {
+    let group: NotifySoundGroup
+    let onChange: () -> Void
+    @AppStorage private var raw: String
+
+    init(group: NotifySoundGroup, onChange: @escaping () -> Void) {
+        self.group = group
+        self.onChange = onChange
+        _raw = AppStorage(wrappedValue: NotifySound.standard.rawValue, NotifySounds.key(group))
+    }
+
+    var body: some View {
+        WrappingPicker(group.title, selection: Binding(
+            get: { NotifySound(rawValue: raw) ?? .standard },
+            set: { picked in
+                raw = picked.rawValue
+                picked.play()
+                onChange()
+            })) {
+            ForEach(NotifySound.allCases) { sound in
+                Text(sound.title).tag(sound)
             }
         }
     }

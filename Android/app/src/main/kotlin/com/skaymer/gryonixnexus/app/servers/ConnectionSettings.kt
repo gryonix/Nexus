@@ -33,6 +33,14 @@ object ConnectionSettings {
     fun reconnect(store: SettingsStore): Int =
         store.string(RECONNECT_KEY)?.toIntOrNull()?.takeIf { it == 0 || it in RECONNECT_RANGE } ?: DEFAULT_RECONNECT
 
+    /** Waits the silence wheel offers */
+    val SILENCE_WHEEL = steps(5..60 step 5, 75..300 step 15, 360..3600 step 60)
+
+    /** Waits the reconnect wheel offers, zero first */
+    val RECONNECT_WHEEL = listOf(0) + steps(30..120 step 10, 150..600 step 30, 660..3600 step 60, 5400..86400 step 1800)
+
+    private fun steps(vararg spans: IntProgression): List<Int> = spans.flatMap { it.toList() }
+
     /** Hours, minutes and seconds, e.g. 1 minute 30 seconds */
     fun title(seconds: Int, locale: Locale = Locale.getDefault()): String {
         val parts = listOf(

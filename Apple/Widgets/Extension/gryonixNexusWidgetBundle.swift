@@ -23,6 +23,7 @@ struct gryonixNexusWidgetBundle: WidgetBundle {
     private var controls: some Widget {
         if #available(iOS 18.0, macOS 26.0, *) {
             VPNControlWidget()
+            ServerStatusControl()
         }
     }
 }

@@ -39,7 +39,7 @@ enum TunnelSetup {
         let context = deployment.serviceContext
         var names: [String] = []
         for service in deployment.installedServices where !ServiceRegistry.mailEngineIDs.contains(service.id) {
-            guard let ingress = service.webIngress(context) else { continue }
+            guard let ingress = service.webIngress(context), !ingress.homeOnly else { continue }
             for name in context.servedHostnames(of: ingress.hostname)
             where !names.contains(name) && !name.hasPrefix("mail.") {
                 names.append(name)

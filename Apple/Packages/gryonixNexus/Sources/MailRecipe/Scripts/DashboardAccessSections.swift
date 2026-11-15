@@ -465,8 +465,26 @@ public enum DashboardAccessSections {
         let name = target.replacingOccurrences(of: "-", with: "_")
         let project = plan.composeProject
         let quiesce = plan.quiesceServices.map { "'\($0)'" }.joined(separator: " ")
-        let data = plan.dataPath
-        var lines: [String] = [
+        var lines = restoreArchiveStart(target: target, name: name, plan: plan)
+        if !plan.quiesceServices.isEmpty {
+            lines.append("  gd_compose_stop '\(project)' \(quiesce)")
+        }
+        lines += restoreArchiveDataMove(plan: plan)
+        lines += restoreArchiveDatabases(plan: plan)
+        lines += [
+            "  # Up again on every path, restored or not.",
+            "  gd_compose_start_all '\(project)'",
+            "  if [ \"$rc\" -ne 0 ]; then",
+            "    echo \"the \(target) database could not be restored\" >&2",
+            "    exit 1",
+            "  fi",
+            "}"
+        ]
+        return lines.joined(separator: "\n")
+    }
+
+    private static func restoreArchiveStart(target: String, name: String, plan: ArchiveBackupPlan) -> [String] {
+        [
             "restore_\(name)() {",
             "  local plain=\"$ARCHIVE\" tmp=\"\" stage=\"\" previous=\"\" saved=0 rc=0",
             "  case \"$ARCHIVE\" in",
@@ -495,50 +513,62 @@ public enum DashboardAccessSections {
             "  # shellcheck disable=SC2064",
             "  trap \"rm -rf '$stage' '$tmp'\" EXIT",
             "  tar --numeric-owner -xzf \"$plain\" -C \"$stage\"",
-            "  if [ ! -d \"$stage/\(plan.dataSlot)\" ]; then",
+            "  if \(restorableTest(plan)); then",
             "    echo \"the archive carries no \(target) data\" >&2",
             "    exit 1",
             "  fi"
         ]
-        if !plan.quiesceServices.isEmpty {
-            lines.append("  gd_compose_stop '\(project)' \(quiesce)")
-        }
-        lines += [
+    }
+
+    private static func restoreArchiveDataMove(plan: ArchiveBackupPlan) -> [String] {
+        let project = plan.composeProject
+        let data = plan.dataPath
+        return [
             "  # The old data is moved aside, never deleted: if the move back",
             "  # fails it is the only way home.",
-            "  previous='\(data)'\".pre-restore-$STAMP\"",
-            "  if [ -d '\(data)' ]; then mv '\(data)' \"$previous\"; saved=1; fi",
-            "  if mv \"$stage/\(plan.dataSlot)\" '\(data)'; then",
-            "    if [ \"$saved\" -eq 1 ]; then echo \"previous data kept at ${previous}\"; fi",
+            "  if [ ! -d \"$stage/\(plan.dataSlot)\" ]; then",
+            "    echo \"the archive carries no \(plan.dataSlot), it is left as it is\"",
             "  else",
-            "    echo \"restore failed, rolling back to the previous data\" >&2",
-            "    rm -rf '\(data)'",
-            "    if [ \"$saved\" -eq 1 ]; then mv \"$previous\" '\(data)'; fi",
-            "    gd_compose_start_all '\(project)'",
-            "    exit 1",
+            "    previous='\(data)'\".pre-restore-$STAMP\"",
+            "    if [ -d '\(data)' ]; then mv '\(data)' \"$previous\"; saved=1; fi",
+            "    if mv \"$stage/\(plan.dataSlot)\" '\(data)'; then",
+            "      if [ \"$saved\" -eq 1 ]; then echo \"previous data kept at ${previous}\"; fi",
+            "    else",
+            "      echo \"restore failed, rolling back to the previous data\" >&2",
+            "      rm -rf '\(data)'",
+            "      if [ \"$saved\" -eq 1 ]; then mv \"$previous\" '\(data)'; fi",
+            "      gd_compose_start_all '\(project)'",
+            "      exit 1",
+            "    fi",
             "  fi"
         ]
+    }
+
+    private static func restoreArchiveDatabases(plan: ArchiveBackupPlan) -> [String] {
+        let project = plan.composeProject
+        var lines: [String] = []
         for database in plan.databases {
             let helper = database.engine == .postgres ? "gd_load_postgres" : "gd_load_mysql"
+            let dump = "$stage/\(ArchiveBackupPlan.dumpDirectoryName)/\(database.fileName)"
             lines += [
-                "  # The database container has to be up to take its dump back;",
-                "  # the rest of the project stays down until it is loaded.",
-                "  gd_compose_start '\(project)' '\(database.service)'",
-                "  \(helper) '\(project)' '\(database.service)' "
-                    + "\"$stage/\(ArchiveBackupPlan.dumpDirectoryName)/\(database.fileName)\""
-                    + (database.databaseName.map { " '\($0)'" } ?? "") + " || rc=1"
+                "  if [ -f \"\(dump)\" ]; then",
+                "    # The database container has to be up to take its dump back;",
+                "    # the rest of the project stays down until it is loaded.",
+                "    gd_compose_start '\(project)' '\(database.service)'",
+                "    \(helper) '\(project)' '\(database.service)' \"\(dump)\""
+                    + (database.databaseName.map { " '\($0)'" } ?? "") + " || rc=1",
+                "  fi"
             ]
         }
-        lines += [
-            "  # Up again on every path, restored or not.",
-            "  gd_compose_start_all '\(project)'",
-            "  if [ \"$rc\" -ne 0 ]; then",
-            "    echo \"the \(target) database could not be restored\" >&2",
-            "    exit 1",
-            "  fi",
-            "}"
-        ]
-        return lines.joined(separator: "\n")
+        return lines
+    }
+
+    /// Shell test: the archive holds no part of this service
+    private static func restorableTest(_ plan: ArchiveBackupPlan) -> String {
+        let dumps = plan.databases.map {
+            "[ ! -f \"$stage/\(ArchiveBackupPlan.dumpDirectoryName)/\($0.fileName)\" ]"
+        }
+        return (["[ ! -d \"$stage/\(plan.dataSlot)\" ]"] + dumps).joined(separator: " && ")
     }
 
     static func serviceBackupDirs(_ access: DashboardAccessInput, context: MailContext) -> String? {

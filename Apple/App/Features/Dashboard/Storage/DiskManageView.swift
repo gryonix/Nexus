@@ -50,8 +50,8 @@ struct DiskManageView: View {
             StorageRunSection(model: model, title: Self.title(task), step: step,
                               destructive: task == .format) { dismiss() }
         }
-        .navigationTitle(Text(verbatim: disk.name))
-        #if os(iOS)
+        .screenTitle(Text(verbatim: disk.name))
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {

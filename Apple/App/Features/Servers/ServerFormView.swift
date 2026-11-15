@@ -1,4 +1,5 @@
 import ServerControl
+import ServerControlSSH
 import ServiceCatalog
 import SwiftUI
 import gryonixNexusCore
@@ -44,6 +45,7 @@ struct ServerFormView: View {
     @State private var user: String
     @State private var homeWGAddress: String
     @State private var homeLANAddress: String
+    @State private var homePath: HomePathChoice
     @State private var wgInterface: String
     @State private var services: Set<ServiceID>
     @State private var settings: ServiceSettings
@@ -52,11 +54,11 @@ struct ServerFormView: View {
     /// The groups the rest of the fleet is in
     @State private var knownGroups: [String] = ServerGroups.known()
     @State private var namingGroup = false
-    @State private var newGroupName = ""
     @State private var metricsIndicatorStyle: MetricsIndicatorStyle?
     @State private var access: ServerAccessOptions
     /// The Wake-on-LAN address, read from the machine
     @State private var wakeOnLANMAC: String
+    @State private var homeUser: String
     @State private var fleet: [Deployment] = []
     @State private var usesPasswordAuth: Bool
     @State private var iconSymbol: String?
@@ -109,6 +111,7 @@ struct ServerFormView: View {
             _user = State(initialValue: "root")
             _homeWGAddress = State(initialValue: "10.8.0.2")
             _homeLANAddress = State(initialValue: "")
+            _homePath = State(initialValue: .automatic)
             _wgInterface = State(initialValue: "wg0")
             _services = State(initialValue: [])
             _settings = State(initialValue: ServiceSettings())
@@ -118,6 +121,7 @@ struct ServerFormView: View {
             _usesPasswordAuth = State(initialValue: false)
             _access = State(initialValue: .none)
             _wakeOnLANMAC = State(initialValue: "")
+            _homeUser = State(initialValue: "")
             _usesAgent = State(initialValue: false)
             _iconSymbol = State(initialValue: nil)
             _tintName = State(initialValue: nil)
@@ -133,6 +137,7 @@ struct ServerFormView: View {
             _homeWGAddress = State(initialValue: deployment.homeWGAddress ?? "10.8.0.2")
             _homeLANAddress = State(initialValue:
                 InstallAddressStore.homeAddress(deploymentID: deployment.id))
+            _homePath = State(initialValue: HomePathChoice.load(for: deployment.id))
             _wgInterface = State(initialValue: deployment.wgInterface)
             _services = State(initialValue: deployment.services)
             _settings = State(initialValue: deployment.serviceSettings)
@@ -142,6 +147,7 @@ struct ServerFormView: View {
             _usesPasswordAuth = State(initialValue: deployment.usesPasswordAuth)
             _access = State(initialValue: ServerAccessStore.options(for: deployment.id))
             _wakeOnLANMAC = State(initialValue: deployment.wakeOnLANMAC ?? "")
+            _homeUser = State(initialValue: deployment.homeUser ?? "")
             _usesAgent = State(initialValue: deployment.usesAgent)
             _iconSymbol = State(initialValue: deployment.iconSymbol)
             _tintName = State(initialValue: deployment.tintName)
@@ -185,8 +191,8 @@ struct ServerFormView: View {
                 }
             }
             #endif
-            .navigationTitle(mode.isAdd ? addTitle : mode.title)
-            #if os(iOS)
+            .screenTitle(mode.isAdd ? addTitle : mode.title)
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar { formToolbar }
@@ -382,9 +388,11 @@ struct ServerFormView: View {
 
             if topology == .vpsRelayWithHomeBackend {
                 Section {
+                    formField("User", prompt: "root", text: $homeUser)
                     formField("Address in WireGuard", prompt: "10.8.0.2", text: $homeWGAddress)
                     formField("Address on the network", prompt: "192.168.1.50",
                               text: $homeLANAddress)
+                    HomePathPicker(selection: $homePath)
                     formField("WireGuard interface", prompt: "wg0", text: $wgInterface)
                     if usesPasswordAuth {
                         SecureTechnicalField(title: "Password", text: $homePassword)
@@ -627,6 +635,11 @@ struct ServerFormView: View {
         .accessibilityLabel(tint?.rawValue ?? "Default")
     }
 
+    private var homeUserForSave: String? {
+        let trimmed = homeUser.trimmingCharacters(in: .whitespaces)
+        return topology == .vpsRelayWithHomeBackend && !trimmed.isEmpty ? trimmed : nil
+    }
+
     private func makeDeployment() -> Deployment {
         Deployment(
             id: existingID ?? addID,
@@ -650,7 +663,8 @@ struct ServerFormView: View {
             iconSymbol: iconSymbol,
             tintName: tintName,
             scope: scope,
-            wakeOnLANMAC: WakeOnLAN.normalised(wakeOnLANMAC)
+            wakeOnLANMAC: WakeOnLAN.normalised(wakeOnLANMAC),
+            homeUser: homeUserForSave
         )
     }
 
@@ -676,6 +690,7 @@ struct ServerFormView: View {
         InstallAddressStore.save(
             homeAddress: homeLANAddress.trimmingCharacters(in: .whitespaces),
             deploymentID: deployment.id)
+        HomePathChoice.save(homePath, for: deployment.id)
         ServerAccessStore.save(trimmedAccess, for: deployment.id)
     }
 
@@ -740,7 +755,6 @@ struct ServerFormView: View {
                 }
                 if !offeredGroups.isEmpty { Divider() }
                 Button {
-                    newGroupName = ""
                     namingGroup = true
                 } label: {
                     Label("New group…", systemImage: "plus")
@@ -750,15 +764,11 @@ struct ServerFormView: View {
                     .lineLimit(1)
             }
         }
-        .alert("New group", isPresented: $namingGroup) {
-            TextField("Group", text: $newGroupName)
-            Button("Add") {
-                if let name = ServerGroups.clean(newGroupName), !isMember(of: name) {
-                    toggle(group: name)
-                }
-                namingGroup = false
+        .sheet(isPresented: $namingGroup) {
+            NameEditSheet(title: "New group", fieldTitle: "Group", initial: "",
+                          valid: { ServerGroups.clean($0) != nil }) { name in
+                if let name = ServerGroups.clean(name), !isMember(of: name) { toggle(group: name) }
             }
-            Button("Cancel", role: .cancel) { namingGroup = false }
         }
     }
 

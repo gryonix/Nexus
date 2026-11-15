@@ -1,5 +1,7 @@
 package com.skaymer.gryonixnexus.app.ui
 
+import com.skaymer.gryonixnexus.aiassistant.RamVerdict
+import com.skaymer.gryonixnexus.aiassistant.OllamaRam
 import androidx.compose.runtime.LaunchedEffect
 import com.skaymer.gryonixnexus.catalog.storage.StorageArray
 import com.skaymer.gryonixnexus.catalog.ServiceDataPlacement
@@ -39,7 +41,10 @@ import com.skaymer.gryonixnexus.app.ui.design.IOSSheet
 import com.skaymer.gryonixnexus.app.ui.design.Metrics
 import com.skaymer.gryonixnexus.app.ui.design.SheetAction
 import com.skaymer.gryonixnexus.R
+import androidx.compose.material3.Icon
+import com.skaymer.gryonixnexus.app.ui.design.SymbolIcons
 import com.skaymer.gryonixnexus.app.servers.AddServiceViewModel
+import com.skaymer.gryonixnexus.agentcontrol.InstallFinding
 import com.skaymer.gryonixnexus.catalog.ServiceID
 import com.skaymer.gryonixnexus.catalog.ServiceRegistry
 import com.skaymer.gryonixnexus.servercontrol.Deployment
@@ -66,8 +71,12 @@ fun AddServiceDialog(
     loadArrays: suspend () -> List<StorageArray> = { emptyList() },
     /** The server's memory, when its metrics are in */
     memoryBytes: Long? = null,
+    /** Asks the machine what it lacks for the services */
+    checkMachine: suspend (List<ServiceID>) -> List<InstallFinding> = { emptyList() },
 ) {
     var selection by remember(deployment.id) { mutableStateOf(emptySet<ServiceID>()) }
+    var findings by remember(deployment.id) { mutableStateOf(emptyList<InstallFinding>()) }
+    LaunchedEffect(selection) { findings = if (selection.isEmpty()) emptyList() else checkMachine(selection.toList()) }
     var arrays by remember(deployment.id) { mutableStateOf(emptyList<StorageArray>()) }
     var askingWhere by remember { mutableStateOf(false) }
     LaunchedEffect(deployment.id) { arrays = loadArrays() }
@@ -93,7 +102,7 @@ fun AddServiceDialog(
         closeLabel = stringResource(R.string.containers_cancel),
         action = SheetAction(
             title = stringResource(R.string.add_service_install),
-            enabled = selection.isNotEmpty(),
+            enabled = selection.isNotEmpty() && findings.none { it.isBlocking && it.service in selection },
             onSelect = {
                 if (arrays.isNotEmpty() && chosen.any(ServiceDataPlacement::keepsData)) {
                     askingWhere = true
@@ -110,6 +119,8 @@ fun AddServiceDialog(
                 }
             }
         }
+        HostCompatibilitySection(findings)
+        if (ServiceID.OLLAMA in selection) OllamaAdvice(memoryBytes)
         if (!deployment.usesAgent) {
             GroupedSection(footer = stringResource(R.string.add_service_agent_sudo)) {
                 ValueRow(
@@ -130,7 +141,7 @@ fun AddServiceDialog(
         }
         shelves.forEach { (category, services) ->
             GroupedSection(
-                header = category.title,
+                header = categoryTitle(category),
                 footer = if (category == shelves.last().first) {
                     stringResource(R.string.add_service_note)
                 } else {
@@ -147,6 +158,10 @@ fun AddServiceDialog(
                             )
                         },
                         showDivider = service != services.last(),
+                        leading = {
+                            Icon(SymbolIcons.of(service.systemImage), null, tint = Gryonix.colors.accent,
+                                modifier = Modifier.size(22.dp))
+                        },
                     )
                 }
             }
@@ -245,4 +260,24 @@ private fun DataPlacementAlert(arrays: List<StorageArray>, onDismiss: () -> Unit
             AlertAction(stringResource(R.string.containers_cancel)) { onDismiss() },
         ),
     )
+}
+
+@Composable
+private fun OllamaAdvice(memoryBytes: Long?) {
+    var model by remember { mutableStateOf(OllamaRam.suggestedModels.first()) }
+    GroupedSection(
+        header = stringResource(R.string.ai_model_plan),
+        footer = stringResource(R.string.ai_ram_table),
+    ) {
+        OllamaRam.suggestedModels.forEachIndexed { index, name ->
+            CheckRow(name, model == name, onClick = { model = name }, showDivider = index != OllamaRam.suggestedModels.lastIndex)
+        }
+        val verdict = OllamaRam.verdict(model, memoryBytes)
+        if (verdict is RamVerdict.TooLow) {
+            GroupedRow(showDivider = false) {
+                Text(stringResource(R.string.ai_ram_warn, verdict.needGb.toString(), verdict.haveGb.toString()),
+                    style = MaterialTheme.typography.bodyMedium, color = Gryonix.colors.warning)
+            }
+        }
+    }
 }

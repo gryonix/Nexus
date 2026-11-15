@@ -39,6 +39,8 @@ public struct MetricsHistoryPoint: Sendable, Hashable {
     public var powerWatts: Double?
     /// The sensor: rapl, hwmon, ipmi, ups or pi
     public var powerSource: String?
+    public var swapUsedBytes: Int64?
+    public var swapTotalBytes: Int64?
 
     public init(date: Date, cpuPercent: Double?,
                 memUsedBytes: Int64, memTotalBytes: Int64,
@@ -46,7 +48,8 @@ public struct MetricsHistoryPoint: Sendable, Hashable {
                 netReceivedPerSecond: Double?, netSentPerSecond: Double?,
                 diskReadPerSecond: Double?, diskWrittenPerSecond: Double?,
                 load1: Double, temperatureCelsius: Double?,
-                powerWatts: Double? = nil, powerSource: String? = nil) {
+                powerWatts: Double? = nil, powerSource: String? = nil,
+                swapUsedBytes: Int64? = nil, swapTotalBytes: Int64? = nil) {
         self.date = date
         self.cpuPercent = cpuPercent
         self.memUsedBytes = memUsedBytes
@@ -61,10 +64,17 @@ public struct MetricsHistoryPoint: Sendable, Hashable {
         self.temperatureCelsius = temperatureCelsius
         self.powerWatts = powerWatts
         self.powerSource = powerSource
+        self.swapUsedBytes = swapUsedBytes
+        self.swapTotalBytes = swapTotalBytes
     }
 
     public var memUsedFraction: Double {
         memTotalBytes > 0 ? Double(memUsedBytes) / Double(memTotalBytes) : 0
+    }
+
+    public var swapUsedFraction: Double? {
+        guard let used = swapUsedBytes, let total = swapTotalBytes, total > 0 else { return nil }
+        return Double(used) / Double(total)
     }
 
     public var diskUsedFraction: Double {

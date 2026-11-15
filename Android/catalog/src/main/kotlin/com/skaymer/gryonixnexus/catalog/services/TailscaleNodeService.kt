@@ -76,6 +76,10 @@ class TailscaleNodeService : ManagedService {
                   - $path/state:/var/lib/tailscale
                 environment:
                   TS_STATE_DIR: /var/lib/tailscale
+                  # Joins once; later starts reuse the saved identity.
+                  TS_AUTH_ONCE: "true"
+                  # A real interface, so the host itself reaches the mesh.
+                  TS_USERSPACE: "false"
                   TS_HOSTNAME: ${nodeName(context)}
                   # Read from .env, which is 0600 and written once.
                   TS_AUTHKEY: ${SH}{TS_AUTHKEY}
@@ -94,6 +98,24 @@ class TailscaleNodeService : ManagedService {
         val lang = context.language
         val name = nodeName(context)
         val headscale = HeadscaleService.CONTAINER
+        // Without our own control server, the node joins Tailscale.
+        if (ServiceID.HEADSCALE !in context.installedServices) {
+            return listOf("""
+            log "Mesh node: ${L10nServices.serviceStarting(lang)}"
+            install -d -m 755 $path
+            install -d -m 700 $path/state
+            cd $path
+            docker compose -p $COMPOSE_PROJECT pull -q
+            # A node without its key (and without an identity from an
+            # earlier join) would only restart for ever, so it is not started.
+            if grep -q '_current-profile' $path/state/tailscaled.state 2>/dev/null \
+               || grep -q '^TS_AUTHKEY=.\+' $path/.env 2>/dev/null; then
+              docker compose -p $COMPOSE_PROJECT up -d
+            else
+              log "  ${L10nServices.meshNodeNoKeyNote(lang)}"
+            fi
+            """.trimIndent())
+        }
         return listOf("""
         log "Mesh node: ${L10nServices.serviceStarting(lang)}"
         install -d -m 755 $path
@@ -187,6 +209,12 @@ class TailscaleNodeService : ManagedService {
     override fun reportSteps(context: ServiceContext): List<String> {
         val lang = context.language
         val name = nodeName(context)
+        // Tailscale names the node here.
+        if (ServiceID.HEADSCALE !in context.installedServices) {
+            return listOf("""
+            echo "${L10nServices.meshNodeTitle(lang)}: $name"
+            """.trimIndent())
+        }
         val base = HeadscaleService().baseDomain(context)
         return listOf("""
         echo "${L10nServices.meshNodeTitle(lang)}: $name.$base"

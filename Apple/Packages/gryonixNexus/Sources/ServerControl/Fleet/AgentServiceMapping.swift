@@ -36,6 +36,15 @@ public enum AgentServiceMapping {
             case "home-assistant": result.insert(.homeAssistant)
             case "mosquitto": result.insert(.mosquitto)
             case "zigbee2mqtt": result.insert(.zigbee2MQTT)
+            case "shairport-sync": result.insert(.shairportSync)
+            case "uxplay": result.insert(.uxplay)
+            case "odio": result.insert(.odio)
+            case "snapserver": result.insert(.snapserver)
+            case "snapclient": result.insert(.snapclient)
+            case "upmpdcli": result.insert(.upmpdcli)
+            case "bluealsa": result.insert(.bluealsa)
+            case "raspotify": result.insert(.raspotify)
+            case "mympd": result.insert(.mympd)
             case "anythingllm": result.insert(.anythingLLM)
             case "qdrant": result.insert(.qdrant)
             case "searxng": result.insert(.searxng)
@@ -72,6 +81,11 @@ public enum AgentServiceMapping {
         return found
     }
 
+    /// Services this app installed, by the agent's record; VPN aside
+    public static func installedByApp(_ services: [(id: String, outside: Bool)]) -> Set<ServiceID> {
+        serviceIDs(forAgentIDs: services.filter { !$0.outside && $0.id != "vpn" }.map(\.id))
+    }
+
     public static func agentID(for serviceID: ServiceID) -> String? {
         if serviceID == .vpnPanel || ServiceID.vpnProtocols.contains(serviceID) { return "vpn" }
 
@@ -81,7 +95,8 @@ public enum AgentServiceMapping {
              .cloudflared, .tailscaleNode, .homepage, .authelia,
              .minecraftJava, .minecraftBedrock, .craftyController,
              .openWebUI, .ollama, .liteLLM, .n8n, .anythingLLM, .qdrant, .searxng, .openclaw,
-             .homeAssistant, .mosquitto, .zigbee2MQTT:
+             .homeAssistant, .mosquitto, .zigbee2MQTT, .shairportSync, .uxplay, .odio,
+             .snapserver, .snapclient, .upmpdcli, .bluealsa, .raspotify, .mympd:
             return serviceID.rawValue
         default: return nil
         }

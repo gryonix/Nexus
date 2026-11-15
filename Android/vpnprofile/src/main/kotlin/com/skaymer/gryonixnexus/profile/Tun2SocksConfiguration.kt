@@ -9,8 +9,8 @@ object Tun2SocksConfiguration {
     /** Large on purpose */
     const val MTU = 8500
 
-    /** Small per-connection memory, as hev advises for low-memory systems */
-    const val TCP_BUFFER_BYTES = 4096
+    /** hev's own default; Android has no extension memory cap */
+    const val TCP_BUFFER_BYTES = 65536
     const val TASK_STACK_BYTES = 20480 + TCP_BUFFER_BYTES
 
     /** A silent UDP flow closes after ten seconds */

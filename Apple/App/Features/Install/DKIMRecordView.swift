@@ -42,8 +42,8 @@ struct DKIMRecordView: View {
         #if os(macOS)
         .formStyle(.grouped)
         #endif
-        .navigationTitle("DKIM records")
-        #if os(iOS)
+        .screenTitle("DKIM records")
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {

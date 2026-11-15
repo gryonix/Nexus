@@ -16,6 +16,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** What the sheet shows while the agent is being installed */
@@ -45,6 +50,8 @@ class AgentInstallViewModel(
     private val release: suspend (Deployment) -> Unit = {},
     /** Sets up passwordless sudo first, asking once */
     private val ensureSudo: suspend (Deployment) -> Unit = {},
+    /** Where the sources come from — see `AgentSource` */
+    private val chosenSource: () -> AgentSource = { AgentSource.APP },
 ) {
     private val _state = MutableStateFlow(AgentInstallState())
     val state: StateFlow<AgentInstallState> = _state.asStateFlow()
@@ -72,9 +79,7 @@ class AgentInstallViewModel(
         val failures: List<String>
         try {
             ensureSudo(deployment)
-            installOn(deployment, deployment.servicesHost, notice, reinstall)
-            failures = deployment.agentHosts.filter { it != deployment.servicesHost }
-                .mapNotNull { installOnOther(deployment, it, notice, reinstall) }
+            failures = installEverywhere(deployment, notice, reinstall)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failure: Exception) {
@@ -111,18 +116,41 @@ class AgentInstallViewModel(
         }
     }
 
+    /** Every machine at once; the other machines' failures as text */
+    private suspend fun installEverywhere(deployment: Deployment, notice: OperationNotice, reinstall: Boolean): List<String> {
+        val hosts = listOf(deployment.servicesHost) + deployment.agentHosts.filter { it != deployment.servicesHost }
+        val machines = AgentBuildMachines(hosts.map { machineName(deployment, it) }, summaryWords())
+        return coroutineScope {
+            val ticker = if (machines.isSeveral) launch { showSummaryWhileBuilding(machines, notice) } else null
+            try {
+                val others = hosts.drop(1).map { host ->
+                    async { installOnOther(deployment, host, notice, reinstall, machines) }
+                }
+                installOn(deployment, hosts.first(), notice, reinstall, machines)
+                others.awaitAll().filterNotNull()
+            } finally {
+                ticker?.cancel()
+                if (machines.isSeveral) showSummary(machines, notice)
+            }
+        }
+    }
+
     /** Another machine of the server; its failure as text */
     private suspend fun installOnOther(
         deployment: Deployment,
         host: SSHHostID,
         notice: OperationNotice,
         reinstall: Boolean,
+        machines: AgentBuildMachines,
     ): String? {
-        val name = OperationNotices.text(R.string.agent_host_relay)
+        val name = machineName(deployment, host)
         return try {
             val probe = runners(deployment).run(SudoAccess.probeCommand(AgentBootstrapSections.SCRIPT_PATH), host, 20.seconds)
-            if (!SudoAccess.isReady(probe.stdout)) return OperationNotices.text(R.string.agent_update_needs_access, name)
-            installOn(deployment, host, notice, reinstall)
+            if (!SudoAccess.isReady(probe.stdout)) {
+                machines.finished(name, ok = false)
+                return OperationNotices.text(R.string.agent_update_needs_access, name)
+            }
+            installOn(deployment, host, notice, reinstall, machines)
             null
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -131,21 +159,57 @@ class AgentInstallViewModel(
         }
     }
 
-    private suspend fun installOn(deployment: Deployment, host: SSHHostID, notice: OperationNotice, reinstall: Boolean) {
-        AgentBootstrapOperations.install(
-            reinstall = reinstall,
-            runner = runners(deployment),
-            files = browsers(deployment),
-            host = host,
-            sources = sources,
-            onPhase = { line ->
-                _state.value = _state.value.copy(phase = line)
-                notice.update(line)
-            },
-            onOutput = { line ->
-                _state.value = _state.value.copy(log = tail(_state.value.log + line + "\n"))
-            },
-        )
+    private suspend fun installOn(
+        deployment: Deployment,
+        host: SSHHostID,
+        notice: OperationNotice,
+        reinstall: Boolean,
+        machines: AgentBuildMachines,
+    ) {
+        val name = machineName(deployment, host)
+        machines.started(name)
+        try {
+            AgentBootstrapOperations.install(
+                reinstall = reinstall,
+                runner = runners(deployment),
+                files = browsers(deployment),
+                host = host,
+                sources = sources,
+                source = chosenSource(),
+                onPhase = { line -> phase(line, name, machines, notice) },
+                onOutput = { line -> append(machines.line(line, name)) },
+            )
+            machines.finished(name, ok = true)
+        } catch (failure: Exception) {
+            machines.finished(name, ok = false)
+            throw failure
+        }
+    }
+
+    private fun phase(line: String, name: String, machines: AgentBuildMachines, notice: OperationNotice) {
+        if (machines.isSeveral) {
+            append(machines.line(line, name))
+            return
+        }
+        _state.update { it.copy(phase = line) }
+        notice.update(line)
+    }
+
+    private fun append(line: String) {
+        _state.update { it.copy(log = tail(it.log + line + "\n")) }
+    }
+
+    private suspend fun showSummaryWhileBuilding(machines: AgentBuildMachines, notice: OperationNotice) {
+        while (true) {
+            showSummary(machines, notice)
+            delay(SUMMARY_EVERY_MILLIS)
+        }
+    }
+
+    private fun showSummary(machines: AgentBuildMachines, notice: OperationNotice) {
+        val summary = machines.summary()
+        _state.update { it.copy(phase = summary) }
+        notice.update(summary)
     }
 
     fun check(deployment: Deployment) {
@@ -172,6 +236,28 @@ class AgentInstallViewModel(
     private companion object {
         /** How much of the server's chatter is kept */
         const val LINES = 20_000
+        const val SUMMARY_EVERY_MILLIS = 30_000L
+
+        /** What a machine is called in the run's lines */
+        fun machineName(deployment: Deployment, host: SSHHostID): String {
+            val node = deployment.nodes.firstOrNull { it.sshHost == host }
+            return when {
+                node != null && node.name.isNotEmpty() -> node.name
+                host == SSHHostID.HOME -> OperationNotices.text(R.string.terminal_machine_local).ifEmpty { "Local" }
+                host == SSHHostID.VPS -> "VPS"
+                else -> node?.endpoint?.host ?: "VPS"
+            }
+        }
+
+        fun summaryWords() = AgentBuildMachines.Words(
+            done = { OperationNotices.text(R.string.agent_machine_done, it).ifEmpty { "$it: done" } },
+            failed = { OperationNotices.text(R.string.agent_machine_failed, it).ifEmpty { "$it: failed" } },
+            building = { OperationNotices.text(R.string.agent_machine_building, it).ifEmpty { "$it: building" } },
+            buildingFor = { name, minutes ->
+                OperationNotices.text(R.string.agent_machine_building_for, name, minutes).ifEmpty { "$name: building, $minutes min" }
+            },
+            waiting = { OperationNotices.text(R.string.agent_machine_waiting, it).ifEmpty { "$it: waiting" } },
+        )
 
         fun tail(log: String): String {
             val lines = log.split("\n")

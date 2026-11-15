@@ -467,6 +467,7 @@ public struct MailuService: MailEngineService {
                 plan: .archive(ArchiveBackupPlan(
                     composeProject: Self.composeProject,
                     dataPath: path,
+                    dataPart: .files,
                     databases: [],
                     quiesceServices: ["front", "admin", "imap", "smtp",
                                       "antispam", "webmail", "redis", "resolver"],

@@ -29,8 +29,8 @@ public actor CitadelCommandRunner: SSHCommandRunner {
 
     /// Per-host keepalive tickers; see `startKeepalive`
     private var keepalives: [SSHHostID: Task<Void, Never>] = [:]
-    /// How often the keepalive nudges an idle session
-    private static let keepaliveInterval = Duration.seconds(60)
+    /// Inside the app tunnel's 30 s idle limit
+    static let keepaliveInterval = Duration.seconds(15)
 
     public init(settings: SSHConnectionSettings,
                 onPinHostKey: @escaping @Sendable (SSHHostID, String) -> Void = { _, _ in },
@@ -48,13 +48,21 @@ public actor CitadelCommandRunner: SSHCommandRunner {
             while !Task.isCancelled {
                 try? await Task.sleep(for: interval)
                 if Task.isCancelled { return }
-                guard client.isConnected else { return }
+                guard client.isConnected else {
+                    await self.dropDeadLink(host, client)
+                    return
+                }
                 do {
                     _ = try await client.executeCommandStream("true")
                 } catch let error as CitadelError where error == .channelCreationFailed {
                     await self.dropDeadLink(host, client)
                     return
-                } catch {}
+                } catch {
+                    if !client.isConnected {
+                        await self.dropDeadLink(host, client)
+                        return
+                    }
+                }
             }
         }
     }
@@ -292,6 +300,11 @@ public actor CitadelCommandRunner: SSHCommandRunner {
             }
         }
 
+        let plan = settings.homePath.plan
+        if plan.localFirst, let local = await localLink(to: host, route: route, probing: plan.usesVPS) { return local }
+        guard plan.usesVPS else {
+            throw ServerControlError.connectionFailed("the machine does not answer on the local network")
+        }
         var lastError: Error?
         for attempt in 1...maxAttempts {
             if attempt > 1 {
@@ -302,7 +315,7 @@ public actor CitadelCommandRunner: SSHCommandRunner {
                 directLinks.remove(host)
                 return jumped
             } catch let error as ServerControlError {
-                if case .connectionFailed = error, let direct = try? await connectDirectly(to: host, route: route) {
+                if case .connectionFailed = error, plan.localLastResort, let direct = try? await connectDirectly(to: host, route: route) {
                     return direct
                 }
                 throw error // config/auth problems — retrying cannot help
@@ -311,11 +324,20 @@ public actor CitadelCommandRunner: SSHCommandRunner {
             }
         }
         // The tunnel never came back. Same last resort as above.
-        if let direct = try? await connectDirectly(to: host, route: route) {
+        if plan.localLastResort, let direct = try? await connectDirectly(to: host, route: route) {
             return direct
         }
         throw ServerControlError.connectionFailed(
             "home server unreachable through the tunnel: \(String(describing: lastError ?? ServerControlError.notConfigured("no attempt made")))")
+    }
+
+    /// The local network first, when the machine answers there
+    private func localLink(to host: SSHHostID, route: Route, probing: Bool) async -> SSHClient? {
+        guard let fallback = route.fallback else { return nil }
+        if probing, await !LANProbe.answers(host: fallback.host, port: fallback.port) { return nil }
+        guard let client = try? await connect(to: fallback, as: host) else { return nil }
+        directLinks.insert(host)
+        return client
     }
 
     private func connectDirectly(to host: SSHHostID, route: Route) async throws -> SSHClient {
@@ -420,7 +442,7 @@ public actor CitadelCommandRunner: SSHCommandRunner {
 
     private func clientSettings(host: String, port: Int, hostID: SSHHostID,
                                 pinned: String?) throws -> SSHClientSettings {
-        let username = settings.username
+        let username = hostID == .home ? settings.homeUsername : settings.username
         let onPin = onPinHostKey
         let authenticationMethod: @Sendable () -> SSHAuthenticationMethod
         if let password = settings.passwords[hostID] {
@@ -616,6 +638,12 @@ extension CitadelCommandRunner: RemoteFileBrowser {
                 try? await file.close()
                 throw error
             }
+        }
+    }
+
+    public func renameFile(from oldPath: String, to newPath: String, on host: SSHHostID) async throws {
+        try await withSFTP(host, label: "sftp: rename \(oldPath)") { sftp in
+            try await sftp.rename(at: oldPath, to: newPath)
         }
     }
 

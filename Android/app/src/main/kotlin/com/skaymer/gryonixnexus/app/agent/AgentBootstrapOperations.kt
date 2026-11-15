@@ -28,12 +28,13 @@ object AgentBootstrapOperations {
         onPhase: Reporter,
         onOutput: Reporter,
         reinstall: Boolean = false,
+        source: AgentSource = AgentSource.APP,
     ) {
         val home = files.homeDirectory(host)
         val build = DetachedAgentBuild(home)
         if (build.isRunning(runner, host)) {
             onPhase.report(FOLLOWING)
-            finish(build, runner, host, onPhase, onOutput)
+            finish(build, null, runner, host, onPhase, onOutput)
             return
         }
         if (reinstall) {
@@ -41,25 +42,48 @@ object AgentBootstrapOperations {
             runner.run(": > ${singleQuoted(marker)}", host, 20.seconds)
         }
         val remoteArchive = "$home/${AgentBootstrapSections.ARCHIVE_NAME}"
-        upload(sources, files, host, remoteArchive, onPhase) { failure ->
+        val prefix = stage(source, sources, files, host, remoteArchive, home, onPhase, onOutput) { failure ->
             "Could not write $remoteArchive on the server: ${failure.message ?: failure}"
         }
         try {
-            finish(build, runner, host, onPhase, onOutput)
+            finish(build, prefix, runner, host, onPhase, onOutput)
         } catch (missing: WrapperMissing) {
             onPhase.report(PREPARING)
             installWrapper(runner, files, host, remoteArchive, home)
-            finish(build, runner, host, onPhase, onOutput)
+            finish(build, null, runner, host, onPhase, onOutput)
         } catch (mismatch: ArchiveElsewhere) {
             onPhase.report(RELOCATING)
             onOutput.report("The server reads ${mismatch.expected}; the upload went to $remoteArchive.")
-            upload(sources, files, host, mismatch.expected, onPhase) {
+            val again = stage(source, sources, files, host, mismatch.expected, home, onPhase, onOutput) {
                 "The server looks for the agent sources in ${mismatch.expected}, and this " +
                     "account cannot write there. Connect as a user that can, or re-run the " +
                     "installation to refresh the server's wrapper."
             }
-            finish(build, runner, host, onPhase, onOutput)
+            finish(build, again, runner, host, onPhase, onOutput)
         }
+    }
+
+    private suspend fun stage(
+        source: AgentSource,
+        sources: Sources,
+        files: RemoteFileBrowser,
+        host: SSHHostID,
+        path: String,
+        home: String,
+        onPhase: Reporter,
+        onOutput: Reporter,
+        refusal: (Exception) -> String,
+    ): String? {
+        val fetch = source.fetchScript(path)
+        if (fetch == null) {
+            upload(sources, files, host, path, onPhase, refusal)
+            return null
+        }
+        onPhase.report(SENDING)
+        onOutput.report("Agent sources: the repository.")
+        val staged = "$home/.gryonixnexus-agent-fetch.sh"
+        files.uploadFile((fetch + "\n").toByteArray(), staged, host)
+        return staged
     }
 
     private suspend fun upload(
@@ -82,14 +106,15 @@ object AgentBootstrapOperations {
 
     private suspend fun finish(
         build: DetachedAgentBuild,
+        fetchScript: String?,
         runner: SSHCommandRunner,
         host: SSHHostID,
         onPhase: Reporter,
         onOutput: Reporter,
     ) {
         onPhase.report(BUILDING)
-        if (!build.isRunning(runner, host)) {
-            runner.run(build.startCommand(null, AgentBootstrapSections.SCRIPT_PATH), host, 60.seconds)
+        if (fetchScript != null || !build.isRunning(runner, host)) {
+            runner.run(build.startCommand(fetchScript, AgentBootstrapSections.SCRIPT_PATH), host, 60.seconds)
         }
         val outcome = build.follow(
             runner, host, onOutput::report,

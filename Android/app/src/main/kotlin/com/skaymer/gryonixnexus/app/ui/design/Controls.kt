@@ -1,5 +1,6 @@
 package com.skaymer.gryonixnexus.app.ui.design
 
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -30,13 +31,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -165,7 +169,7 @@ fun ProminentButton(
             onClick()
         },
         enabled = enabled,
-        modifier = modifier.fillMaxWidth().height(50.dp),
+        modifier = modifier.fillMaxWidth().height(48.dp),
         shape = RoundedCornerShape(percent = 50),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (danger) colors.danger else colors.accent,
@@ -174,7 +178,7 @@ fun ProminentButton(
             disabledContentColor = colors.tertiaryLabel,
         ),
     ) {
-        Text(text, style = MaterialTheme.typography.titleMedium)
+        Text(text, style = MaterialTheme.typography.labelLarge)
     }
 }
 
@@ -264,20 +268,22 @@ fun DisclosureChevron() {
         Icons.AutoMirrored.Filled.KeyboardArrowRight,
         contentDescription = null,
         tint = Gryonix.colors.tertiaryLabel,
-        modifier = Modifier.size(20.dp),
+        modifier = Modifier.size(22.dp),
     )
 }
 
-/** The iPhone's switch */
+/** Material switch in the app accent */
 @Composable
 fun IOSSwitch(
     checked: Boolean,
     onCheckedChange: ((Boolean) -> Unit)?,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    onColor: Color? = null,
 ) {
     val colors = Gryonix.colors
     val haptics = LocalHaptics.current
+    val track = onColor ?: colors.accent
     Switch(
         checked = checked,
         onCheckedChange = onCheckedChange?.let { change ->
@@ -288,19 +294,15 @@ fun IOSSwitch(
         },
         enabled = enabled,
         modifier = modifier,
+        // A thumb with content keeps one size, as on iOS.
+        thumbContent = { Box(Modifier.size(SwitchDefaults.IconSize)) },
         colors = SwitchDefaults.colors(
             checkedThumbColor = Color.White,
-            checkedTrackColor = colors.success,
-            checkedBorderColor = Color.Transparent,
+            checkedTrackColor = track,
+            checkedBorderColor = track,
             uncheckedThumbColor = Color.White,
-            uncheckedTrackColor = colors.trackFill,
+            uncheckedTrackColor = colors.trackFill.copy(alpha = maxOf(colors.trackFill.alpha, 0.28f)),
             uncheckedBorderColor = Color.Transparent,
-            disabledCheckedThumbColor = Color.White,
-            disabledCheckedTrackColor = colors.success.copy(alpha = 0.5f),
-            disabledCheckedBorderColor = Color.Transparent,
-            disabledUncheckedThumbColor = Color.White.copy(alpha = 0.7f),
-            disabledUncheckedTrackColor = colors.trackFill.copy(alpha = 0.5f),
-            disabledUncheckedBorderColor = Color.Transparent,
         ),
     )
 }
@@ -316,6 +318,9 @@ fun ValueRow(
     leading: (@Composable () -> Unit)? = null,
     /** What a tappable row shows at its end */
     chevron: @Composable () -> Unit = { DisclosureChevron() },
+    valueColor: Color = Gryonix.colors.secondaryLabel,
+    /** Longer explanation behind an "i" at the row's end */
+    infoNote: String? = null,
 ) {
     val colors = Gryonix.colors
     val style = MaterialTheme.typography.bodyLarge
@@ -332,8 +337,9 @@ fun ValueRow(
             showDivider = showDivider,
             leading = leading,
             trailing = {
+                if (infoNote != null) InfoNoteButton(title = title, note = infoNote)
                 if (value != null && oneLine) {
-                    Text(value, style = style, color = colors.secondaryLabel, maxLines = 1)
+                    Text(value, style = style, color = valueColor, maxLines = 1)
                 }
                 if (onClick != null) chevron()
             },
@@ -384,17 +390,24 @@ fun FieldRow(
     singleLine: Boolean = true,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     visualTransformation: VisualTransformation = VisualTransformation.None,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    /** Longer explanation behind an "i" at the row's end */
+    infoNote: String? = null,
 ) {
     val colors = Gryonix.colors
     val style = MaterialTheme.typography.bodyLarge
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    GroupedRow(modifier = modifier, showDivider = showDivider) {
+    GroupedRow(
+        modifier = modifier,
+        showDivider = showDivider,
+        trailing = { if (infoNote != null) InfoNoteButton(title = label, note = infoNote) },
+    ) {
         BoxWithConstraints(Modifier.weight(1f)) {
             val labelWidth = with(density) { measurer.measure(label, style).size.width.toDp() }
             val input: @Composable (TextAlign, Modifier) -> Unit = { align, fieldModifier ->
                 FieldInput(value, onValueChange, placeholder ?: label, align, singleLine, keyboardOptions,
-                    visualTransformation, fieldModifier)
+                    visualTransformation, keyboardActions, fieldModifier)
             }
             if (labelWidth + FIELD_GAP + FIELD_MIN <= maxWidth) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -425,6 +438,7 @@ private fun FieldInput(
     singleLine: Boolean,
     keyboardOptions: KeyboardOptions,
     visualTransformation: VisualTransformation,
+    keyboardActions: KeyboardActions,
     modifier: Modifier,
 ) {
     val colors = Gryonix.colors
@@ -433,6 +447,7 @@ private fun FieldInput(
         onValueChange = onValueChange,
         singleLine = singleLine,
         keyboardOptions = keyboardOptions,
+        keyboardActions = keyboardActions,
         visualTransformation = visualTransformation,
         textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.label, textAlign = align),
         cursorBrush = SolidColor(colors.accent),
@@ -462,11 +477,13 @@ fun CheckRow(
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     showDivider: Boolean = true,
+    leading: (@Composable () -> Unit)? = null,
 ) {
     GroupedRow(
         modifier = modifier,
         onClick = onClick,
         showDivider = showDivider,
+        leading = leading,
         trailing = {
             if (checked) {
                 Icon(
@@ -513,12 +530,15 @@ fun StepperRow(
     modifier: Modifier = Modifier,
     showDivider: Boolean = true,
     format: (Int) -> String = { it.toString() },
+    /** Longer explanation behind an "i" before the value */
+    infoNote: String? = null,
 ) {
     val colors = Gryonix.colors
     GroupedRow(
         modifier = modifier,
         showDivider = showDivider,
         trailing = {
+            if (infoNote != null) InfoNoteButton(title = label, note = infoNote)
             Text(
                 format(value),
                 style = MaterialTheme.typography.bodyLarge,
@@ -625,23 +645,28 @@ private fun TileActionButton(action: TileAction, modifier: Modifier = Modifier) 
         action.danger -> colors.danger
         else -> colors.accent
     }
+    val shape = RoundedCornerShape(28.dp)
     Column(
         modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(ink.copy(alpha = if (action.enabled) 0.12f else 0.06f))
+            .defaultMinSize(minHeight = 72.dp)
+            .shadow(1.dp, shape, ambientColor = colors.separator, spotColor = colors.separator)
+            .clip(shape)
+            .background(colors.cardBackground)
+            .border(0.5.dp, colors.separator.copy(alpha = 0.25f), shape)
             .clickable(enabled = action.enabled) {
                 haptics(if (action.danger) Haptics.Feel.WEIGHTY else Haptics.Feel.TAP)
                 action.onClick()
             }
             .padding(vertical = 10.dp, horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
     ) {
-        Icon(action.icon, contentDescription = null, tint = ink, modifier = Modifier.size(20.dp))
+        Icon(action.icon, contentDescription = null, tint = ink, modifier = Modifier.size(22.dp))
         Text(
             action.title,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelSmall,
             color = ink,
+            textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

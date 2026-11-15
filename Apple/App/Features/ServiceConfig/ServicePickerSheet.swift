@@ -31,8 +31,8 @@ struct ServicePickerSheet: View {
                 .padding(.vertical, 12)
             }
             .background(sheetBackground)
-            .navigationTitle(LocalizedStringKey(category.title))
-            #if os(iOS)
+            .screenTitle(LocalizedStringKey(category.title))
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
@@ -68,7 +68,7 @@ struct ServicePickerSheet: View {
                 Image(systemName: service.systemImage)
                     .font(.title3)
                     .foregroundStyle(.tint)
-                    .frame(width: 28)
+                    .rowIconFrame(28)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(verbatim: service.displayName)
                         .font(.headline)
@@ -109,7 +109,7 @@ struct ServicePickerSheet: View {
     }
 
     private var sheetBackground: Color {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         Color(.systemGroupedBackground)
         #else
         Color.clear

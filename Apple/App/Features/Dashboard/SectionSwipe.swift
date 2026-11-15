@@ -101,7 +101,7 @@ struct SectionSwipe: UIViewRepresentable {
 
         /// iOS 26 goes back from a drag anywhere
         private func isContentPop(_ other: UIGestureRecognizer) -> Bool {
-            guard #available(iOS 26.0, *), let stack = host?.navigationController else { return false }
+            guard #available(iOS 26.0, tvOS 26.0, *), let stack = host?.navigationController else { return false }
             return other === stack.interactiveContentPopGestureRecognizer
         }
     }

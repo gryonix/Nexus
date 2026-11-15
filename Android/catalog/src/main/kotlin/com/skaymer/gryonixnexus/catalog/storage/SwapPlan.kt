@@ -29,6 +29,9 @@ data class SwapPlan(val sizeGB: Int) {
         /** Sizes a custom value may take */
         val ALLOWED = 1..256
 
+        /** Sizes the wheel offers, zero meaning off */
+        val WHEEL = listOf(0, 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256)
+
         /** The smallest offered size that covers the missing memory */
         fun suggested(memoryBytes: Long, needBytes: Long): Int {
             val missing = (needBytes - memoryBytes).coerceAtLeast(0) / 1_073_741_824.0

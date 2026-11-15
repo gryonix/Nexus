@@ -21,7 +21,7 @@ final class ServiceHostnameSettingsTests: XCTestCase {
 
     /// A row may not point at somebody else's field
     func testEachEntryDrivesTheServiceItNames() {
-        for (id, _) in ServiceSettings.hostnameSettings {
+        for (id, _) in ServiceSettings.hostnameSettings where ServiceSettings.asksHostname(id) {
             guard let service = ServiceRegistry.service(id) else {
                 return XCTFail("\(id.rawValue) is in the table but not in the catalog")
             }
@@ -58,5 +58,19 @@ final class ServiceHostnameSettingsTests: XCTestCase {
         var settings = ServiceSettings()
         settings.applyHostnames([.seafile: "files.example.com", .psono: "   "])
         XCTAssertEqual(settings.namedHostnames, [.seafile: "files.example.com"])
+    }
+
+    func testTheAudioHubOpensOnAPublicNameAndStaysHomeOnALocalOne() {
+        XCTAssertTrue(ServiceSettings.asksHostname(.odio))
+        var settings = ServiceSettings()
+        XCTAssertEqual(OdioService().webIngress(context(settings))?.hostname, "odio.local")
+        settings.odioHostname = "music.example.org"
+        XCTAssertEqual(OdioService().webIngress(context(settings))?.homeOnly, false)
+        XCTAssertEqual(OdioService().dnsHostnames(context(settings)), ["music.example.org"])
+        settings.odioHostname = "hifi.local"
+        let ingress = OdioService().webIngress(context(settings))
+        XCTAssertEqual(ingress?.hostname, "hifi.local")
+        XCTAssertEqual(ingress?.homeOnly, true)
+        XCTAssertEqual(OdioService().dnsHostnames(context(settings)), [])
     }
 }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -44,24 +45,22 @@ fun VPNDNSPrioritySection(
     priority: VPNDNSPriority,
     local: LocalDNS,
 ) {
-    var typing by remember { mutableStateOf(false) }
     val order = priority.resolvers
     val save: (List<String>) -> Unit = { changed -> if (changed != order) clients.setDNSPriority(server, changed) }
+    val homeNotFirst = local.isOffered && order.firstOrNull() != VPNDNSPriority.LOCAL
     GroupedSection(
         header = stringResource(R.string.dns_order_header),
         note = stringResource(R.string.dns_order_note) + " " + stringResource(R.string.dns_order_footer),
+        footer = if (homeNotFirst) stringResource(R.string.dns_order_home_not_first) else null,
     ) {
         order.forEachIndexed { index, entry ->
             val last = index == order.lastIndex && !VPNDNSPriorityEditing.canAdd(order)
             PriorityRow(index, entry, priority, local, showDivider = !last, save)
         }
-        if (VPNDNSPriorityEditing.canAdd(order)) AddResolverRow(order, local, save, onTyping = { typing = true })
-    }
-    if (typing) {
-        TypedResolverAlert(
-            onAdd = { address -> save(VPNDNSPriorityEditing.add(address, order)) },
-            onDismiss = { typing = false },
-        )
+        if (VPNDNSPriorityEditing.canAdd(order)) {
+            AddResolverRow(order, local, save)
+            ResolverAddressRow(order, save)
+        }
     }
 }
 
@@ -94,16 +93,29 @@ private fun PriorityRow(
                 modifier = Modifier.width(24.dp),
             )
         },
-        trailing = { PriorityRowMenu(index, priority.resolvers, save) },
+        trailing = {
+            if (index == 0) {
+                Icon(Icons.Filled.Lock, stringResource(R.string.dns_order_chosen), tint = Gryonix.colors.secondaryLabel)
+            } else {
+                PriorityRowMenu(index, priority.resolvers, save)
+            }
+        },
     ) {
-        PriorityLabel(priorityEntryName(entry, local), answering = priority.isReachable(index))
+        PriorityLabel(priorityEntryName(entry, local), answering = priority.isReachable(index), chosen = index == 0)
     }
 }
 
 @Composable
-private fun RowScope.PriorityLabel(name: String, answering: Boolean) {
+private fun RowScope.PriorityLabel(name: String, answering: Boolean, chosen: Boolean) {
     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(name, style = MaterialTheme.typography.bodyLarge, color = Gryonix.colors.label)
+        if (chosen) {
+            Text(
+                stringResource(R.string.dns_order_chosen),
+                style = MaterialTheme.typography.bodySmall,
+                color = Gryonix.colors.secondaryLabel,
+            )
+        }
         if (!answering) {
             Text(
                 stringResource(R.string.dns_order_not_answering),
@@ -130,17 +142,16 @@ private fun PriorityRowMenu(index: Int, order: List<String>, save: (List<String>
             val pick: (List<String>) -> Unit = { changed -> open = false; save(changed) }
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.move_up)) },
-                enabled = index > 0,
+                enabled = VPNDNSPriorityEditing.canMoveUp(index),
                 onClick = { pick(VPNDNSPriorityEditing.moveUp(index, order)) },
             )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.move_down)) },
-                enabled = index < order.lastIndex,
+                enabled = VPNDNSPriorityEditing.canMoveDown(index, order),
                 onClick = { pick(VPNDNSPriorityEditing.moveDown(index, order)) },
             )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.vpn_remove), color = Gryonix.colors.danger) },
-                enabled = order.size > 1,
                 onClick = { pick(VPNDNSPriorityEditing.remove(index, order)) },
             )
         }
@@ -149,7 +160,7 @@ private fun PriorityRowMenu(index: Int, order: List<String>, save: (List<String>
 
 /** This server's DNS, public presets, or a typed address */
 @Composable
-private fun AddResolverRow(order: List<String>, local: LocalDNS, save: (List<String>) -> Unit, onTyping: () -> Unit) {
+private fun AddResolverRow(order: List<String>, local: LocalDNS, save: (List<String>) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         ActionRow(text = stringResource(R.string.dns_order_add), onClick = { open = true }, showDivider = false)
@@ -167,40 +178,20 @@ private fun AddResolverRow(order: List<String>, local: LocalDNS, save: (List<Str
                     },
                 )
             }
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.dns_order_other)) },
-                onClick = {
-                    open = false
-                    onTyping()
-                },
-            )
         }
     }
 }
 
-/** One resolver address, typed by hand */
+/** One resolver address, typed in its row */
 @Composable
-private fun TypedResolverAlert(onAdd: (String) -> Unit, onDismiss: () -> Unit) {
-    var text by remember { mutableStateOf("") }
-    val address = VPNDNSPriorityEditing.typed(text)
-    IOSAlert(
-        title = stringResource(R.string.dns_order_typed_title),
-        message = stringResource(R.string.dns_order_typed_message),
-        onDismiss = onDismiss,
-        actions = listOf(
-            AlertAction(stringResource(R.string.vpn_cancel)) { onDismiss() },
-            AlertAction(stringResource(R.string.vpn_add), preferred = true, enabled = address != null) {
-                address?.let(onAdd)
-                onDismiss()
-            },
-        ),
-    ) {
-        FieldRow(
-            label = stringResource(R.string.dns_servers),
-            value = text,
-            onValueChange = { text = it },
-            placeholder = "1.1.1.1",
-            showDivider = false,
-        )
-    }
+private fun ResolverAddressRow(order: List<String>, save: (List<String>) -> Unit) {
+    PendingTextRow(
+        label = stringResource(R.string.dns_order_typed_title),
+        saved = "",
+        placeholder = "1.1.1.1",
+        apply = stringResource(R.string.vpn_add),
+        clearsAfterApply = true,
+        valid = { VPNDNSPriorityEditing.typed(it) != null },
+        onApply = { text -> VPNDNSPriorityEditing.typed(text)?.let { save(VPNDNSPriorityEditing.add(it, order)) } },
+    )
 }

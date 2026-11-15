@@ -23,8 +23,8 @@ struct ConfiguratorHistoryView: View {
     var body: some View {
         NavigationStack {
             historyContent
-                .navigationTitle("History")
-                #if os(iOS)
+                .screenTitle("History")
+                #if os(iOS) || os(tvOS)
                 .navigationBarTitleDisplayMode(.inline)
                 #endif
                 .toolbar { historyToolbar }
@@ -75,7 +75,7 @@ struct ConfiguratorHistoryView: View {
                         delete(ids: Set(offsets.map { scenarioEntries[$0].id }))
                     }
                 }
-                #if os(iOS)
+                #if os(iOS) || os(tvOS)
                 .environment(\.editMode, .constant(editing ? .active : .inactive))
                 #endif
             }
@@ -84,7 +84,7 @@ struct ConfiguratorHistoryView: View {
 
     @ToolbarContentBuilder
     private var historyToolbar: some ToolbarContent {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         ToolbarItem(placement: .topBarLeading) { clearHistoryButton }
         #else
         ToolbarItem(placement: .destructiveAction) { clearHistoryButton }
@@ -103,7 +103,7 @@ struct ConfiguratorHistoryView: View {
         ToolbarItem(placement: .confirmationAction) {
             Button("Done") { dismiss() }
         }
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         ToolbarItemGroup(placement: .bottomBar) {
             if editing {
                 Button("Cancel") {

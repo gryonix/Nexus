@@ -67,4 +67,12 @@ class AgentServiceMappingTest {
         assertNotNull(AgentServiceMapping.serviceID("vpn"))
         assertEquals(setOf(ServiceID.VPN_PANEL), AgentServiceMapping.serviceIDs(listOf("vpn")))
     }
+
+    @Test
+    fun `installed by app keeps only the app's own services`() {
+        val ids = AgentServiceMapping.installedByApp(
+            listOf("headscale" to false, "vaultwarden" to true, "vpn" to false, "portainer" to false),
+        )
+        assertEquals(setOf(ServiceID.HEADSCALE), ids)
+    }
 }

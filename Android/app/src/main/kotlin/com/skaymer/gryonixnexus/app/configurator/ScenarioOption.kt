@@ -63,6 +63,14 @@ data class ScenarioOption(
                 topology = Topology.SINGLE_HOST,
                 scope = DeploymentScope.MESH_ONLY,
             ),
+            ScenarioOption(
+                id = "tailscaleOnly",
+                title = R.string.scenario_tailscale_only_title,
+                subtitle = R.string.scenario_tailscale_only_subtitle,
+                icon = ScenarioIcon.MESH,
+                topology = Topology.SINGLE_HOST,
+                scope = DeploymentScope.TAILSCALE_ONLY,
+            ),
         )
     }
 }

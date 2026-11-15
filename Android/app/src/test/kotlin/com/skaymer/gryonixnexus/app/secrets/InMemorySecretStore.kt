@@ -12,4 +12,6 @@ class InMemorySecretStore : SecretStore {
     override fun deleteSecret(account: String) {
         items.remove(account)
     }
+
+    override fun accounts(prefix: String): List<String> = items.keys.filter { it.startsWith(prefix) }
 }

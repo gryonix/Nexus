@@ -54,7 +54,7 @@ struct GroupMembershipView: View {
                 }
             }
             .buttonStyle(.borderless)
-            .navigationTitle("Servers in group")
+            .screenTitle("Servers in group")
             .raisedNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

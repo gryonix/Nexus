@@ -94,6 +94,30 @@ enum AgentSource: String, CaseIterable, Identifiable, Sendable {
     /// The public repository the branches are read from
     static let repository = "gryonix/nexus-agent"
 
+    /// The agent version on this branch, read from github.com
+    func branchVersion(session: URLSession = .shared) async -> String? {
+        guard let branch, let url = URL(string:
+            "https://raw.githubusercontent.com/\(Self.repository)/\(branch)/Agent/gryonixnexusd/Cargo.toml")
+        else { return nil }
+        let request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
+        guard let (data, response) = try? await session.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        return Self.crateVersion(in: String(decoding: data, as: UTF8.self))
+    }
+
+    /// The first `version = "…"` line of a Cargo manifest
+    static func crateVersion(in manifest: String) -> String? {
+        let prefix = "version = \""
+        guard let line = manifest.split(separator: "\n").first(where: { $0.hasPrefix(prefix) }) else { return nil }
+        let value = line.dropFirst(prefix.count).prefix { $0 != "\"" }
+        return value.isEmpty ? nil : String(value)
+    }
+
+    /// The version an update from this source installs
+    func offeredVersion(shipped: String) async -> String {
+        await branchVersion() ?? shipped
+    }
+
     /// Only these names ever reach a shell command
     static func named(_ raw: String) -> AgentSource {
         AgentSource(rawValue: raw) ?? .app

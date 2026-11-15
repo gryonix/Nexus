@@ -34,8 +34,8 @@ struct MetricChoiceSheet: View {
                     InfoSectionHeader("Metrics", note: "CPU, memory and disk can be shown together — they share one 0–100 % axis. Anything else is plotted on its own.")
                 }
             }
-            .navigationTitle("Metric")
-            #if os(iOS)
+            .screenTitle("Metric")
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
@@ -49,7 +49,7 @@ struct MetricChoiceSheet: View {
             guard !chosen.isEmpty, chosen != selected else { return }
             onChoose(chosen)
         }
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         .phoneSheetDetents([.medium])
         #else
         .frame(minWidth: 320, minHeight: 320)
@@ -60,7 +60,7 @@ struct MetricChoiceSheet: View {
         HStack(spacing: 12) {
             Image(systemName: metric.systemImage)
                 .foregroundStyle(metric.tint)
-                .frame(width: 24)
+                .rowIconFrame(24)
             Text(metric.title)
                 .foregroundStyle(.primary)
             Spacer(minLength: 8)
@@ -108,8 +108,8 @@ struct MetricPanelActionsSheet: View {
                     Text(verbatim: subtitle)
                 }
             }
-            .navigationTitle(Text(verbatim: title))
-            #if os(iOS)
+            .screenTitle(Text(verbatim: title))
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
@@ -129,7 +129,7 @@ struct MetricPanelActionsSheet: View {
             }
             pending = nil
         }
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         .phoneSheetDetents([.height(240)])
         #else
         .frame(minWidth: 320, minHeight: 220)
@@ -141,7 +141,7 @@ struct MetricPanelActionsSheet: View {
         HStack(spacing: 12) {
             Image(systemName: systemImage)
                 .foregroundStyle(destructive ? AnyShapeStyle(Color.red) : AnyShapeStyle(Color.accentColor))
-                .frame(width: 24)
+                .rowIconFrame(24)
             Text(title)
                 .foregroundStyle(destructive ? AnyShapeStyle(Color.red) : AnyShapeStyle(.primary))
             Spacer(minLength: 8)

@@ -10,8 +10,8 @@ struct SimpleResultView: View {
     var openPorts: [OpenPortRequirement] = []
     var resumingRunningInstall = false
     var resumingViewModel: InstallViewModel?
+    var onLeave: (() -> Void)?
 
-    @State private var dismiss = DismissHandle()
     @State private var index = 0
     @State private var shareURLs: [URL] = []
     @State private var shareDirectory: URL?
@@ -57,10 +57,6 @@ struct SimpleResultView: View {
     }
 
     var body: some View {
-        screen.dismissHandle(dismiss)
-    }
-
-    @ViewBuilder private var screen: some View {
         CardList {
             switch current {
             case .install: installPage
@@ -70,16 +66,12 @@ struct SimpleResultView: View {
             case .notes: notesPage
             }
         }
-        .navigationTitle("Installation")
+        .screenTitle("Installation")
         .raisedNavigationTitle()
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .wizardBack) {
-                Button {
-                    if index > 0 { withAnimation { index -= 1 } } else { dismiss() }
-                } label: {
-                    Label("Back", systemImage: "chevron.left")
-                }
+                WizardBackButton(stepBack: stepBack, onLeave: onLeave)
             }
             if !license.status.isActive {
                 ToolbarItem(placement: .primaryAction) {
@@ -87,13 +79,16 @@ struct SimpleResultView: View {
                         Label("Share bundle", systemImage: "lock.fill")
                     }
                 }
-            } else if !shareURLs.isEmpty {
+            }
+            #if !os(tvOS)
+            if license.status.isActive, !shareURLs.isEmpty {
                 ToolbarItem(placement: .primaryAction) {
                     ShareLink(items: shareURLs) {
                         Label("Share bundle", systemImage: "square.and.arrow.up")
                     }
                 }
             }
+            #endif
         }
         .safeAreaInset(edge: .bottom) {
             bottomBar
@@ -106,6 +101,12 @@ struct SimpleResultView: View {
         .modifier(InstallResetAutoPush(isPresented: $debugPushInstall,
                                        deployment: deployment, bundle: bundle))
         #endif
+    }
+
+    private func stepBack() -> Bool {
+        guard index > 0 else { return false }
+        withAnimation { index -= 1 }
+        return true
     }
 
     // MARK: - Pages
@@ -335,7 +336,7 @@ struct SimpleArtifactRow: View {
         HStack(spacing: 12) {
             Image(systemName: artifact.kind.systemImage)
                 .foregroundStyle(.tint)
-                .frame(width: 24)
+                .rowIconFrame(24)
             VStack(alignment: .leading, spacing: 3) {
                 Text(artifact.fileName)
                     .font(.headline.monospaced())

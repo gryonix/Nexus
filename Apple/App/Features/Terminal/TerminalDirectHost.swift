@@ -9,14 +9,17 @@ struct TerminalDirectHost: Identifiable, Codable, Hashable, Sendable {
     var port: Int
     /// The account this connection signs in as
     var username: String
+    /// A managed machine the connection goes through
+    var via: TerminalVia?
 
     init(id: UUID = UUID(), name: String = "", host: String, port: Int = 22,
-         username: String) {
+         username: String, via: TerminalVia? = nil) {
         self.id = id
         self.name = name
         self.host = host
         self.port = port
         self.username = username
+        self.via = via
     }
 
     /// The name, or the address when there is no name
@@ -31,6 +34,13 @@ struct TerminalDirectHost: Identifiable, Codable, Hashable, Sendable {
                    topology: .singleHost,
                    entry: HostEndpoint(host: host, port: port, user: username))
     }
+}
+
+/// A managed machine a connection goes through
+struct TerminalVia: Codable, Hashable, Sendable {
+    var server: UUID
+    /// Nil means the server's entry machine
+    var node: UUID?
 }
 
 /// The saved direct hosts, in a plain JSON file

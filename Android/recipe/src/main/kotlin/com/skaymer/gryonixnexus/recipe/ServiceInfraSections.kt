@@ -3,6 +3,7 @@ package com.skaymer.gryonixnexus.recipe
 import com.skaymer.gryonixnexus.catalog.VPNPortShare
 import com.skaymer.gryonixnexus.catalog.AppLanguage
 import com.skaymer.gryonixnexus.catalog.CaddySetupGuard
+import com.skaymer.gryonixnexus.catalog.L10nServices
 import com.skaymer.gryonixnexus.catalog.Apt
 import com.skaymer.gryonixnexus.catalog.ManagedService
 import com.skaymer.gryonixnexus.catalog.SH
@@ -47,11 +48,25 @@ internal object ServiceInfraSections {
         "APT" to Apt.QUIET
     )
 
+    /** A notice at the root, the rest goes upstream */
+    fun withRootNotice(site: String, notice: String): String {
+        val at = site.lastIndexOf("\n    reverse_proxy ")
+        if (at < 0) return site
+        val tail = site.substring(at + 1)
+        if (!tail.endsWith("\n}")) return site
+        val proxy = tail.dropLast(2)
+        if (proxy.contains('{') || proxy.contains('\n')) return site
+        val text = notice.replace('"', '\'').replace('\\', '\'')
+        return site.substring(0, at) +
+            "\n    handle / {\n        respond \"$text\" 200\n    }\n    handle {\n    $proxy\n    }\n}"
+    }
+
     fun caddySite(owner: String, hostname: String, upstreamPort: Int,
                   adminGuard: Boolean = false,
                   upstreamHTTPS: Boolean = false, tlsInternal: Boolean = false,
                   sso: Boolean = false, publicPaths: List<String> = emptyList(),
-                  overwriteForwardedFor: Boolean = false): String {
+                  overwriteForwardedFor: Boolean = false,
+                  basicAuthSnippet: String? = null): String {
         val proxy = if (upstreamHTTPS) {
             """
             reverse_proxy https://127.0.0.1:$upstreamPort {
@@ -120,22 +135,23 @@ internal object ServiceInfraSections {
                                        "GUARD" to guardLine,
                                        "SSO" to nested(ssoLine), "PROXY" to nested(proxy))
         }
+        val authLine = basicAuthSnippet?.let { "import $it\n    " } ?: ""
         if (!adminGuard) {
             return """
             @HOSTNAME@ {
-                @OWNER@@TLS@@SSO@@PROXY@
+                @OWNER@@TLS@@AUTH@@SSO@@PROXY@
             }
             """.trimIndent().embedding("HOSTNAME" to hostname, "OWNER" to ownerLine,
-                                       "TLS" to tlsLine,
+                                       "TLS" to tlsLine, "AUTH" to authLine,
                                        "SSO" to ssoLine, "PROXY" to proxy)
         }
         return """
         @HOSTNAME@ {
             @OWNER@@TLS@import ${VPNPanelService.ADMIN_GUARD_PATH}
-            @SSO@@PROXY@
+            @AUTH@@SSO@@PROXY@
         }
         """.trimIndent().embedding("HOSTNAME" to hostname, "OWNER" to ownerLine,
-                                   "TLS" to tlsLine,
+                                   "TLS" to tlsLine, "AUTH" to authLine,
                                    "SSO" to ssoLine, "PROXY" to proxy)
     }
 
@@ -253,12 +269,18 @@ internal object ServiceInfraSections {
             val site = caddySite(
                 owner = service.id.rawValue, hostname = names, upstreamPort = ingress.upstreamPort,
                 adminGuard = ingress.adminGuard, upstreamHTTPS = ingress.upstreamHTTPS,
-                tlsInternal = context.usesInternalTLS, sso = sso,
+                tlsInternal = context.usesInternalTLS || ingress.homeOnly, sso = sso,
                 publicPaths = ingress.publicPaths,
-                overwriteForwardedFor = ingress.overwriteForwardedFor
+                overwriteForwardedFor = ingress.overwriteForwardedFor,
+                basicAuthSnippet = ingress.basicAuthSnippet
             )
             val installed = context.serviceContext.installedServices
-            service.id.rawValue to CaddySetupGuard.guarding(site, service.id.rawValue, installed)
+            val guarded = CaddySetupGuard.guarding(site, service.id.rawValue, installed)
+            service.id.rawValue to if (service.id == ServiceID.HEADSCALE) {
+                withRootNotice(guarded, L10nServices.headscaleRootPage(context.language))
+            } else {
+                guarded
+            }
         }
         val sites = rendered.map { it.second }
         val ownedIDs = rendered.joinToString(",") { it.first }

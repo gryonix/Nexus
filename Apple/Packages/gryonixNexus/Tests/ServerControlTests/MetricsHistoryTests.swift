@@ -47,6 +47,21 @@ final class MetricsHistoryTests: XCTestCase {
         XCTAssertNil(sparse.temperatureCelsius)
     }
 
+    func testFourteenColumnRowsCarrySwapAndTwelveColumnRowsDoNot() {
+        let output = """
+        1758000000,12.5,1073741824,2147483648,32000000000,110000000000,1024,2048,100,200,0.42,55.0,100,400
+        1758000010,12.5,1073741824,2147483648,32000000000,110000000000,1024,2048,100,200,0.42,55.0
+        1758000020,,1073741824,2147483648,32000000000,110000000000,,,,,0.42,,,
+        """
+        let points = MetricsHistoryParser.parse(output)
+        XCTAssertEqual(points.count, 3)
+        XCTAssertEqual(points[0].swapUsedBytes, 100)
+        XCTAssertEqual(points[0].swapTotalBytes, 400)
+        XCTAssertEqual(points[0].swapUsedFraction, 0.25)
+        XCTAssertNil(points[1].swapTotalBytes)
+        XCTAssertNil(points[2].swapUsedFraction)
+    }
+
     func testMalformedAndTruncatedLinesAreSkipped() {
         let output = """
         garbage

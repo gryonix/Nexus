@@ -85,8 +85,8 @@ struct MetricPanelEditor: View {
             #if os(macOS)
             .formStyle(.grouped)
             #endif
-            .navigationTitle(panel == nil ? "Add panel" : "Edit panel")
-            #if os(iOS)
+            .screenTitle(panel == nil ? "Add panel" : "Edit panel")
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {

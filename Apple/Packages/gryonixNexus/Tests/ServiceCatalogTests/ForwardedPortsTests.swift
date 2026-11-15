@@ -36,4 +36,11 @@ final class ForwardedPortsTests: XCTestCase {
         XCTAssertEqual(ports, ports.sorted(), "the rules read better in order, and fixtures depend on it")
         XCTAssertEqual(ports.count, Set(ports).count, "two services on one port must produce one rule")
     }
+
+    func testHomeOnlyServiceKeepsItsOwnPortsOffTheRelay() {
+        let services = ServiceRegistry.services([.dockerMailserver, .vaultwarden])
+        let ports = ForwardedPorts.tcp(services: services, context: context(),
+                                       excluding: [ServiceID.dockerMailserver.rawValue])
+        XCTAssertEqual(ports, [80, 443])
+    }
 }

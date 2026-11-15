@@ -50,6 +50,15 @@ object AgentInstallSettings {
         out["home_assistant_hostname"] = settings.homeAssistantHostname
         out["home_assistant_path"] = settings.homeAssistantPath
         out["machine_at_home"] = if (settings.machineAtHome) "true" else "false"
+        out["shairport_path"] = settings.shairportPath
+        out["shairport_mode"] = settings.shairportMode
+        out["shairport_name"] = settings.shairportName
+        out["shairport_output"] = settings.shairportOutput
+        out["shairport_options"] = settings.shairportOptions
+        out["uxplay_name"] = settings.uxplayName
+        out["speaker_name"] = settings.speakerName
+        out["odio_path"] = settings.odioPath
+        out["odio_hostname"] = settings.odioHostname
         out["ollama_path"] = settings.ollamaPath
         out["open_webui_path"] = settings.openWebUIPath
         out["open_webui_hostname"] = settings.openWebUIHostname
@@ -154,6 +163,8 @@ object AgentInstallSettings {
         "immich_hostname", "immich_path", "photoprism_hostname", "photoprism_path",
         "jellyfin_hostname", "jellyfin_path", "jellyfin_media_path",
         "home_assistant_hostname", "home_assistant_path", "machine_at_home",
+        "shairport_path", "shairport_mode", "shairport_name", "shairport_output", "shairport_options",
+        "uxplay_name", "speaker_name", "odio_path", "odio_hostname",
         "ollama_path", "open_webui_path", "open_webui_hostname", "open_webui_allow_signups", "litellm_path", "litellm_hostname", "anythingllm_path", "anythingllm_hostname", "qdrant_path", "searxng_path", "openclaw_path", "openclaw_hostname",
         "minecraft_java_path", "minecraft_java_version", "minecraft_java_flavour",
         "minecraft_java_memory_mb", "minecraft_java_port", "minecraft_java_accepts_eula",

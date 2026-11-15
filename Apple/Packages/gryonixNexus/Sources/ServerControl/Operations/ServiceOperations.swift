@@ -56,6 +56,11 @@ public struct ServiceOperations: Sendable {
                 return [ContainerStatus(name: name, status: "not running")]
             }
             return [container]
+
+        case .systemdUnits(let list, _):
+            let output = try await runSucceeding(list.command, timeout: timeout(.quick))
+            let units = SystemdShowParser.parse(output)
+            return units.isEmpty ? [ContainerStatus(name: service.displayName, status: "not running")] : units
         }
     }
 

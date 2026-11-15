@@ -9,7 +9,7 @@ public struct DetachedAgentBuild: Sendable {
     public let home: String
     private let retryDelay: Duration
 
-    public init(home: String, retryDelay: Duration = .seconds(5)) {
+    public init(home: String, retryDelay: Duration = .seconds(2)) {
         self.home = home
         self.retryDelay = retryDelay
     }

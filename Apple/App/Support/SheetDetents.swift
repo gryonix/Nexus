@@ -1,5 +1,5 @@
 import SwiftUI
-#if os(iOS)
+#if os(iOS) || os(tvOS)
 import UIKit
 #endif
 
@@ -13,7 +13,7 @@ private struct PhoneSheetDetents: ViewModifier {
     let detents: Set<PresentationDetent>
 
     private var isPad: Bool {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         UIDevice.current.userInterfaceIdiom == .pad
         #else
         false

@@ -22,6 +22,10 @@ import com.skaymer.gryonixnexus.catalog.services.NextcloudService
 import com.skaymer.gryonixnexus.catalog.services.N8NService
 import com.skaymer.gryonixnexus.catalog.services.HomeAssistantService
 import com.skaymer.gryonixnexus.catalog.services.MosquittoService
+import com.skaymer.gryonixnexus.catalog.services.OdioService
+import com.skaymer.gryonixnexus.catalog.services.ShairportSyncService
+import com.skaymer.gryonixnexus.catalog.services.UxPlayService
+import com.skaymer.gryonixnexus.catalog.services.PackagedAudioService
 import com.skaymer.gryonixnexus.catalog.services.Zigbee2MQTTService
 import com.skaymer.gryonixnexus.catalog.services.OllamaService
 import com.skaymer.gryonixnexus.catalog.services.OpenClawService
@@ -84,8 +88,11 @@ object ServiceRegistry {
         N8NService(),
         HomeAssistantService(),
         MosquittoService(),
-        Zigbee2MQTTService()
-    )
+        Zigbee2MQTTService(),
+        ShairportSyncService(),
+        UxPlayService(),
+        OdioService()
+    ) + PackagedAudioService.ALL
 
     /** The members of [category] that this scope can actually run */
     fun services(category: ServiceCategory, scope: DeploymentScope): List<ManagedService> =
@@ -110,6 +117,7 @@ object ServiceRegistry {
         if (ids.any { it in ServiceID.VPN_PROTOCOLS }) ids.add(ServiceID.VPN_PANEL)
         if (scope == DeploymentScope.CLOUDFLARE_TUNNEL) ids.add(ServiceID.CLOUDFLARED)
         if (scope.requiresMesh) ids.add(ServiceID.HEADSCALE)
+        if (scope.joinsTailscale) ids.add(ServiceID.TAILSCALE_NODE)
         if (ids.any { it in ServiceID.GAME_SERVERS }) ids.add(ServiceID.CRAFTY_CONTROLLER)
         // Zigbee publishes to the broker, so one brings both
         if (ServiceID.ZIGBEE2MQTT in ids) ids.add(ServiceID.MOSQUITTO)

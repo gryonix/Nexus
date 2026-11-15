@@ -11,7 +11,9 @@ struct CardList<Content: View>: View {
             .formRowButtons()
         #else
         List { content }
+            #if !os(tvOS)
             .listRowSpacing(0)
+            #endif
             .bottomBarClearance()
         #endif
     }

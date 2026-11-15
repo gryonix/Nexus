@@ -85,8 +85,8 @@ struct BackupConfirmSheet: View {
             .formStyle(.grouped)
             .frame(minWidth: 420, minHeight: 340)
             #endif
-            .navigationTitle("Back Up")
-            #if os(iOS)
+            .screenTitle("Back Up")
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {

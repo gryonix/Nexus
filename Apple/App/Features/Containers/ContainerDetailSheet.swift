@@ -36,8 +36,8 @@ struct ContainerDetailSheet: View {
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle(Text(verbatim: container.name))
-            #if os(iOS)
+            .screenTitle(Text(verbatim: container.name))
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {

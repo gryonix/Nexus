@@ -149,6 +149,7 @@ public struct PhotoPrismService: ManagedService {
                 plan: .archive(ArchiveBackupPlan(
                     composeProject: Self.composeProject,
                     dataPath: "\(path)/originals",
+                    dataPart: .files,
                     databases: [BackupDatabase(engine: .mysql, service: "mariadb",
                                                fileName: "photoprism.sql")],
                     quiesceServices: [],

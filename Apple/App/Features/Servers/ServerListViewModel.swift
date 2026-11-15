@@ -13,6 +13,10 @@ final class ServerListViewModel: ObservableObject {
 
     init(store: any DeploymentStore = FileDeploymentStore()) {
         self.store = store
+        NotificationCenter.default.addObserver(forName: .cloudSyncChangedServers, object: nil, queue: .main) {
+            [weak self] _ in
+            MainActor.assumeIsolated { self?.load() }
+        }
     }
 
     func load() {
@@ -64,6 +68,7 @@ final class ServerListViewModel: ObservableObject {
             }
             applyDemoRule()
             errorMessage = nil
+            CloudSync.shared.scheduleSync()
         } catch {
             errorMessage = UIL10n.string("Failed to save the server: %@", error.localizedDescription)
         }
@@ -83,6 +88,7 @@ final class ServerListViewModel: ObservableObject {
             do {
                 try store.upsert(deployment)
                 await self?.report(nil)
+                await CloudSync.shared.scheduleSync()
             } catch {
                 let message = UIL10n.string("Failed to save the server: %@",
                                             error.localizedDescription)
@@ -108,6 +114,37 @@ final class ServerListViewModel: ObservableObject {
         }
     }
 
+    /// Groups and their servers, sealed as one file
+    func groupExportData(groups: [String], passphrase: String) async -> Data? {
+        var transfers: [DeploymentTransfer] = []
+        for deployment in ServerGroups.members(ofAny: groups, in: deployments)
+        where !DemoServer.isBuiltIn(deployment) {
+            let key = await transferKey(for: deployment)
+            transfers.append(DeploymentTransferService.export(deployment, transferKey: key))
+        }
+        do {
+            let plain = try ServerGroupBundle.make(groups: groups, transfers: transfers).encoded()
+            return try TransferSeal.seal(plain, passphrase: passphrase)
+        } catch {
+            errorMessage = UIL10n.string("Failed to export the server: %@", error.localizedDescription)
+            return nil
+        }
+    }
+
+    /// Groups from a file take their place on the strip
+    func adoptGroupOrder(_ groups: [String], defaults: UserDefaults = .standard) {
+        let stored = ServerGroups.storedOrder(defaults: defaults)
+        defaults.set(ServerGroups.format(ServerGroups.adopting(groups, into: stored)),
+                     forKey: ServerGroups.orderKey)
+    }
+
+    /// The server as JSON for a QR transfer
+    func transferText(for deployment: Deployment) async -> String? {
+        let key = await transferKey(for: deployment)
+        let data = try? DeploymentTransferService.encode(DeploymentTransferService.export(deployment, transferKey: key))
+        return data.flatMap { String(data: $0, encoding: .utf8) }
+    }
+
     /// A one-time key reaches one machine only
     static func usesOneTimeKey(for deployment: Deployment) -> Bool {
         !deployment.isMultiHost
@@ -129,6 +166,7 @@ final class ServerListViewModel: ObservableObject {
             }
             applyDemoRule()
             errorMessage = nil
+            CloudSync.shared.scheduleSync()
         } catch {
             errorMessage = UIL10n.string("Failed to import the server: %@", error.localizedDescription)
         }
@@ -146,6 +184,7 @@ final class ServerListViewModel: ObservableObject {
             Task.detached(priority: .utility) {
                 DeploymentEraser.eraseSecrets(deploymentID: id, nodeIDs: nodeIDs)
             }
+            CloudSync.shared.scheduleSync()
         } catch {
             errorMessage = UIL10n.string("Failed to delete the server: %@", error.localizedDescription)
         }

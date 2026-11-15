@@ -9,9 +9,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import com.skaymer.gryonixnexus.app.ui.design.Gryonix
 import com.skaymer.gryonixnexus.app.ui.design.PlainButton
 import com.skaymer.gryonixnexus.app.ui.design.ProminentButton
+import com.skaymer.gryonixnexus.app.ui.design.SheetBar
 import com.skaymer.gryonixnexus.R
 
 /** What this app is, said once, on the first launch */
@@ -44,11 +45,12 @@ fun WelcomeSheet(onConfigure: () -> Unit, onDismiss: () -> Unit) {
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         dragHandle = null,
     ) {
+        SheetBar(title = "", closeLabel = stringResource(R.string.close), onClose = onDismiss, action = null)
         Column(
             Modifier
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
-                .padding(top = 32.dp, bottom = 24.dp),
+                .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -65,9 +67,9 @@ fun WelcomeSheet(onConfigure: () -> Unit, onDismiss: () -> Unit) {
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Point(Icons.Filled.Build, R.string.welcome_builds_title, R.string.welcome_builds_detail)
-                Point(Icons.Filled.Info, R.string.welcome_watches_title, R.string.welcome_watches_detail)
-                Point(Icons.Filled.Lock, R.string.welcome_yours_title, R.string.welcome_yours_detail)
+                Point(Icons.Filled.AutoFixHigh, R.string.welcome_builds_title, R.string.welcome_builds_detail)
+                Point(Icons.Filled.BarChart, R.string.welcome_watches_title, R.string.welcome_watches_detail)
+                Point(Icons.Filled.Shield, R.string.welcome_yours_title, R.string.welcome_yours_detail)
             }
 
             Column(

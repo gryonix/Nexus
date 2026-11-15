@@ -37,8 +37,8 @@ class XrayConfigurationGoldenTest {
     fun `the socks port is the one tun2socks dials`() {
         val yaml = Tun2SocksConfiguration.yaml(access)
         assertTrue(yaml.contains("port: ${access.port}"), "the two halves have to name the same port")
-        assertTrue(yaml.contains("tcp-buffer-size: 4096"), "each connection keeps a small buffer")
-        assertTrue(yaml.contains("task-stack-size: 24576"))
+        assertTrue(yaml.contains("tcp-buffer-size: 65536"), "each connection gets a full-speed buffer")
+        assertTrue(yaml.contains("task-stack-size: 86016"))
         assertTrue(yaml.contains("udp-read-write-timeout: 10000"), "silent UDP flows close soon")
         assertTrue(yaml.contains("max-session-count: 128"))
         assertTrue(yaml.contains("username: ${access.username}"))

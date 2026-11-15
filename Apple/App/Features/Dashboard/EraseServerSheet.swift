@@ -42,7 +42,7 @@ struct EraseServerSheet: View {
                 Section {
                     TextField(String(""), text: $typed, prompt: Text(verbatim: Self.confirmationWord))
                         .autocorrectionDisabled()
-                        #if os(iOS)
+                        #if os(iOS) || os(tvOS)
                         .textInputAutocapitalization(.characters)
                         #endif
                         .font(.body.monospaced())
@@ -55,8 +55,8 @@ struct EraseServerSheet: View {
             #if os(macOS)
             .formStyle(.grouped)
             #endif
-            .navigationTitle("Erase \(deployment.name)?")
-            #if os(iOS)
+            .screenTitle("Erase \(deployment.name)?")
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {

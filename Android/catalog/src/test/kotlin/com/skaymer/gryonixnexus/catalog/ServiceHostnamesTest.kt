@@ -29,7 +29,7 @@ class ServiceHostnamesTest {
     /** A row may not point at somebody else's field */
     @Test
     fun `each entry drives the service it names`() {
-        for (id in ServiceHostnames.settings.keys) {
+        for (id in ServiceHostnames.settings.keys.filter(ServiceHostnames::asksHostname)) {
             val service = requireNotNull(ServiceRegistry.service(id)) {
                 "${id.rawValue} is in the table but not in the catalog"
             }

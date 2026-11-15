@@ -136,7 +136,7 @@ fun HistoryContent(
                 series.any { it.values.size >= 2 } -> HistoryChart(
                     series = series,
                     percentChart = HistoryMetric.isPercentChart(metrics),
-                    axisLabel = { ceiling -> HistoryMetric.axisLabel(metrics, ceiling) }
+                    axisLabel = { value -> HistoryMetric.tickLabel(metrics, value) }
                 )
                 state.errorMessage != null -> Text(
                     stringResource(R.string.unreachable, state.errorMessage!!),
@@ -274,9 +274,9 @@ private fun MetricChoiceSheet(
 private fun PickerRow(label: String, content: @Composable () -> Unit) {
     Column {
         Text(
-            label.uppercase(),
-            style = MaterialTheme.typography.bodySmall,
-            color = Gryonix.colors.secondaryLabel,
+            label,
+            style = MaterialTheme.typography.titleSmall,
+            color = Gryonix.colors.accent,
             modifier = Modifier.padding(
                 start = Metrics.listInset + 4.dp,
                 end = Metrics.listInset + 4.dp,

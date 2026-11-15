@@ -232,6 +232,7 @@ public struct GitLabService: ManagedService {
                 plan: .archive(ArchiveBackupPlan(
                     composeProject: Self.composeProject,
                     dataPath: path,
+                    dataPart: .files,
                     databases: [],
                     quiesceServices: [Self.containerName],
                     encryptsByDefault: false,

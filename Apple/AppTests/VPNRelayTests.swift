@@ -60,16 +60,27 @@ final class VPNRelayTests: XCTestCase {
     func testTheDNSOrderIsEditedWithinItsBounds() {
         typealias Edit = VPNDNSPriorityEditing
         let order = ["local", "1.1.1.1", "9.9.9.9"]
-        XCTAssertEqual(Edit.moveUp(1, in: order), ["1.1.1.1", "local", "9.9.9.9"])
-        XCTAssertEqual(Edit.moveUp(0, in: order), order)
+        XCTAssertEqual(Edit.moveUp(2, in: order), ["local", "9.9.9.9", "1.1.1.1"])
+        XCTAssertEqual(Edit.moveUp(1, in: order), order, "nothing climbs over the chosen DNS")
+        XCTAssertEqual(Edit.moveDown(0, in: order), order, "the chosen DNS stays first")
         XCTAssertEqual(Edit.moveDown(2, in: order), order)
-        XCTAssertEqual(Edit.remove(0, from: order), ["1.1.1.1", "9.9.9.9"])
-        XCTAssertEqual(Edit.remove(0, from: ["local"]), ["local"], "the last resolver stays")
+        XCTAssertEqual(Edit.remove(0, from: order), order, "the chosen DNS cannot be removed")
+        XCTAssertEqual(Edit.remove(1, from: order), ["local", "9.9.9.9"])
         XCTAssertEqual(Edit.add("8.8.8.8", to: order), order + ["8.8.8.8"])
         XCTAssertEqual(Edit.add("1.1.1.1", to: order), order, "no repeats")
         let full = order + ["8.8.8.8"]
         XCTAssertEqual(Edit.add("1.0.0.1", to: full), full, "four at most")
         XCTAssertFalse(Edit.canAdd(to: full))
+    }
+
+    func testTheChosenDNSLeadsTheOrder() {
+        typealias Edit = VPNDNSPriorityEditing
+        XCTAssertEqual(Edit.chosenEntry(for: ["10.53.0.53"], localAddress: "10.53.0.53"), "local")
+        XCTAssertEqual(Edit.chosenEntry(for: ["94.140.14.14", "94.140.15.15"], localAddress: "10.53.0.53"), "94.140.14.14")
+        XCTAssertEqual(Edit.chosenEntry(for: [], localAddress: "10.53.0.53"), "1.1.1.1")
+        XCTAssertEqual(Edit.pin(["94.140.14.14", "1.1.1.1"], first: "local"), ["local", "94.140.14.14", "1.1.1.1"])
+        XCTAssertEqual(Edit.pin(["1.1.1.1", "8.8.8.8", "9.9.9.9", "1.0.0.1"], first: "local"),
+                       ["local", "1.1.1.1", "8.8.8.8", "9.9.9.9"], "four at most")
     }
 
     func testEntriesAreNamedForPeople() {

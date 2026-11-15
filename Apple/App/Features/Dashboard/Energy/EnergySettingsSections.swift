@@ -22,7 +22,7 @@ struct EnergyPriceSection: View {
                 }
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: 110)
-                #if os(iOS)
+                #if os(iOS) || os(tvOS)
                 .keyboardType(.decimalPad)
                 #endif
             }
@@ -89,7 +89,7 @@ struct EnergyEstimateSection: View {
             }
             .multilineTextAlignment(.trailing)
             .frame(maxWidth: 110)
-            #if os(iOS)
+            #if os(iOS) || os(tvOS)
             .keyboardType(.decimalPad)
             #endif
         }

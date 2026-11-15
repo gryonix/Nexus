@@ -1,10 +1,12 @@
 package com.skaymer.gryonixnexus.app.ui
 
+import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.outlined.ViewInAr
+import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.runtime.Composable
@@ -23,6 +25,7 @@ val AppTab.titleRes: Int
         AppTab.CONTAINERS -> R.string.tab_containers
         AppTab.VPN -> R.string.tab_vpn
         AppTab.TERMINAL -> R.string.tab_terminal
+        AppTab.AI -> R.string.tab_ai
         AppTab.CONFIGURATOR -> R.string.tab_configurator
         AppTab.SETTINGS -> R.string.tab_settings
     }
@@ -30,10 +33,11 @@ val AppTab.titleRes: Int
 val AppTab.icon: ImageVector
     @Composable get() = when (this) {
         AppTab.SERVERS -> Icons.Filled.Dns
-        AppTab.METRICS -> Icons.Filled.BarChart
-        AppTab.CONTAINERS -> Icons.Filled.Inventory2
+        AppTab.METRICS -> Icons.AutoMirrored.Filled.ShowChart
+        AppTab.CONTAINERS -> Icons.Outlined.ViewInAr
         AppTab.VPN -> ImageVector.vectorResource(R.drawable.tab_icon_logo)
         AppTab.TERMINAL -> Icons.Filled.Terminal
+        AppTab.AI -> Icons.Filled.AutoAwesome
         AppTab.CONFIGURATOR -> Icons.Filled.Tune
         AppTab.SETTINGS -> Icons.Filled.Settings
     }
@@ -51,6 +55,17 @@ fun vpnMarkRes(tunnelActive: Boolean): Int =
 fun VpnTunnel.State.carriesASession(): Boolean = when (this) {
     is VpnTunnel.State.Up, is VpnTunnel.State.Working -> true
     is VpnTunnel.State.Down, is VpnTunnel.State.Failed -> false
+}
+
+/** A server section as an icon */
+@Composable
+fun ServerSection.icon(tunnelActive: Boolean): ImageVector = when (this) {
+    ServerSection.GENERAL -> Icons.Outlined.GridView
+    ServerSection.APPS -> Icons.Filled.Tune
+    ServerSection.METRICS -> Icons.AutoMirrored.Filled.ShowChart
+    ServerSection.CONTAINERS -> Icons.Outlined.ViewInAr
+    ServerSection.VPN -> ImageVector.vectorResource(vpnMarkRes(tunnelActive))
+    ServerSection.TERMINAL -> Icons.Filled.Terminal
 }
 
 /** The same split for a server's own sections — see `ServerSection` */

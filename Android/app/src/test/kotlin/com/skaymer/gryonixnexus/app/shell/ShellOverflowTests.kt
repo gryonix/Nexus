@@ -22,7 +22,7 @@ class ShellOverflowTests {
 
         assertEquals(4, onBar.size, "four sections and the More slot make five")
         assertEquals(sevenSections, onBar + behind, "nothing is dropped and nothing is reordered")
-        assertEquals(listOf(AppTab.TERMINAL, AppTab.CONFIGURATOR, AppTab.SETTINGS), behind)
+        assertEquals(listOf(AppTab.TERMINAL, AppTab.AI, AppTab.CONFIGURATOR, AppTab.SETTINGS), behind)
     }
 
     @Test

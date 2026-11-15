@@ -43,6 +43,7 @@ public struct AmneziaWGVPNService: ManagedService {
                 environment:
                   WG_HOST: \(hostname(context))
                   WG_PORT: "\(port)"
+                  WG_MTU: "1280"
                   # 10.10.0.x: clear of the relay tunnel (10.8.0.0/24) and the
                   # plain WireGuard VPN (10.9.0.0/24).
                   WG_DEFAULT_ADDRESS: 10.10.0.x

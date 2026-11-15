@@ -149,6 +149,22 @@ data class ServiceSettings(
     val zigbee2MQTTPath: String = "/opt/zigbee2mqtt",
     /** Full hostname; empty — zigbee.<domain> */
     val zigbee2MQTTHostname: String = "",
+    val shairportPath: String = "/opt/shairport-sync",
+    /** "airplay2" or "airplay1" */
+    val shairportMode: String = "airplay2",
+    /** The speaker's name on the phones */
+    val shairportName: String = "gryonix",
+    /** The ALSA device the sound goes to */
+    val shairportOutput: String = "default",
+    /** Extra speaker options, `key=value;` pairs */
+    val shairportOptions: String = "",
+    /** The screen's name on the phones */
+    val uxplayName: String = "gryonix TV",
+    /** Packaged speakers' name on the phones; empty: the machine's */
+    val speakerName: String = "",
+    val odioPath: String = "/opt/odio",
+    /** Full hostname; empty — odio.<domain> */
+    val odioHostname: String = "",
     // The retrieval pair.
     val anythingLLMPath: String = "/opt/anythingllm",
     /** Full hostname; empty — docs.<domain> */

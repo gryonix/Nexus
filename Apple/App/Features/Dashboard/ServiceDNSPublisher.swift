@@ -10,7 +10,7 @@ enum ServiceDNSPublisher {
     static func hostnames(of service: any ManagedService, in deployment: Deployment) -> [String] {
         let context = deployment.serviceContext
         var names: [String] = []
-        if let ingress = service.webIngress(context) {
+        if let ingress = service.webIngress(context), !ingress.homeOnly {
             names += context.servedHostnames(of: ingress.hostname)
         }
         names += service.dnsHostnames(context)
@@ -34,7 +34,8 @@ enum ServiceDNSPublisher {
     /// Publishes through the saved DNS token, one line per zone
     @MainActor
     static func publish(_ service: any ManagedService, for deployment: Deployment) async -> [String] {
-        guard deployment.scope.publishesAddressRecords, !deployment.services.contains(.cloudflared)
+        guard deployment.scope.publishesAddressRecords, !deployment.services.contains(.cloudflared),
+              !deployment.homeOnlyDNSRemoved.contains(service.id)
         else { return [] }
         let names = hostnames(of: service, in: deployment)
         guard !names.isEmpty else { return [] }
@@ -90,10 +91,21 @@ enum ServiceDNSPublisher {
     @MainActor
     static func unpublish(_ service: any ManagedService, from deployment: Deployment,
                           keeping after: Deployment) async -> [String] {
+        await unpublish(namesOnlyUsed(by: service, before: deployment, after: after), from: deployment)
+    }
+
+    /// Publishes a moved service's new names, drops old ones
+    @MainActor
+    static func move(_ service: any ManagedService, from before: Deployment, to after: Deployment) async -> [String] {
+        let current = Set(hostnames(of: service, in: after).map { $0.lowercased() })
+        let left = namesOnlyUsed(by: service, before: before, after: after).filter { !current.contains($0.lowercased()) }
+        return await publish(service, for: after) + unpublish(left, from: before)
+    }
+
+    @MainActor
+    private static func unpublish(_ names: [String], from deployment: Deployment) async -> [String] {
         guard deployment.scope.publishesAddressRecords, !deployment.services.contains(.cloudflared),
-              let ip = await address(of: deployment) else { return [] }
-        let names = namesOnlyUsed(by: service, before: deployment, after: after)
-        guard !names.isEmpty else { return [] }
+              !names.isEmpty, let ip = await address(of: deployment) else { return [] }
         let byHand = UIL10n.string("Remove these DNS records by hand: %@",
                                    names.map { "\($0) A \(ip)" }.joined(separator: ", "))
         guard let credential = DNSCredentials.shared.selected ?? DNSCredentials.shared.all.first,
@@ -183,7 +195,8 @@ enum ServiceDNSPublisher {
     /// What adding a service leaves DNS to catch up with
     static func pending(adding service: any ManagedService, to deployment: Deployment,
                         lookup: (String) async -> [String] = resolvedIPv4) async -> (Update?, [String]) {
-        guard deployment.scope.publishesAddressRecords, !deployment.services.contains(.cloudflared) else { return (nil, []) }
+        guard deployment.scope.publishesAddressRecords, !deployment.services.contains(.cloudflared),
+              !deployment.homeOnlyDNSRemoved.contains(service.id) else { return (nil, []) }
         let names = hostnames(of: service, in: deployment)
         guard !names.isEmpty else { return (nil, []) }
         guard let ip = await address(of: deployment, lookup: lookup) else {

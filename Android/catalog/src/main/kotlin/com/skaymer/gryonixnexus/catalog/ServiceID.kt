@@ -64,6 +64,26 @@ value class ServiceID(val rawValue: String) : Comparable<ServiceID> {
         /** Zigbee devices, through a stick on the machine */
         val ZIGBEE2MQTT = ServiceID("zigbee2mqtt")
 
+        /** Turns the machine into an AirPlay speaker */
+        val SHAIRPORT_SYNC = ServiceID("shairport-sync")
+
+        /** Shows an iPhone or Mac screen on the TV */
+        val UXPLAY = ServiceID("uxplay")
+
+        /** Music players for the whole house on one machine */
+        val ODIO = ServiceID("odio")
+
+        /** Single audio players, each installed on its own */
+        val SNAPSERVER = ServiceID("snapserver")
+        val SNAPCLIENT = ServiceID("snapclient")
+        val UPMPDCLI = ServiceID("upmpdcli")
+        val BLUEALSA = ServiceID("bluealsa")
+        val RASPOTIFY = ServiceID("raspotify")
+        val MYMPD = ServiceID("mympd")
+
+        /** Players the audio hub already brings */
+        val AUDIO_HUB_PLAYERS = setOf(SNAPCLIENT, UPMPDCLI, BLUEALSA, RASPOTIFY, MYMPD)
+
         /** The hub's own add-ons: never offered, and never installed, alone */
         val SMART_HOME_ADD_ONS = setOf(MOSQUITTO, ZIGBEE2MQTT)
 

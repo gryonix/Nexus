@@ -9,12 +9,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Autorenew
-import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.DeviceHub
-import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.outlined.Autorenew
+import androidx.compose.material.icons.outlined.Cloud
+import androidx.compose.material.icons.outlined.DeviceHub
+import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -62,6 +62,7 @@ fun ConfiguratorScenariosScreen(onPick: (ScenarioOption) -> Unit) {
                             Text(
                                 stringResource(option.title),
                                 style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                                 color = Gryonix.colors.label,
                             )
                             Text(
@@ -79,10 +80,10 @@ fun ConfiguratorScenariosScreen(onPick: (ScenarioOption) -> Unit) {
 
 val ScenarioIcon.vector: ImageVector
     get() = when (this) {
-        ScenarioIcon.SERVER -> Icons.Filled.Dns
-        ScenarioIcon.RELAY -> Icons.Filled.Hub
-        ScenarioIcon.HOUSE -> Icons.Filled.Home
-        ScenarioIcon.CLOUD -> Icons.Filled.Cloud
-        ScenarioIcon.REFRESH -> Icons.Filled.Autorenew
-        ScenarioIcon.MESH -> Icons.Filled.DeviceHub
+        ScenarioIcon.SERVER -> Icons.Outlined.Dns
+        ScenarioIcon.RELAY -> Icons.Outlined.Hub
+        ScenarioIcon.HOUSE -> Icons.Outlined.Home
+        ScenarioIcon.CLOUD -> Icons.Outlined.Cloud
+        ScenarioIcon.REFRESH -> Icons.Outlined.Autorenew
+        ScenarioIcon.MESH -> Icons.Outlined.DeviceHub
     }

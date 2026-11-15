@@ -16,7 +16,7 @@ extension DashboardViewModel {
         let key = Self.notifySyncedKey(for: deployment.id)
         let language = ContentLanguageSetting.current.rawValue
         let own = defaults.object(forKey: NotifyChannelDefault.ownKey(for: deployment.id)) as? Bool
-        let mark = wanted.fingerprint + language + "k" + "h\(deployment.agentHosts.count)"
+        let mark = wanted.fingerprint + NotifySounds.fingerprint(defaults) + language + "k" + "h\(deployment.agentHosts.count)"
             + Self.tokenMark(PushRegistration.shared.token) + "p1" + channel.fingerprint + "\(own.map { $0 ? 1 : 0 } ?? 2)"
         let checkedThisLaunch = Self.notifyCheckedThisLaunch.contains(deployment.id)
         guard defaults.string(forKey: key) != mark || !checkedThisLaunch else { return }
@@ -35,7 +35,8 @@ extension DashboardViewModel {
                 try await operations.register(platform: PushRegistration.shared.platform, token: token,
                                               appVersion: version, locale: ContentLanguageSetting.current.rawValue,
                                               muted: wanted.muted, proof: DevicePushProof.proof,
-                                              name: PushRegistration.deviceName)
+                                              name: PushRegistration.deviceName,
+                                              sounds: NotifySounds.chosen(defaults))
             }
             PushRelays.remember(current.relayURL)
             guard await mirrorNotify(try await operations.settings()) else { return }
@@ -90,7 +91,7 @@ extension DashboardViewModel {
         try await operations.register(platform: PushRegistration.shared.platform, token: token, appVersion: version,
                                       locale: ContentLanguageSetting.current.rawValue,
                                       muted: NotifyPreferences.current().muted, proof: DevicePushProof.proof,
-                                      name: PushRegistration.deviceName)
+                                      name: PushRegistration.deviceName, sounds: NotifySounds.chosen())
     }
 
     /// What another machine needs to match the main one
@@ -108,7 +109,8 @@ extension DashboardViewModel {
     static func notifySyncRequest(current: Gryonixnexusd_V1_NotifySettings, wanted: NotifyPreferences,
                                   language: String, appKey: String,
                                   channel: NotifyChannelDefault? = nil) -> Gryonixnexusd_V1_SetNotifySettingsRequest? {
-        let checks = current.customChecks ? current.checks : wanted.checks
+        var checks = current.customChecks ? current.checks : wanted.checks
+        checks.widgetRefreshMinutes = wanted.checks.widgetRefreshMinutes
         let keyKnown = appKey.isEmpty || current.quietKeys.contains { appKey.hasPrefix($0) }
         let channelInStep = channel?.matches(current) ?? true
         guard current.checks != checks || current.language != language || !keyKnown || !channelInStep else { return nil }

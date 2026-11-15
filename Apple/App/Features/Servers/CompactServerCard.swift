@@ -142,9 +142,11 @@ struct CompactServerCard: View, Equatable {
         }
     }
 
+    private var ringCount: Int { MetricDatum.all(for: snapshot).count }
+
     private var ringGauges: some View {
         GeometryReader { geo in
-            let stacked = RingLayout.stacks(in: geo.size, count: 3,
+            let stacked = RingLayout.stacks(in: geo.size, count: ringCount,
                                             gutter: RingLayout.compactGutter,
                                             stackedGutter: RingLayout.stackedGutter,
                                             labelHeight: ringLabelHeight,
@@ -175,10 +177,10 @@ struct CompactServerCard: View, Equatable {
 
     private func ringDiameter(in size: CGSize, stacked: Bool) -> CGFloat {
         stacked
-            ? RingLayout.stackedDiameter(in: size, count: 3,
+            ? RingLayout.stackedDiameter(in: size, count: ringCount,
                                          gutter: RingLayout.stackedGutter,
                                          labelWidth: ringLabelWidth, floor: 20)
-            : RingLayout.diameter(in: size, count: 3, gutter: RingLayout.compactGutter,
+            : RingLayout.diameter(in: size, count: ringCount, gutter: RingLayout.compactGutter,
                                   labelHeight: ringLabelHeight, floor: 20,
                                   cap: RingLayout.compactMaxDiameter)
     }

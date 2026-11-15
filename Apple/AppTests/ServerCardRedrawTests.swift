@@ -48,12 +48,24 @@ final class ServerCardRedrawTests: XCTestCase {
         XCTAssertEqual(announced, 1)
     }
 
-    func testTheStorePublishesNothingAtAll() {
+    /// Publishes only the offline set, only on change
+    func testTheStorePublishesOnlyWhoIsOffline() {
         let published = Mirror(reflecting: ServerMetricsStore()).children.filter {
             String(describing: type(of: $0.value)).hasPrefix("Published<")
-        }
-        XCTAssertTrue(published.isEmpty,
-                      "ServerMetricsStore must publish nothing — found \(published.map { $0.label ?? "?" })")
+        }.map { $0.label ?? "?" }
+        XCTAssertEqual(published, ["_offlineIDs"],
+                       "ServerMetricsStore may publish only the offline set — found \(published)")
+    }
+
+    func testARecordedReadingDoesNotRepublishTheOfflineSet() {
+        let store = ServerMetricsStore()
+        var announced = 0
+        let watch = store.objectWillChange.sink { _ in announced += 1 }
+        defer { watch.cancel() }
+
+        store.card(for: deployment.id).record(sample(cpu: 12), for: .vps)
+
+        XCTAssertEqual(announced, 0, "a reading from a reachable server must not redraw the list")
     }
 
     // MARK: - (2) what the card calls equal

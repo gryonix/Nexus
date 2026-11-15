@@ -528,3 +528,30 @@ final class VPNClientAccessTests: XCTestCase {
         XCTAssertEqual(model.vpnClientAccess, .both)
     }
 }
+
+@MainActor
+final class ConfiguratorAddressTests: XCTestCase {
+    func testOnlyScenariosWithoutAPublicAddressAskForTheNetworkAddress() {
+        let onNetwork = DeploymentScope.allCases.filter {
+            ServiceConfigViewModel(topology: .singleHost, initialScope: $0).addressIsOnNetwork
+        }
+        XCTAssertEqual(Set(onNetwork), [.localOnly, .cloudflareTunnel, .meshOnly, .tailscaleOnly])
+        XCTAssertFalse(DeploymentScope.allCases.contains {
+            ServiceConfigViewModel(topology: .vpsRelayWithHomeBackend, initialScope: $0).addressIsOnNetwork
+        })
+    }
+
+    func testTheTailscaleScenarioIsOfferedAndInstallsTheNodeWithoutAControlServer() throws {
+        let option = try XCTUnwrap(ScenarioOption.all.first { $0.scope == .tailscaleOnly })
+        XCTAssertEqual(option.topology, .singleHost)
+        let model = ServiceConfigViewModel(topology: .singleHost, initialScope: .tailscaleOnly)
+        XCTAssertFalse(model.hasTailscaleKey, "the key lives in the Keychain, never in the view model")
+        XCTAssertTrue(model.selectedServices.contains(.tailscaleNode))
+        XCTAssertFalse(model.selectedServices.contains(.headscale))
+    }
+
+    func testTheTunnelAddressIsPromptedWithALocalOne() {
+        let model = ServiceConfigViewModel(topology: .singleHost, initialScope: .cloudflareTunnel)
+        XCTAssertEqual(model.addressPrompt, "192.168.1.50")
+    }
+}

@@ -86,11 +86,18 @@ object ServerJobNotices {
         }
     }
 
-    /** A new notification, unless this phone already shows its own */
+    /** The job's notification, this phone's own when it shows one */
     private fun open(serverId: String, job: String, saved: List<String>): OperationNotice? {
         val name = serverName(serverId) ?: saved.getOrNull(2).orEmpty()
-        if (OperationNotices.isShowing(name) && shown.values.none { it.second == name }) return null
+        if (shown.values.none { it.second == name }) {
+            OperationNotices.showing(name)?.let { own ->
+                OperationJournal.note("job ${OperationJournal.short(job)} belongs to this device's notification", saved.getOrNull(1).orEmpty())
+                shown[job] = own to name
+                return own
+            }
+        }
         val kind = OperationKind.entries.firstOrNull { it.name.lowercase() == saved.first() } ?: OperationKind.OTHER
+        OperationJournal.note("job ${OperationJournal.short(job)} started by the server", saved.getOrNull(1).orEmpty())
         val notice = OperationNotices.startTitled(saved.getOrNull(1).orEmpty(), name, kind = kind)
         canceller?.let { cancel -> notice.onStop { cancel(serverId, job) } }
         shown[job] = notice to name

@@ -47,81 +47,118 @@ struct ServerVPNSection: View {
 
         VPNDNSPrioritySection(viewModel: viewModel)
 
+        tunnelSpeedSection
+
+        deviceListSection
+    }
+
+    @ViewBuilder private var tunnelSpeedSection: some View {
+        if viewModel.deployment.usesAgent {
+            Section {
+                NavigationLink {
+                    VPNSpeedView(viewModel: viewModel)
+                } label: {
+                    Label("Tunnel speed", systemImage: "speedometer")
+                }
+            }
+        }
+
         if viewModel.offersVPNMove {
             VPNPlacementSection(viewModel: viewModel)
         }
+    }
 
+    @ViewBuilder private var deviceListSection: some View {
         Section {
             VPNDeviceRows(viewModel: viewModel, selected: selected,
                           onShowConfiguration: show(_:),
                           onRemove: { device in
                               Task { await viewModel.removeVPNClient(protocol: selected, clientID: device.id) }
                           })
-            Button {
-                if LicensePrompt.shared.allow() { showAdd = true }
-            } label: {
-                Label("Add device", systemImage: "plus.circle")
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .task(id: selected) { await viewModel.loadVPNClients(protocol: selected) }
-            #if DEBUG
-            .task {
-                let environment = ProcessInfo.processInfo.environment
-                if let raw = environment["GRYONIXNEXUS_DEMO_VPN_PROTOCOL"] { selection = ServiceID(rawValue: raw) }
-                if environment["GRYONIXNEXUS_DEMO_VPN_ADD"] != nil {
-                    try? await Task.sleep(for: .milliseconds(1500))
-                    showAdd = true
-                }
-            }
+            #if !os(tvOS)
+            deviceSheets(addDeviceButton)
             #endif
-            .sheet(isPresented: $showAdd, onDismiss: {
-                guard let name = pendingName else { return }
-                let site = pendingSite
-                let dns = pendingDNS
-                pendingName = nil
-                pendingSite = nil
-                Task {
-                    if let site { await viewModel.changeRealitySite(to: site) }
-                    await viewModel.addVPNClient(protocol: selected, named: name, dns: dns)
-                }
-            }) {
-                VPNClientNameSheet(currentSite: selected == .xrayReality
-                                       ? viewModel.deployment.serviceSettings.xrayRealitySNI : nil,
-                                   protocolID: selected,
-                                   defaultDNS: viewModel.vpnDefaultDNS,
-                                   localDNS: LocalDNS(viewModel.vpnDNS),
-                                   onCancel: { showAdd = false },
-                                   onConfirm: { name, site, dns in
-                                       pendingName = name
-                                       pendingSite = site
-                                       pendingDNS = dns
-                                       showAdd = false
-                                   })
-            }
-            .sheet(item: $shownInfo) { info in
-                VPNProtocolInfoView(info: info)
-            }
-            .sheet(item: $configuration) { shown in
-                VPNClientConfigSheet(device: shown.device,
-                                     configuration: shown.value,
-                                     serverID: viewModel.deployment.id,
-                                     serverName: viewModel.deployment.name,
-                                     protocolID: selected,
-                                     localDNS: LocalDNS(viewModel.vpnDNS),
-                                     onChangeDNS: { dns in changeDNS(of: shown.device, to: dns) }) {
-                    configuration = nil
-                }
-            }
         } header: {
-            HStack {
-                if protocols.count > 1 {
-                    Text("Devices")
-                } else {
-                    Text(verbatim: ServiceRegistry.service(selected)?.displayName ?? selected.rawValue)
-                }
-                Spacer()
-                InfoNote("Devices", "Adding a device generates its keys on the server. Open a device to get its configuration — import it into the protocol's app, or scan the code with the phone that will use it.")
+            #if os(tvOS)
+            deviceSheets(deviceListHeader)
+            #else
+            deviceListHeader
+            #endif
+        }
+    }
+
+    private var deviceListHeader: some View {
+        HStack {
+            if protocols.count > 1 {
+                Text("Devices")
+            } else {
+                Text(verbatim: ServiceRegistry.service(selected)?.displayName ?? selected.rawValue)
+            }
+            Spacer()
+            InfoNote("Devices", "Adding a device generates its keys on the server. Open a device to get its configuration — import it into the protocol's app, or scan the code with the phone that will use it.")
+        }
+    }
+
+    private var addDeviceButton: some View {
+        Button {
+            if LicensePrompt.shared.allow(viewModel.deployment) { showAdd = true }
+        } label: {
+            Label("Add device", systemImage: "plus.circle")
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Loads the devices and owns their sheets
+    private func deviceSheets<Host: View>(_ host: Host) -> some View {
+        host
+        .task(id: selected) { await viewModel.loadVPNClients(protocol: selected) }
+        #if DEBUG
+        .task {
+            let environment = ProcessInfo.processInfo.environment
+            if let raw = environment["GRYONIXNEXUS_DEMO_VPN_PROTOCOL"] { selection = ServiceID(rawValue: raw) }
+            if environment["GRYONIXNEXUS_DEMO_VPN_ADD"] != nil {
+                try? await Task.sleep(for: .milliseconds(1500))
+                showAdd = true
+            }
+        }
+        #endif
+        .sheet(isPresented: $showAdd, onDismiss: {
+            guard let name = pendingName else { return }
+            let site = pendingSite
+            let dns = pendingDNS
+            pendingName = nil
+            pendingSite = nil
+            Task {
+                if let site { await viewModel.changeRealitySite(to: site) }
+                await viewModel.addVPNClient(protocol: selected, named: name, dns: dns)
+            }
+        }) {
+            VPNClientNameSheet(currentSite: selected == .xrayReality
+                                   ? viewModel.deployment.serviceSettings.xrayRealitySNI : nil,
+                               protocolID: selected,
+                               defaultDNS: viewModel.vpnDefaultDNS,
+                               localDNS: LocalDNS(viewModel.vpnDNS),
+                               onCancel: { showAdd = false },
+                               onConfirm: { name, site, dns in
+                                   pendingName = name
+                                   pendingSite = site
+                                   pendingDNS = dns
+                                   showAdd = false
+                               })
+        }
+        .sheet(item: $shownInfo) { info in
+            VPNProtocolInfoView(info: info)
+        }
+        .sheet(item: $configuration) { shown in
+            VPNClientConfigSheet(device: shown.device,
+                                 configuration: shown.value,
+                                 serverID: viewModel.deployment.id,
+                                 serverName: viewModel.deployment.name,
+                                 protocolID: selected,
+                                 localDNS: LocalDNS(viewModel.vpnDNS),
+                                 onChangeDNS: { dns in changeDNS(of: shown.device, to: dns) }) {
+                configuration = nil
             }
         }
     }
@@ -205,7 +242,7 @@ struct ServerVPNSection: View {
     }
 
     private func show(_ device: VPNClientDevice) {
-        guard LicensePrompt.shared.allow() else { return }
+        guard LicensePrompt.shared.allow(viewModel.deployment) else { return }
         Task {
             if let value = await viewModel.vpnClientConfiguration(protocol: selected,
                                                                   clientID: device.id) {

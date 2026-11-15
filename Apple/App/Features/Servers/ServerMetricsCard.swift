@@ -26,8 +26,22 @@ struct MetricDatum: Identifiable {
                             "\(MetricsFormat.bytes($0.diskUsedBytes)) / \(MetricsFormat.bytes($0.diskTotalBytes))"
                         } ?? "—",
                         percent: snapshot.map { $0.diskUsedFraction * 100 },
-                        fraction: snapshot?.diskUsedFraction)
+                        fraction: snapshot?.diskUsedFraction),
+            swap(for: snapshot)
         ]
+    }
+
+    /// Swap load, or "Off" when the machine has none
+    static func swap(for snapshot: HostMetricsSnapshot?) -> MetricDatum {
+        let label = UIL10n.string("Swap")
+        guard let snapshot, !snapshot.isPartial else {
+            return MetricDatum(label: label, detail: "—", percent: nil, fraction: nil)
+        }
+        guard let fraction = snapshot.swapUsedFraction else {
+            return MetricDatum(label: label, detail: UIL10n.string("Off"), percent: nil, fraction: nil)
+        }
+        let detail = "\(MetricsFormat.bytes(snapshot.swapUsedBytes)) / \(MetricsFormat.bytes(snapshot.swapTotalBytes))"
+        return MetricDatum(label: label, detail: detail, percent: fraction * 100, fraction: fraction)
     }
 }
 
@@ -47,18 +61,26 @@ enum HostBadgeTitle {
 }
 
 enum MetricBlock {
-    /// The wide card
-    static let wide: CGFloat = 93
+    /// The TV's type is about twice the phone's
+    static let scale: CGFloat = {
+        #if os(tvOS)
+        1.8
+        #else
+        1
+        #endif
+    }()
+    /// The wide card: four rows
+    static let wide: CGFloat = 124 * scale
     /// The half-width card, whose rows are a type size smaller
-    static let compact: CGFloat = 75
+    static let compact: CGFloat = 100 * scale
     /// The least air between two rows
-    static let wideGap: CGFloat = 4
-    static let compactGap: CGFloat = 3
-    static let wideGapMax: CGFloat = 10
-    static let compactGapMax: CGFloat = 8
-    static let wideTrafficGap: CGFloat = 6
+    static let wideGap: CGFloat = 4 * scale
+    static let compactGap: CGFloat = 3 * scale
+    static let wideGapMax: CGFloat = 10 * scale
+    static let compactGapMax: CGFloat = 8 * scale
+    static let wideTrafficGap: CGFloat = 6 * scale
     /// Between the network line and the disk line under it
-    static let trafficLineGap: CGFloat = 2
+    static let trafficLineGap: CGFloat = 2 * scale
 }
 
 /// How big a ring is drawn in that block
@@ -90,7 +112,7 @@ enum RingLayout {
                        labelHeight: labelHeight, floor: floor, cap: cap)
     }
 
-    static let labelHeight: CGFloat = 17
+    static let labelHeight: CGFloat = 17 * MetricBlock.scale
     static let trailingLabelWidth: CGFloat = 46
     static let trailingLabelGap: CGFloat = 10
     static let wideGutter: CGFloat = 12

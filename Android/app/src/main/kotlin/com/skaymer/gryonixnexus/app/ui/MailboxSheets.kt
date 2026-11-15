@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import com.skaymer.gryonixnexus.app.ui.design.ActionRow
 import com.skaymer.gryonixnexus.app.ui.design.AlertAction
+import com.skaymer.gryonixnexus.app.ui.design.FormSheet
 import com.skaymer.gryonixnexus.app.ui.design.AlertFields
 import com.skaymer.gryonixnexus.app.ui.design.ConfirmAlert
 import com.skaymer.gryonixnexus.app.ui.design.FieldRow
@@ -246,7 +247,7 @@ fun MailboxEditorDialog(
         MailboxesViewModel.canChangePassword(password)
     }
 
-    IOSAlert(
+    FormSheet(
         title = stringResource(
             if (existing == null) R.string.mailboxes_new else R.string.mailboxes_new_password
         ),

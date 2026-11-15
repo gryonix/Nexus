@@ -60,7 +60,7 @@ final class OwnerReportedDefectsTests: XCTestCase {
 
     func testTheReadingsBecomeDashesRatherThanDisappearing() {
         let data = MetricDatum.all(for: nil)
-        XCTAssertEqual(data.count, 3, "CPU, memory and disk keep their rows")
+        XCTAssertEqual(data.count, 4, "CPU, memory, disk and swap keep their rows")
         XCTAssertTrue(data.allSatisfy { $0.percent == nil })
         XCTAssertTrue(data.allSatisfy { $0.detail == "—" })
     }

@@ -7,9 +7,15 @@ public protocol AdminLockdownManaging: Sendable {
 
     /// Guards only the given vhosts
     func set(hosts: [String]) async throws -> AdminLockdownState
+
+    func set(hosts: [String], denyVPN: [String]?) async throws -> AdminLockdownState
 }
 
 extension AdminLockdownManaging {
+    public func set(hosts: [String], denyVPN: [String]?) async throws -> AdminLockdownState {
+        try await set(hosts: hosts)
+    }
+
     /// Applies a state that status returned
     @discardableResult
     public func restore(_ state: AdminLockdownState) async throws -> AdminLockdownState {
@@ -50,5 +56,10 @@ public struct SSHAdminLockdown: AdminLockdownManaging {
 
     public func set(hosts: [String]) async throws -> AdminLockdownState {
         try await StatusOperations(runner: runner, config: config).setAdminLockdown(hosts: hosts, on: host)
+    }
+
+    public func set(hosts: [String], denyVPN: [String]?) async throws -> AdminLockdownState {
+        try await StatusOperations(runner: runner, config: config)
+            .setAdminLockdown(hosts: hosts, denyVPN: denyVPN, on: host)
     }
 }

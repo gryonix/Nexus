@@ -1,6 +1,7 @@
 package com.skaymer.gryonixnexus.app.secrets
 
 import com.skaymer.gryonixnexus.servercontrol.DeploymentNode
+import com.skaymer.gryonixnexus.servercontrol.HomePathChoice
 import com.skaymer.gryonixnexus.servercontrol.HostKeyPinAccounts
 import com.skaymer.gryonixnexus.servercontrol.SSHHostID
 
@@ -16,6 +17,21 @@ class DeploymentSecrets(private val store: SecretStore, private val deploymentID
     fun setPendingTransfer(id: String) = store.setString("ssh-transfer-$deploymentID", id)
 
     fun clearPendingTransfer() = store.deleteSecret("ssh-transfer-$deploymentID")
+
+    /** The home machine's address on its own network */
+    fun homeAddress(): String? = store.string("home-lan-$deploymentID")?.takeIf { it.isNotBlank() }
+
+    fun setHomeAddress(address: String) {
+        if (address.isBlank()) store.deleteSecret("home-lan-$deploymentID") else store.setString("home-lan-$deploymentID", address.trim())
+    }
+
+    /** How this device reaches the home machine */
+    fun homePath(): HomePathChoice = HomePathChoice.from(store.string("home-path-$deploymentID"))
+
+    fun setHomePath(choice: HomePathChoice) {
+        if (choice == HomePathChoice.AUTOMATIC) store.deleteSecret("home-path-$deploymentID")
+        else store.setString("home-path-$deploymentID", choice.raw)
+    }
 
     /** The password of an existing account on one MACHINE */
     fun password(host: SSHHostID): String? {
@@ -65,6 +81,8 @@ class DeploymentSecrets(private val store: SecretStore, private val deploymentID
     fun forget(nodes: List<DeploymentNode>) {
         store.deleteSecret("ssh-identity-$deploymentID")
         store.deleteSecret("ssh-transfer-$deploymentID")
+        store.deleteSecret("home-lan-$deploymentID")
+        store.deleteSecret("home-path-$deploymentID")
         store.deleteSecret(legacyPasswordAccount)
         for (node in nodes) {
             store.deleteSecret(passwordAccount(node.sshHost))

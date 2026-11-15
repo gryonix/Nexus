@@ -84,7 +84,7 @@ struct DeploymentNodesView: View {
                 }
             }
         }
-        .navigationTitle(Text("Servers"))
+        .screenTitle(Text("Servers"))
         .raisedNavigationTitle()
         .sheet(isPresented: $addingMachine) {
             AddMachineSheet(deployment: deployment) { updated in
@@ -120,6 +120,7 @@ struct DeploymentNodesView: View {
             try updated.removeNode(node.id)
             deployment = updated
             onUpdate?(updated)
+            DeploymentEraser.eraseNodeSecrets(deploymentID: updated.id, nodeID: node.id)
         } catch {
             editError = Self.message(for: error)
         }

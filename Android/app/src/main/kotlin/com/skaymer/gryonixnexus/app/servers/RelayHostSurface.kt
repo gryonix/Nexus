@@ -18,8 +18,8 @@ object RelayHostSurface {
             ptrIP = deployment.entry.host,
             tunnelEndpoint = "${deployment.entry.host}:${WireGuardDefaults.LISTEN_PORT}",
             relayWGPort = WireGuardDefaults.LISTEN_PORT,
-            relayForwardedPorts = ForwardedPorts.tcp(services, context),
-            relayForwardedUDPPorts = ForwardedPorts.udp(services, context),
+            relayForwardedPorts = ForwardedPorts.tcp(services, context, deployment.homeOnlyIDs),
+            relayForwardedUDPPorts = ForwardedPorts.udp(services, context, deployment.homeOnlyIDs),
             homeWGAddress = deployment.homeWGAddress.orEmpty(),
             dashboardPublicKey = dashboardPublicKey,
         )

@@ -61,6 +61,8 @@ import com.skaymer.gryonixnexus.app.secrets.DNSCredentialTokenStore
 import com.skaymer.gryonixnexus.app.secrets.DNSCredentials
 import com.skaymer.gryonixnexus.app.secrets.CloudflareTokenStore
 import com.skaymer.gryonixnexus.app.secrets.SecretStore
+import com.skaymer.gryonixnexus.app.secrets.TailscaleKeyStore
+import androidx.compose.ui.platform.LocalUriHandler
 import com.skaymer.gryonixnexus.app.shell.SettingsStore
 import com.skaymer.gryonixnexus.app.ui.design.ActionRow
 import com.skaymer.gryonixnexus.app.ui.design.CheckRow
@@ -122,6 +124,9 @@ fun ConfiguratorWizardScreen(
     LaunchedEffect(current) { model.useDemoAddressesIfLocked() }
 
     val dnsZones = remember(form) { ConfigurationExport.preview(form) }
+    val hasTunnelToken = remember(current) { cloudflare.canIssueTunnelToken }
+    val tailscaleKeys = remember(secrets) { TailscaleKeyStore(secrets) }
+    var hasTailscaleKey by remember { mutableStateOf(tailscaleKeys.key() != null) }
 
     val publishModel = remember(dnsCredentials, secrets) {
         DNSProviderPublishModel(
@@ -208,8 +213,8 @@ fun ConfiguratorWizardScreen(
             when (current) {
                 WizardStep.SERVICES -> servicesStep(model, form) { picking = it }
                 WizardStep.VPN_PROTOCOL -> vpnStep(model, form)
-                WizardStep.DOMAIN -> domainStep(model, form)
-                WizardStep.ADDRESS -> addressStep(model, form)
+                WizardStep.DOMAIN -> domainStep(model, form, hasTunnelToken)
+                WizardStep.ADDRESS -> addressStep(model, form, tailscaleKeys, hasTailscaleKey) { hasTailscaleKey = it }
                 WizardStep.ADMIN -> adminStep(model, form)
                 WizardStep.DNS -> dnsStep(
                     form = form,
@@ -227,7 +232,7 @@ fun ConfiguratorWizardScreen(
         WizardBar(
             canGoBack = index > 0,
             isLast = current == WizardStep.REVIEW,
-            canAdvance = canAdvance(current, form, acknowledgedDNS),
+            canAdvance = canAdvance(current, form, acknowledgedDNS, hasTailscaleKey),
             onBack = {
                 if (current == WizardStep.VPN_PROTOCOL) standingOnVpn = false
                 if (index > 0) index -= 1
@@ -247,13 +252,19 @@ fun ConfiguratorWizardScreen(
     }
 }
 
-private fun canAdvance(step: WizardStep, form: ConfiguratorForm, acknowledgedDNS: Boolean): Boolean =
+private fun canAdvance(
+    step: WizardStep,
+    form: ConfiguratorForm,
+    acknowledgedDNS: Boolean,
+    hasTailscaleKey: Boolean,
+): Boolean =
     when (step) {
         WizardStep.SERVICES ->
             ServiceQuestions.unanswered(form).isEmpty()
         WizardStep.VPN_PROTOCOL -> hasVpnProtocol(form)
         WizardStep.DOMAIN -> form.domain.isNotBlank()
-        WizardStep.ADDRESS -> form.publicIP.isNotBlank()
+        WizardStep.ADDRESS ->
+            form.publicIP.isNotBlank() && (form.scope != DeploymentScope.TAILSCALE_ONLY || hasTailscaleKey)
         WizardStep.ADMIN -> true
         WizardStep.DNS -> acknowledgedDNS
         WizardStep.REVIEW -> true
@@ -287,7 +298,6 @@ private fun WizardBar(
                 modifier = Modifier.width(180.dp),
             )
         }
-        Column(Modifier.fillMaxWidth().navigationBarsPadding()) {}
     }
 }
 
@@ -308,7 +318,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.servicesStep(
                 val chosen = CategorySelection.selection(form, category)
                 val picker = CategorySelection.offersPicker(form, category)
                 ToggleRow(
-                    title = category.title,
+                    title = categoryTitle(category),
                     checked = chosen.isNotEmpty(),
                     onCheckedChange = { on ->
                         model.update { CategorySelection.toggleCategory(it, category, on) }
@@ -418,38 +428,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.servicesStep(
     }
     val questions = ServiceQuestions.raisedBy(form.services, form.topology, form.scope)
     if (questions.isNotEmpty()) {
-        item {
-            GroupedSection(
-                header = stringResource(R.string.wizard_service_answers),
-                note = stringResource(R.string.wizard_service_answers_footer),
-            ) {
-                questions.forEachIndexed { index, question ->
-                    ToggleRow(
-                        title = stringResource(
-                            when (question) {
-                                ServiceQuestions.Question.MINECRAFT_JAVA_EULA ->
-                                    R.string.wizard_minecraft_java_eula
-                                ServiceQuestions.Question.MINECRAFT_BEDROCK_EULA ->
-                                    R.string.wizard_minecraft_bedrock_eula
-                                ServiceQuestions.Question.MACHINE_AT_HOME ->
-                                    R.string.wizard_machine_at_home
-                            },
-                        ),
-                        checked = ServiceQuestions.isAnswered(question, form.serviceSettings),
-                        onCheckedChange = { accepted ->
-                            model.update {
-                                it.copy(
-                                    serviceSettings = ServiceQuestions.answering(
-                                        question, it.serviceSettings, accepted,
-                                    ),
-                                )
-                            }
-                        },
-                        showDivider = index != questions.lastIndex,
-                    )
-                }
-            }
-        }
+        item { ServiceAnswersSection(model, form, questions) }
     }
     val advanced = ServiceRegistry.categories
         .filter { it != ServiceCategory.VPN }
@@ -599,6 +578,7 @@ private fun protocolsIn(form: ConfiguratorForm): List<ServiceID> =
 private fun androidx.compose.foundation.lazy.LazyListScope.domainStep(
     model: ConfiguratorViewModel,
     form: ConfiguratorForm,
+    hasToken: Boolean,
 ) {
     item {
         GroupedSection(
@@ -630,13 +610,93 @@ private fun androidx.compose.foundation.lazy.LazyListScope.domainStep(
                     showDivider = false,
                 )
             }
-            OwnAddressRow(
-                label = stringResource(R.string.reverse_dns_label),
-                value = form.reverseDNSHostname,
-                onValueChange = { value -> model.update { it.copy(reverseDNSHostname = value) } },
-                showDivider = false,
+        }
+    }
+    if (form.scope == DeploymentScope.CLOUDFLARE_TUNNEL) {
+        item { CloudflareTunnelTokenSection(hasToken) }
+    }
+}
+
+private fun addressTitle(form: ConfiguratorForm): Int = when {
+    form.isLocalOnly -> R.string.wizard_local_address
+    form.addressIsOnNetwork -> R.string.wizard_network_address
+    form.topology == Topology.VPS_RELAY_WITH_HOME_BACKEND -> R.string.wizard_vps_address
+    else -> R.string.wizard_server_address
+}
+
+private fun addressFooter(form: ConfiguratorForm): Int = when (form.scope) {
+    DeploymentScope.LOCAL_ONLY -> R.string.wizard_server_footer_local
+    DeploymentScope.CLOUDFLARE_TUNNEL -> R.string.wizard_server_footer_tunnel
+    DeploymentScope.MESH_ONLY -> R.string.wizard_server_footer_mesh
+    DeploymentScope.TAILSCALE_ONLY -> R.string.wizard_server_footer_tailscale
+    DeploymentScope.DYNAMIC_DNS -> R.string.wizard_server_footer_dynamic
+    DeploymentScope.PUBLIC_INTERNET ->
+        if (form.topology == Topology.VPS_RELAY_WITH_HOME_BACKEND) R.string.home_network_address_note
+        else R.string.wizard_server_footer_single
+}
+
+/** Whether a Cloudflare tunnel token is saved */
+@Composable
+private fun CloudflareTunnelTokenSection(hasToken: Boolean) {
+    GroupedSection(header = "Cloudflare", note = stringResource(R.string.wizard_cloudflare_footer)) {
+        GroupedRow(showDivider = false) {
+            Text(
+                stringResource(
+                    if (hasToken) R.string.wizard_cloudflare_token_added else R.string.wizard_cloudflare_token_missing
+                ),
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (hasToken) Gryonix.colors.success else Gryonix.colors.warning,
             )
         }
+    }
+}
+
+/** The Tailscale join key field */
+@Composable
+private fun TailscaleKeySection(
+    keys: TailscaleKeyStore,
+    hasKey: Boolean,
+    onKey: (Boolean) -> Unit,
+) {
+    var draft by remember { mutableStateOf("") }
+    val uri = LocalUriHandler.current
+    GroupedSection(header = "Tailscale", note = stringResource(R.string.wizard_tailscale_footer)) {
+        GroupedRow {
+            Text(
+                stringResource(R.string.wizard_tailscale_needs),
+                style = MaterialTheme.typography.bodyLarge,
+                color = Gryonix.colors.warning,
+            )
+        }
+        if (hasKey) {
+            GroupedRow {
+                Text(
+                    stringResource(R.string.wizard_tailscale_key_added),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Gryonix.colors.success,
+                )
+            }
+        }
+        FieldRow(
+            label = stringResource(
+                if (hasKey) R.string.wizard_tailscale_key_replace else R.string.wizard_tailscale_key
+            ),
+            value = draft,
+            onValueChange = { value ->
+                draft = value
+                if (value.isNotBlank()) {
+                    keys.setKey(value)
+                    onKey(true)
+                }
+            },
+            placeholder = "tskey-auth-…",
+            visualTransformation = PasswordVisualTransformation(),
+        )
+        ActionRow(
+            text = stringResource(R.string.wizard_tailscale_console),
+            onClick = { uri.openUri("https://login.tailscale.com/admin/settings/keys") },
+            showDivider = false,
+        )
     }
 }
 
@@ -644,27 +704,18 @@ private fun androidx.compose.foundation.lazy.LazyListScope.domainStep(
 private fun androidx.compose.foundation.lazy.LazyListScope.addressStep(
     model: ConfiguratorViewModel,
     form: ConfiguratorForm,
+    tailscaleKeys: TailscaleKeyStore,
+    hasTailscaleKey: Boolean,
+    onTailscaleKey: (Boolean) -> Unit,
 ) {
     val relay = form.topology == Topology.VPS_RELAY_WITH_HOME_BACKEND
     item {
         GroupedSection(
             header = stringResource(R.string.wizard_server_header),
-            note = stringResource(
-                when {
-                    form.isLocalOnly -> R.string.wizard_server_footer_local
-                    relay -> R.string.home_network_address_note
-                    else -> R.string.wizard_server_footer_single
-                }
-            ),
+            note = stringResource(addressFooter(form)),
         ) {
             OwnAddressRow(
-                label = stringResource(
-                    when {
-                        form.isLocalOnly -> R.string.wizard_local_address
-                        relay -> R.string.wizard_vps_address
-                        else -> R.string.wizard_server_address
-                    }
-                ),
+                label = stringResource(addressTitle(form)),
                 value = form.publicIP,
                 onValueChange = { value ->
                     model.update {
@@ -694,6 +745,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.addressStep(
                 ) { chosen -> model.update { it.copy(homeDistribution = chosen) } }
             }
         }
+    }
+    if (form.scope == DeploymentScope.TAILSCALE_ONLY) {
+        item { TailscaleKeySection(tailscaleKeys, hasTailscaleKey, onTailscaleKey) }
     }
     if (form.scope == DeploymentScope.PUBLIC_INTERNET || relay) {
         item {
@@ -1028,13 +1082,15 @@ private fun androidx.compose.foundation.lazy.LazyListScope.reviewStep(
                 value = stringResource(scenario.title),
                 onClick = null,
             )
+            if (!form.isLocalOnly) {
+                com.skaymer.gryonixnexus.app.ui.design.ValueRow(
+                    title = stringResource(R.string.domain_label),
+                    value = form.domain.ifBlank { "—" },
+                    onClick = null,
+                )
+            }
             com.skaymer.gryonixnexus.app.ui.design.ValueRow(
-                title = stringResource(R.string.domain_label),
-                value = form.domain.ifBlank { "—" },
-                onClick = null,
-            )
-            com.skaymer.gryonixnexus.app.ui.design.ValueRow(
-                title = stringResource(R.string.public_ip_label),
+                title = stringResource(addressTitle(form)),
                 value = form.publicIP.ifBlank { "—" },
                 onClick = null,
             )
@@ -1065,7 +1121,7 @@ private fun ServicePickerSheet(
     onClose: () -> Unit,
 ) {
     val offered = ServiceRegistry.services(category, form.scope, form.services)
-    IOSSheet(title = category.title, onClose = onClose, closeLabel = stringResource(R.string.close)) {
+    IOSSheet(title = categoryTitle(category), onClose = onClose, closeLabel = stringResource(R.string.close)) {
         GroupedSection {
             offered.forEach { service ->
                 val note = CategorySelection.note(service.id)
@@ -1086,6 +1142,15 @@ private val CategorySelection.NoteKey.resource: Int
         CategorySelection.NoteKey.GITLAB -> R.string.wizard_note_gitlab
         CategorySelection.NoteKey.ADGUARD -> R.string.wizard_note_adguard
         CategorySelection.NoteKey.PIHOLE -> R.string.wizard_note_pihole
+        CategorySelection.NoteKey.SHAIRPORT -> R.string.wizard_note_shairport
+        CategorySelection.NoteKey.UXPLAY -> R.string.wizard_note_uxplay
+        CategorySelection.NoteKey.ODIO -> R.string.wizard_note_odio
+        CategorySelection.NoteKey.SNAPSERVER -> R.string.wizard_note_snapserver
+        CategorySelection.NoteKey.SNAPCLIENT -> R.string.wizard_note_snapclient
+        CategorySelection.NoteKey.DLNA -> R.string.wizard_note_dlna
+        CategorySelection.NoteKey.BLUETOOTH -> R.string.wizard_note_bluetooth
+        CategorySelection.NoteKey.SPOTIFY -> R.string.wizard_note_spotify
+        CategorySelection.NoteKey.MYMPD -> R.string.wizard_note_mympd
     }
 
 /** A password the model already holds */

@@ -14,13 +14,24 @@ public enum AgentVersion {
     }
 
     /// Is `candidate` a LATER version than `installed`?
-    public static func isNewer(_ candidate: String, than installed: String) -> Bool {
-        guard let a = components(candidate), let b = components(installed) else { return false }
+    public static func isNewer(_ candidate: String, than installed: String, now: Date = Date()) -> Bool {
+        guard let a = components(candidate).map({ orderingKey($0, now: now) }),
+              let b = components(installed).map({ orderingKey($0, now: now) }) else { return false }
         for index in 0 ..< max(a.count, b.count) {
             let left = index < a.count ? a[index] : 0
             let right = index < b.count ? b[index] : 0
             if left != right { return left > right }
         }
         return false
+    }
+
+    /// Old November counters sort below dated 26.11.D versions
+    static func orderingKey(_ parts: [Int], now: Date) -> [Int] {
+        guard parts.count >= 3, parts[0] == 26, parts[1] == 11 else { return parts }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC") ?? .current
+        let today = calendar.dateComponents([.year, .month, .day], from: now)
+        let dayInFuture = (today.year ?? 0, today.month ?? 0, today.day ?? 0) < (2026, 11, parts[2])
+        return dayInFuture ? [26, 11, 0] + parts[2...] : parts
     }
 }

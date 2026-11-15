@@ -1,5 +1,6 @@
 package com.skaymer.gryonixnexus.app.dns
 
+import com.skaymer.gryonixnexus.app.servers.DemoDeployments
 import com.skaymer.gryonixnexus.catalog.ServiceRegistry
 import com.skaymer.gryonixnexus.servercontrol.DKIMExport
 import com.skaymer.gryonixnexus.servercontrol.DKIMManaging
@@ -35,6 +36,10 @@ class DKIMViewModel(
     val state: StateFlow<DKIMState> = _state.asStateFlow()
 
     fun load(deployment: Deployment) {
+        if (DemoDeployments.isDemoID(deployment.id)) {
+            _state.value = DKIMState(records = listOf(demoRecord(deployment)), hasAnswered = true)
+            return
+        }
         scope.launch {
             _state.value = _state.value.copy(isLoading = true, errorMessage = null)
             try {
@@ -54,6 +59,12 @@ class DKIMViewModel(
             }
         }
     }
+
+    /** An invented key for the demo fleet */
+    private fun demoRecord(deployment: Deployment) = DKIMRecord(
+        name = "dkim._domainkey.${deployment.domain}",
+        value = "v=DKIM1;k=rsa;p=" + "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A".repeat(6),
+    )
 
     fun reset() {
         _state.value = DKIMState()

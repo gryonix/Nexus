@@ -1,6 +1,6 @@
 import StoreKit
 import SwiftUI
-#if os(iOS)
+#if os(iOS) || os(tvOS)
 import UIKit
 #else
 import AppKit
@@ -98,7 +98,7 @@ private struct AppStoreExtras: View {
     @State private var failure: String?
 
     var body: some View {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         Button("Manage subscription") { store.openManageSubscriptions() }
         #endif
         Button {
@@ -140,7 +140,7 @@ struct CopyableCode: View {
     private func copy() {
         #if os(iOS)
         UIPasteboard.general.string = code
-        #else
+        #elseif os(macOS)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(code, forType: .string)
         #endif

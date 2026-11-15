@@ -1,5 +1,7 @@
 import Foundation
+#if !os(tvOS)
 import LocalAuthentication
+#endif
 import Network
 
 /// Where a system permission stands.
@@ -91,6 +93,7 @@ private actor LocalNetworkProbe {
     }
 }
 
+#if !os(tvOS)
 /// Face ID, Touch ID or Optic ID.
 enum BiometricPermission {
     static let grantedKey = "onboarding.biometricsGranted"
@@ -118,3 +121,4 @@ enum BiometricPermission {
         return granted ? .granted : .denied
     }
 }
+#endif

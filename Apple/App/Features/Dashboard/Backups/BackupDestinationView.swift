@@ -30,7 +30,7 @@ struct BackupDestinationView: View {
         .formRowButtons()
         #endif
         .bottomBarClearance()
-        .navigationTitle("Backup destination")
+        .screenTitle("Backup destination")
         .raisedNavigationTitle()
         .task {
             fleet = (try? FileDeploymentStore().load()) ?? []
@@ -229,7 +229,7 @@ struct BackupDestinationView: View {
                 .labelsHidden()
                 .textFieldStyle(.plain)
                 .multilineTextAlignment(.trailing)
-                #if os(iOS)
+                #if os(iOS) || os(tvOS)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 #endif

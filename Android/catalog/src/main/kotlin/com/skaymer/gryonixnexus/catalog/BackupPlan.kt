@@ -21,6 +21,19 @@ data class BackupWrapperSpec(
     }
 }
 
+/** What a backup copies, chosen per host */
+enum class BackupPart(val rawValue: String) {
+    /** Photos, documents, mail and other user files */
+    FILES("files"),
+    /** Service configuration and small state */
+    SETTINGS("settings"),
+    DATABASES("databases");
+
+    companion object {
+        fun from(rawValue: String): BackupPart? = entries.firstOrNull { it.rawValue == rawValue }
+    }
+}
+
 /** The two shapes a wrapper-driven backup takes */
 sealed class BackupPlan {
     data class ExternalScript(val path: String, override val sizePaths: List<String>) : BackupPlan() {
@@ -43,6 +56,8 @@ data class ArchiveBackupPlan(
     /** Compose project the stop/start and `exec` commands address */
     val composeProject: String,
     val dataPath: String,
+    /** Which part the data directory counts as */
+    val dataPart: BackupPart = BackupPart.SETTINGS,
     /** Databases dumped through their own client instead of archived */
     val databases: List<BackupDatabase> = emptyList(),
     val quiesceServices: List<String> = emptyList(),

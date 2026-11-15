@@ -2,51 +2,27 @@ import XCTest
 @testable import MailRecipe
 
 final class AgentBundledVersionTests: XCTestCase {
-    private func cargoManifest() throws -> String {
+    /// What the packing script wrote beside the shipped archive
+    private func packedVersion() throws -> String {
         var url = URL(fileURLWithPath: #filePath)
         // <this file> → MailRecipeTests → Tests → gryonixNexus → Packages → Apple
-        for _ in 0 ..< 6 { url.deleteLastPathComponent() }
-        let manifest = url
-            .appendingPathComponent("Server")
-            .appendingPathComponent("gryonixnexusd")
-            .appendingPathComponent("Cargo.toml")
-        let text = try String(contentsOf: manifest, encoding: .utf8)
-        XCTAssertFalse(text.isEmpty, "found the manifest but it is empty: \(manifest.path)")
-        return text
+        for _ in 0 ..< 5 { url.deleteLastPathComponent() }
+        let file = url.appendingPathComponent("App/Resources/agent-src.version")
+        return try String(contentsOf: file, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// `version = "x.y.z"` from the `[package]` table, and only from there
-    private func crateVersion(in manifest: String) -> String? {
-        var inPackage = false
-        for line in manifest.split(separator: "\n", omittingEmptySubsequences: false) {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed.hasPrefix("[") {
-                inPackage = trimmed == "[package]"
-                continue
-            }
-            guard inPackage, trimmed.hasPrefix("version = \"") else { continue }
-            return String(trimmed.dropFirst("version = \"".count).dropLast())
-        }
-        return nil
-    }
-
-    func testTheBundledVersionIsTheCrateVersion() throws {
-        let manifest = try cargoManifest()
-        let crate = try XCTUnwrap(crateVersion(in: manifest),
-                                  "no top-level `version = \"…\"` line in Cargo.toml")
+    func testTheBundledVersionIsThePackedOne() throws {
+        let packed = try packedVersion()
         XCTAssertEqual(
-            AgentBootstrapSections.bundledVersion, crate,
-            "the app says it carries \(AgentBootstrapSections.bundledVersion) but the crate is \(crate) — "
-                + "bump AgentBootstrapSections.bundledVersion together with Cargo.toml")
+            AgentBootstrapSections.bundledVersion, packed,
+            "the app says it carries \(AgentBootstrapSections.bundledVersion) but packs \(packed) — "
+                + "the app carries the agent on main of nexus-agent; set bundledVersion to that")
     }
 
     /// The harness must be able to fail
-    func testTheHarnessActuallyReadsTheManifest() throws {
-        let manifest = try cargoManifest()
-        XCTAssertTrue(manifest.contains("name = \"gryonixnexusd\""),
-                      "this is not the agent's manifest")
-        XCTAssertTrue(manifest.contains("[package]"), "this is not a Cargo manifest")
-        XCTAssertNotNil(crateVersion(in: manifest), "no version in the [package] table")
+    func testTheHarnessActuallyReadsThePackedVersion() throws {
+        let packed = try packedVersion()
+        XCTAssertNotNil(AgentVersion.components(packed), "agent-src.version holds no version: \(packed)")
     }
 }
 
@@ -60,6 +36,14 @@ final class AgentVersionTests: XCTestCase {
         XCTAssertTrue(AgentVersion.isNewer("26.10.12-1", than: "26.10.12"))
         XCTAssertTrue(AgentVersion.isNewer("26.10.12-2", than: "26.10.12-1"))
         XCTAssertFalse(AgentVersion.isNewer("26.10.12-9", than: "26.10.13"))
+    }
+
+    func testNovemberCountersSortBelowTheDate() {
+        let nov9 = Date(timeIntervalSince1970: 1_794_182_400)
+        XCTAssertTrue(AgentVersion.isNewer("26.11.9", than: "26.11.25", now: nov9))
+        XCTAssertFalse(AgentVersion.isNewer("26.11.25", than: "26.11.9", now: nov9))
+        XCTAssertTrue(AgentVersion.isNewer("26.11.9-1", than: "26.11.9", now: nov9))
+        XCTAssertTrue(AgentVersion.isNewer("26.11.10", than: "26.11.9", now: nov9.addingTimeInterval(86_400)))
     }
 
     func testADatedVersionBeatsTheOldNumbering() {

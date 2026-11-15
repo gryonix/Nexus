@@ -89,3 +89,21 @@ final class ServiceCategoryTests: XCTestCase {
                                   .authelia])
     }
 }
+
+final class TailscaleNodeRecipeTests: XCTestCase {
+    private func steps(withHeadscale: Bool) -> String {
+        let context = ServiceContext(domain: "example.com", sshUser: "", settings: ServiceSettings(),
+                                     installedServices: withHeadscale ? [.headscale, .tailscaleNode] : [.tailscaleNode])
+        return TailscaleNodeService().setupSteps(context).joined(separator: "\n")
+    }
+
+    func testWithoutAControlServerOfOursTheNodeNeverTalksToHeadscale() {
+        let script = steps(withHeadscale: false)
+        XCTAssertFalse(script.contains("headscale"))
+        XCTAssertTrue(script.contains("TS_AUTHKEY"), "the key the user supplied decides whether it starts")
+    }
+
+    func testBesideHeadscaleTheNodeStillMintsItsOwnKey() {
+        XCTAssertTrue(steps(withHeadscale: true).contains("preauthkeys create"))
+    }
+}

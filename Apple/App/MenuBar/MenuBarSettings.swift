@@ -47,14 +47,15 @@ final class MenuBarSettings: ObservableObject {
     }
 
     /// Applies the Dock decision to the running app
-    func applyActivationPolicy() {
+    func applyActivationPolicy(activating: Bool = true) {
         let wanted: NSApplication.ActivationPolicy = (showsItem && accessoryOnly)
             ? .accessory : .regular
         guard NSApp.activationPolicy() != wanted else { return }
         NSApp.setActivationPolicy(wanted)
-        if wanted == .regular {
+        if wanted == .regular, activating {
             NSApp.activate(ignoringOtherApps: true)
         }
+        DockPresence.note("saved choice applied")
     }
 }
 #endif

@@ -3,6 +3,7 @@ package com.skaymer.gryonixnexus.transport
 import com.skaymer.gryonixnexus.servercontrol.ExecChunk
 import com.skaymer.gryonixnexus.servercontrol.ExecResult
 import com.skaymer.gryonixnexus.servercontrol.SSHCommandRunner
+import com.skaymer.gryonixnexus.servercontrol.HomePathChoice
 import com.skaymer.gryonixnexus.servercontrol.SSHHostID
 import com.skaymer.gryonixnexus.servercontrol.ServerControlError
 import java.io.InputStream
@@ -35,6 +36,10 @@ import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
 class SSHJCommandRunner(
     private val settings: SSHConnectionSettings,
     private val onPinHostKey: (SSHHostID, String) -> Unit = { _, _ -> },
+    /** Dials a machine through its parent's open session */
+    private val connectThrough: (suspend (SSHConnectionSettings.Route.Address, SSHHostID, SSHClient) -> SSHClient)? = null,
+    /** Whether an address on the local network answers now */
+    private val answers: suspend (SSHConnectionSettings.Route.Address) -> Boolean = ::answersOnLAN,
     private val connect: suspend (SSHConnectionSettings.Route.Address, SSHHostID) -> SSHClient =
         ::defaultConnect,
 ) : SSHCommandRunner {
@@ -152,13 +157,41 @@ class SSHJCommandRunner(
 
     private suspend fun client(host: SSHHostID): SSHClient {
         clients[host]?.let { if (it.isConnected) return it else drop(host) }
+        val route = settings.route(host) ?: throw ServerControlError.NotConfigured("no address for $host")
+        val plan = if (route.parent == null) HomePathChoice.AUTOMATIC.plan else settings.homePath.plan
+        val local = route.fallback?.takeIf { route.parent != null && plan.localFirst && (!plan.usesVPS || answers(it)) }
+        val through = if (local != null || !plan.usesVPS) null else parentSession(route)
         return lock.withLock {
             clients[host]?.let { if (it.isConnected) return@withLock it }
-            val route = settings.route(host)
-                ?: throw ServerControlError.NotConfigured("no address for $host")
-            val client = connect(route.address, host)
+            val viaLocal = local?.let { runCatching { connect(it, host) }.getOrNull() }
+            if (viaLocal == null && !plan.usesVPS) {
+                throw ServerControlError.ConnectionFailed("the machine does not answer on the local network")
+            }
+            val client = viaLocal ?: open(route, host, through, plan.localLastResort)
             clients[host] = client
             client
+        }
+    }
+
+    private suspend fun parentSession(route: SSHConnectionSettings.Route): SSHClient? {
+        val parent = route.parent ?: return null
+        if (connectThrough == null) return null
+        return runCatching { client(parent) }.getOrNull()
+    }
+
+    /** Through the parent, then the address on the local network */
+    private suspend fun open(
+        route: SSHConnectionSettings.Route,
+        host: SSHHostID,
+        through: SSHClient?,
+        localLastResort: Boolean,
+    ): SSHClient {
+        val jump = connectThrough
+        return try {
+            if (through != null && jump != null) jump(route.address, host, through) else connect(route.address, host)
+        } catch (failure: Exception) {
+            val fallback = route.fallback?.takeIf { localLastResort } ?: throw failure
+            connect(fallback, host)
         }
     }
 
@@ -189,6 +222,23 @@ class SSHJCommandRunner(
     companion object {
         const val MAX_CONCURRENT_CHANNELS = 4
         private val CLOSE_GRACE = 5.seconds
+
+        private const val LAN_PROBE_MS = 1500
+
+        /** A short knock that waits for the SSH greeting */
+        internal suspend fun answersOnLAN(address: SSHConnectionSettings.Route.Address): Boolean =
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    java.net.Socket().use { socket ->
+                        socket.connect(java.net.InetSocketAddress(address.host, address.port), LAN_PROBE_MS)
+                        socket.soTimeout = LAN_PROBE_MS
+                        isSSHBanner(socket.getInputStream().readNBytes(4))
+                    }
+                }.getOrDefault(false)
+            }
+
+        /** The SSH banner proves the machine, not the tunnel */
+        internal fun isSSHBanner(bytes: ByteArray): Boolean = bytes.decodeToString().startsWith("SSH-")
 
         /** A connected, authenticated client for one address */
         internal suspend fun defaultConnect(

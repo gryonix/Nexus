@@ -93,6 +93,9 @@ class CatalogGoldenTest {
         assertEquals((service.runtime as? ServiceRuntime.Docker)?.composeProject,
                      want.optional("runtimeProject"),
                      "compose project")
+        assertEquals((service.runtime as? ServiceRuntime.Systemd)?.unit,
+                     want.optional("runtimeUnit"),
+                     "systemd unit")
     }
 
     private fun assertCompose(want: JsonObject, service: ManagedService, context: ServiceContext) {
@@ -137,6 +140,8 @@ class CatalogGoldenTest {
                      ingress?.adminGuard?.toString(), "ingress admin guard")
         assertEquals(want.optional("webIngressUpstreamHTTPS"),
                      ingress?.upstreamHTTPS?.toString(), "ingress upstream https")
+        assertEquals(want.optional("webIngressBasicAuthSnippet"),
+                     ingress?.basicAuthSnippet, "ingress basic auth snippet")
         assertEquals(want.list("webIngressPublicPaths"),
                      ingress?.publicPaths ?: emptyList<String>(), "ingress public paths")
     }
@@ -187,6 +192,8 @@ class CatalogGoldenTest {
                 lines += "status\tcomposeProject:${probe.project}\t${probe.list.command}"
             is StatusProbe.Container ->
                 lines += "status\tcontainer:${probe.name}\t${probe.list.command}"
+            is StatusProbe.SystemdUnits ->
+                lines += "status\tsystemdUnits\t${probe.list.command}"
         }
         actions.restart?.let { lines += actionLine("restart", it) }
         actions.start?.let { lines += actionLine("start", it) }

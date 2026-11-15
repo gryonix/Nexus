@@ -29,7 +29,7 @@ final class SectionLensView: UIView {
     private var appliedSelection: CGRect?
 
     override init(frame: CGRect) {
-        if #available(iOS 26.0, *), AppChrome.usesGlass {
+        if #available(iOS 26.0, tvOS 26.0, *), AppChrome.usesGlass {
             let effect = UIGlassEffect(style: .regular)
             effect.isInteractive = false
             effect.tintColor = UIColor { traits in
@@ -149,7 +149,7 @@ final class GlassPanelView: UIView {
     var panelContent: UIView { effectView.contentView }
 
     override init(frame: CGRect) {
-        if #available(iOS 26.0, *), AppChrome.usesGlass {
+        if #available(iOS 26.0, tvOS 26.0, *), AppChrome.usesGlass {
             let glass = UIGlassEffect(style: .regular)
             glass.isInteractive = false
             glass.tintColor = UIColor { traits in

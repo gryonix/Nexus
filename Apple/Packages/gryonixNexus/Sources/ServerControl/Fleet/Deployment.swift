@@ -46,6 +46,13 @@ public struct Deployment: Identifiable, Codable, Sendable, Hashable {
     public var wakeOnLANBroadcast: String?
     /// Runs the VPN on the relay instead of at home
     public var vpnOnRelay: Bool?
+    /// Login on the home machine; `nil` reuses the entry user
+    public var homeUser: String?
+    /// Services closed on the relay
+    public var homeOnlyServices: Set<ServiceID> = []
+    /// Home-only services that VPN clients cannot open either
+    public var homeOnlyNoVPN: Set<ServiceID> = []
+    public var homeOnlyDNSRemoved: Set<ServiceID> = []
 
     public init(
         id: UUID = UUID(),
@@ -69,7 +76,11 @@ public struct Deployment: Identifiable, Codable, Sendable, Hashable {
         scope: DeploymentScope = .publicInternet,
         storedNodes: [DeploymentNode]? = nil,
         placement: ServicePlacement? = nil,
-        wakeOnLANMAC: String? = nil
+        wakeOnLANMAC: String? = nil,
+        homeUser: String? = nil,
+        homeOnlyServices: Set<ServiceID> = [],
+        homeOnlyNoVPN: Set<ServiceID> = [],
+        homeOnlyDNSRemoved: Set<ServiceID> = []
     ) {
         self.id = id
         self.name = name
@@ -93,6 +104,10 @@ public struct Deployment: Identifiable, Codable, Sendable, Hashable {
         self.storedNodes = storedNodes
         self.placement = placement
         self.wakeOnLANMAC = wakeOnLANMAC
+        self.homeUser = homeUser
+        self.homeOnlyServices = homeOnlyServices
+        self.homeOnlyNoVPN = homeOnlyNoVPN
+        self.homeOnlyDNSRemoved = homeOnlyDNSRemoved
     }
 
     public init(from decoder: Decoder) throws {
@@ -123,6 +138,62 @@ public struct Deployment: Identifiable, Codable, Sendable, Hashable {
         wakeOnLANMAC = try container.decodeIfPresent(String.self, forKey: .wakeOnLANMAC)
         wakeOnLANBroadcast = try container.decodeIfPresent(String.self, forKey: .wakeOnLANBroadcast)
         vpnOnRelay = try container.decodeIfPresent(Bool.self, forKey: .vpnOnRelay)
+        homeUser = try container.decodeIfPresent(String.self, forKey: .homeUser)
+        homeOnlyServices = try container.decodeIfPresent(Set<ServiceID>.self, forKey: .homeOnlyServices) ?? []
+        homeOnlyNoVPN = try container.decodeIfPresent(Set<ServiceID>.self, forKey: .homeOnlyNoVPN) ?? []
+        homeOnlyDNSRemoved = try container.decodeIfPresent(Set<ServiceID>.self, forKey: .homeOnlyDNSRemoved) ?? []
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(topology, forKey: .topology)
+        try container.encode(domain, forKey: .domain)
+        try container.encode(additionalDomains, forKey: .additionalDomains)
+        try container.encode(entry, forKey: .entry)
+        try container.encodeIfPresent(homeWGAddress, forKey: .homeWGAddress)
+        try container.encode(wgInterface, forKey: .wgInterface)
+        try container.encode(services, forKey: .services)
+        try container.encode(serviceSettings, forKey: .serviceSettings)
+        try container.encode(timeouts, forKey: .timeouts)
+        try container.encode(tags, forKey: .tags)
+        try container.encodeIfPresent(metricsIndicatorStyle, forKey: .metricsIndicatorStyle)
+        try container.encode(usesPasswordAuth, forKey: .usesPasswordAuth)
+        try container.encode(usesAgent, forKey: .usesAgent)
+        try container.encodeIfPresent(iconSymbol, forKey: .iconSymbol)
+        try container.encodeIfPresent(tintName, forKey: .tintName)
+        try container.encodeIfPresent(cardSize, forKey: .cardSize)
+        try container.encode(scope, forKey: .scope)
+        try container.encodeIfPresent(storedNodes, forKey: .storedNodes)
+        try container.encodeIfPresent(placement, forKey: .placement)
+        try container.encodeIfPresent(wakeOnLANMAC, forKey: .wakeOnLANMAC)
+        try container.encodeIfPresent(wakeOnLANBroadcast, forKey: .wakeOnLANBroadcast)
+        try container.encodeIfPresent(vpnOnRelay, forKey: .vpnOnRelay)
+        try container.encodeIfPresent(homeUser, forKey: .homeUser)
+        if !homeOnlyServices.isEmpty {
+            try container.encode(homeOnlyServices, forKey: .homeOnlyServices)
+        }
+        if !homeOnlyNoVPN.isEmpty {
+            try container.encode(homeOnlyNoVPN, forKey: .homeOnlyNoVPN)
+        }
+        if !homeOnlyDNSRemoved.isEmpty {
+            try container.encode(homeOnlyDNSRemoved, forKey: .homeOnlyDNSRemoved)
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, topology, domain, additionalDomains, entry, homeWGAddress, wgInterface
+        case services, serviceSettings, timeouts, tags, metricsIndicatorStyle, usesPasswordAuth
+        case usesAgent, iconSymbol, tintName, cardSize, scope, storedNodes, placement
+        case wakeOnLANMAC, wakeOnLANBroadcast, vpnOnRelay, homeUser, homeOnlyServices
+        case homeOnlyNoVPN, homeOnlyDNSRemoved
+    }
+
+    public var homeOnlyIDs: Set<String> { Set(homeOnlyServices.map(\.rawValue)) }
+
+    public var effectiveHomeUser: String {
+        homeUser.flatMap { $0.isEmpty ? nil : $0 } ?? entry.user
     }
 
     public var serviceContext: ServiceContext {
@@ -145,6 +216,11 @@ public struct Deployment: Identifiable, Codable, Sendable, Hashable {
     /// A machine that can take a USB drive
     public var hasPhysicalAccess: Bool {
         topology == .vpsRelayWithHomeBackend || scope == .localOnly || scope == .dynamicDNS
+    }
+
+    /// A home machine whose services can leave the internet
+    public var closesServicesAtHome: Bool {
+        (hasHomeHost && hasRelayIngress) || scope == .dynamicDNS
     }
 
     public var hasHomeHost: Bool {
@@ -207,6 +283,7 @@ extension Deployment {
             vpsHost: entry.host,
             sshPort: entry.port,
             sshUser: entry.user,
+            homeSSHUser: homeUser ?? "",
             homeWGAddress: homeWGAddress ?? "",
             wgInterface: wgInterface,
             mailcowPath: serviceSettings.mailcowPath,

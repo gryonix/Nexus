@@ -22,13 +22,15 @@ struct VPNLockScreenSettingsView: View {
             } header: {
                 Text("On the card")
             } footer: {
-                Text("The colour is shared with the Dynamic Island.")
+                if DynamicIsland.isOnThisDevice {
+                    Text("The colour is shared with the Dynamic Island.")
+                }
             }
             Section {
                 Button("Reset to defaults") { settings.vpnIslandStyle.lockScreen = nil }
             }
         }
-        .navigationTitle("Lock Screen")
+        .screenTitle("Lock Screen")
         .navigationBarTitleDisplayMode(.inline)
     }
 

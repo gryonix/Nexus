@@ -21,8 +21,8 @@ struct SSHAccessView: View {
             everyoneSection
             accountsSection
         }
-        .navigationTitle("SSH access")
-        #if os(iOS)
+        .screenTitle("SSH access")
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar { reloadButton }

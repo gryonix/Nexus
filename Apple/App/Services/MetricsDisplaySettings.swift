@@ -9,6 +9,11 @@ enum MetricsDisplaySettings {
     /// Where metrics are reachable from — see `MetricsPlacement`
     static let placementKey = "metrics.placement"
     static let cardColumnsKey = "servers.cardColumns"
+    static let collectOnOpenKey = "metrics.collectOnOpen"
+
+    static var collectOnOpen: Bool {
+        UserDefaults.standard.object(forKey: collectOnOpenKey) as? Bool ?? true
+    }
 
     static func indicatorStyle(from raw: String) -> MetricsIndicatorStyle {
         MetricsIndicatorStyle(rawValue: raw) ?? .bars

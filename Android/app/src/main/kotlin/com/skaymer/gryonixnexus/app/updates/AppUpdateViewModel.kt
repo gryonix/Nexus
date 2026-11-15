@@ -65,7 +65,7 @@ class AppUpdateViewModel(
     companion object {
         fun installedVersion(context: Context): Pair<Long, String> = runCatching {
             val info = context.packageManager.getPackageInfo(context.packageName, 0)
-            info.longVersionCode to (info.versionName ?: "—")
+            androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(info) to (info.versionName ?: "—")
         }.getOrElse { _: Throwable -> 0L to "—" }
     }
 }

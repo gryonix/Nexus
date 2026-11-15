@@ -29,7 +29,7 @@ public enum MetricsHistoryParser {
 
     private static func parseLine(_ line: Substring) -> MetricsHistoryPoint? {
         let fields = line.split(separator: ",", omittingEmptySubsequences: false)
-        guard fields.count == 12,
+        guard fields.count == 12 || fields.count == 14,
               let epoch = Double(fields[0]),
               let memUsed = Int64(fields[2]),
               let memTotal = Int64(fields[3]),
@@ -54,7 +54,9 @@ public enum MetricsHistoryParser {
             diskReadPerSecond: optionalDouble(fields[8]),
             diskWrittenPerSecond: optionalDouble(fields[9]),
             load1: load1,
-            temperatureCelsius: optionalDouble(fields[11])
+            temperatureCelsius: optionalDouble(fields[11]),
+            swapUsedBytes: fields.count == 14 ? Int64(fields[12]) : nil,
+            swapTotalBytes: fields.count == 14 ? Int64(fields[13]) : nil
         )
     }
 }

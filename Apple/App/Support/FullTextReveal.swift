@@ -1,5 +1,5 @@
 import SwiftUI
-#if os(iOS)
+#if os(iOS) || os(tvOS)
 import UIKit
 #endif
 
@@ -20,7 +20,7 @@ private struct FullTextReveal: ViewModifier {
     func body(content: Content) -> some View {
         #if os(macOS)
         content.help(text)
-        #else
+        #elseif os(iOS)
         content.contextMenu {
             if let copyable {
                 Button {
@@ -38,6 +38,8 @@ private struct FullTextReveal: ViewModifier {
                 .frame(maxWidth: 320, alignment: .leading)
                 .padding(16)
         }
+        #else
+        content
         #endif
     }
 }

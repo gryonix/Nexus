@@ -1,5 +1,5 @@
 import Foundation
-#if os(iOS)
+#if os(iOS) || os(tvOS)
 import UIKit
 #endif
 
@@ -26,7 +26,7 @@ enum ShellSections {
         }
     }
     static var barCapacity: Int {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         UIDevice.current.userInterfaceIdiom == .pad ? .max : 5
         #else
         .max

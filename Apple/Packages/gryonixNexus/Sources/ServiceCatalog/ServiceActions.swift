@@ -36,6 +36,8 @@ extension ServicePower {
             arguments = "logs --tail 500 --timestamps \(name)"
         case .composeProject(let project, _):
             arguments = "compose -p \(project) logs --tail 500 --timestamps"
+        case .systemdUnits(_, let journal):
+            return ServiceCommand(journal, timeoutClass: .quick, streamsOutput: true)
         }
         return ServiceCommand(
             PrivilegedCommand(binaryPath: "/usr/bin/docker", arguments: arguments),
@@ -58,6 +60,20 @@ public enum ServicePower {
         ServiceCommand(PrivilegedCommand(binaryPath: "/usr/bin/docker",
                                          arguments: "\(verb) \(name)"),
                        timeoutClass: timeoutClass)
+    }
+}
+
+extension ServicePower {
+    public static func systemctl(_ verb: String, _ units: String,
+                                 timeoutClass: ServiceCommand.TimeoutClass = .restart) -> ServiceCommand {
+        ServiceCommand(PrivilegedCommand(binaryPath: "/usr/bin/systemctl",
+                                         arguments: "\(verb) \(units)"),
+                       timeoutClass: timeoutClass)
+    }
+
+    public static func helper(_ path: String, _ verb: String,
+                              timeoutClass: ServiceCommand.TimeoutClass = .restart) -> ServiceCommand {
+        ServiceCommand(PrivilegedCommand(binaryPath: path, arguments: verb), timeoutClass: timeoutClass)
     }
 }
 
@@ -95,11 +111,14 @@ public enum StatusProbe: Sendable, Hashable {
     /// `sudo docker compose -p <project> ps` — one row per container
     case composeProject(project: String, list: PrivilegedCommand)
     case container(name: String, list: PrivilegedCommand)
+    /// `systemctl show` blocks per unit, plus the journal command
+    case systemdUnits(list: PrivilegedCommand, journal: PrivilegedCommand)
 
     public var privilegedCommands: [PrivilegedCommand] {
         switch self {
         case .composeProject(_, let list): return [list]
         case .container(_, let list): return [list]
+        case .systemdUnits(let list, _): return [list]
         }
     }
 }

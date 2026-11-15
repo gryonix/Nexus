@@ -64,15 +64,12 @@ struct VPNCompactTrailing: View {
 
     var body: some View {
         switch model.style.compactDetail {
-        case .timer:
-            CompactIslandTimer(since: model.startedAt)
-                .foregroundStyle(model.tint)
-        case .protocolName:
-            CompactIslandPercent(text: model.style.shortLabel(for: model.protocolName), tint: model.tint)
-        case .traffic:
-            CompactIslandPercent(text: CompactBytes.of(model.statistics.received), tint: model.tint)
-        case .nothing:
+        case .timer, .nothing:
             EmptyView()
+        case .protocolName:
+            CompactIslandLabel(text: model.style.shortLabel(for: model.protocolName), tint: model.tint)
+        case .traffic:
+            CompactIslandLabel(text: CompactBytes.of(model.statistics.received), tint: model.tint)
         }
     }
 }

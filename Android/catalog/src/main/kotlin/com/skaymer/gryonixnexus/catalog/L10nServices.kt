@@ -732,6 +732,18 @@ object L10nServices {
         ZH to "该地址是设备的控制服务器，不是网页"
     ))
 
+    fun headscaleRootPage(l: AppLanguage): String = l.pick(mapOf(
+        EN to "This is the Headscale server your devices connect to. It has no web page: add and manage devices in the Nexus app, in the Mesh section of the server.",
+        DE to "Dies ist der Headscale-Server, mit dem sich Ihre Geräte verbinden. Er hat keine Webseite: Geräte fügen Sie in der Nexus-App im Bereich Mesh des Servers hinzu und verwalten sie dort.",
+        FR to "Ceci est le serveur Headscale auquel vos appareils se connectent. Il n'a pas de page web : ajoutez et gérez les appareils dans l'app Nexus, section Mesh du serveur.",
+        ES to "Este es el servidor Headscale al que se conectan tus dispositivos. No tiene página web: añade y gestiona los dispositivos en la app Nexus, en la sección Mesh del servidor.",
+        RU to "Это сервер Headscale, к которому подключаются ваши устройства. Веб-страницы у него нет: устройства добавляются и управляются в приложении Nexus, в разделе Mesh сервера.",
+        UK to "Це сервер Headscale, до якого підключаються ваші пристрої. Вебсторінки в нього немає: пристрої додаються й керуються в застосунку Nexus, у розділі Mesh сервера.",
+        IT to "Questo è il server Headscale a cui si collegano i tuoi dispositivi. Non ha una pagina web: aggiungi e gestisci i dispositivi nell'app Nexus, nella sezione Mesh del server.",
+        JA to "これはデバイスが接続する Headscale サーバーです。Web ページはありません。デバイスの追加と管理は Nexus アプリのサーバーの Mesh セクションで行います。",
+        ZH to "这是设备连接的 Headscale 服务器。它没有网页：请在 Nexus 应用中服务器的 Mesh 部分添加和管理设备。"
+    ))
+
     fun headscaleCreateUserNote(l: AppLanguage): String = l.pick(mapOf(
         EN to "Create a user and a join key on the server",
         DE to "Benutzer und Beitrittsschlüssel auf dem Server anlegen",
@@ -1775,6 +1787,78 @@ object L10nServices {
         IT to "Questa macchina non ha lo strumento ubuntu-drivers, quindi il driver non e stato installato automaticamente — installalo tu stesso, poi esegui di nuovo questa installazione.",
         JA to "このマシンには ubuntu-drivers ツールがないため、ドライバーは自動インストールされませんでした。自分でインストールしてから、このインストールを再実行してください。",
         ZH to "本机没有 ubuntu-drivers 工具，因此未自动安装驱动 — 请自行安装后再次运行本次安装。"
+    ))
+
+    fun airplaySpeakerHint(l: AppLanguage): String = l.pick(mapOf(
+        EN to "Pick it in the AirPlay menu on your iPhone, iPad or Mac.",
+        DE to "Wählen Sie ihn im AirPlay-Menü Ihres iPhones, iPads oder Macs aus.",
+        FR to "Choisissez-le dans le menu AirPlay de votre iPhone, iPad ou Mac.",
+        ES to "Elíjalo en el menú AirPlay de su iPhone, iPad o Mac.",
+        RU to "Выберите его в меню AirPlay на iPhone, iPad или Mac.",
+        UK to "Виберіть його в меню AirPlay на iPhone, iPad або Mac.",
+        IT to "Scegli l'altoparlante nel menu AirPlay di iPhone, iPad o Mac.",
+        JA to "iPhone、iPad、Mac の AirPlay メニューから選んでください。",
+        ZH to "请在 iPhone、iPad 或 Mac 的 AirPlay 菜单中选择它。"
+    ))
+
+    fun packagedAudioReady(l: AppLanguage): String = l.pick(mapOf(
+        EN to "installed; phones and computers on your home network find it on their own.",
+        DE to "installiert; Telefone und Computer in Ihrem Heimnetz finden es von selbst.",
+        FR to "installé ; les téléphones et ordinateurs de votre réseau domestique le trouvent d'eux-mêmes.",
+        ES to "instalado; los teléfonos y ordenadores de su red doméstica lo encuentran solos.",
+        RU to "установлено; телефоны и компьютеры в домашней сети находят его сами.",
+        UK to "встановлено; телефони й комп'ютери в домашній мережі знаходять його самі.",
+        IT to "installato; telefoni e computer della rete di casa lo trovano da soli.",
+        JA to "インストールしました。家庭内ネットワークのスマートフォンやパソコンが自動で見つけます。",
+        ZH to "已安装；家庭网络中的手机和电脑会自动找到它。"
+    ))
+
+    fun airplayScreenHint(l: AppLanguage): String = l.pick(mapOf(
+        EN to "Pick it in the AirPlay menu on your iPhone, iPad or Mac, under Screen Mirroring.",
+        DE to "Wählen Sie ihn im AirPlay-Menü Ihres iPhones, iPads oder Macs unter Bildschirmsynchronisierung aus.",
+        FR to "Choisissez-le dans le menu AirPlay de votre iPhone, iPad ou Mac, sous Recopie de l'écran.",
+        ES to "Elíjalo en el menú AirPlay de su iPhone, iPad o Mac, en Duplicar pantalla.",
+        RU to "Выберите его в меню AirPlay на iPhone, iPad или Mac, в разделе «Повтор экрана».",
+        UK to "Виберіть його в меню AirPlay на iPhone, iPad або Mac, у розділі «Дзеркалення екрана».",
+        IT to "Sceglilo nel menu AirPlay di iPhone, iPad o Mac, sotto Duplica schermo.",
+        JA to "iPhone、iPad、Mac の AirPlay メニューの「画面ミラーリング」から選んでください。",
+        ZH to "请在 iPhone、iPad 或 Mac 的 AirPlay 菜单的“屏幕镜像”中选择它。"
+    ))
+
+    fun airplayScreenDrmNote(l: AppLanguage): String = l.pick(mapOf(
+        EN to "DRM-protected video (Netflix and similar) cannot be shown — that is an Apple restriction.",
+        DE to "Kopiergeschützte Videos (Netflix und Ähnliches) können nicht angezeigt werden — das ist eine Einschränkung von Apple.",
+        FR to "Les vidéos protégées par DRM (Netflix et similaires) ne peuvent pas être affichées — c'est une restriction d'Apple.",
+        ES to "El vídeo protegido con DRM (Netflix y similares) no se puede mostrar: es una restricción de Apple.",
+        RU to "Видео с защитой DRM (Netflix и подобные) показать нельзя — это ограничение Apple.",
+        UK to "Відео із захистом DRM (Netflix та подібні) показати не можна — це обмеження Apple.",
+        IT to "I video protetti da DRM (Netflix e simili) non possono essere mostrati: è una restrizione di Apple.",
+        JA to "DRM で保護された動画（Netflix など）は表示できません。これは Apple の制限です。",
+        ZH to "受 DRM 保护的视频（Netflix 等）无法显示——这是 Apple 的限制。"
+    ))
+
+    fun odioInstallerChecksum(l: AppLanguage): String = l.pick(mapOf(
+        EN to "the odio installer does not match its pinned checksum",
+        DE to "Das odio-Installationsprogramm stimmt nicht mit seiner festgelegten Prüfsumme überein",
+        FR to "le programme d'installation d'odio ne correspond pas à sa somme de contrôle fixée",
+        ES to "el instalador de odio no coincide con su suma de comprobación fijada",
+        RU to "установщик odio не совпадает с закреплённой контрольной суммой",
+        UK to "інсталятор odio не збігається із закріпленою контрольною сумою",
+        IT to "il programma di installazione di odio non corrisponde al checksum fissato",
+        JA to "odio のインストーラーが固定されたチェックサムと一致しません",
+        ZH to "odio 安装程序与固定的校验和不一致"
+    ))
+
+    fun odioLeftovers(l: AppLanguage, packages: String, account: String): String = l.pick(mapOf(
+        EN to "left in place: the packages the installer added ($packages) and the user $account. Remove them with apt and userdel if you no longer need them.",
+        DE to "bleibt bestehen: die vom Installer hinzugefügten Pakete ($packages) und der Benutzer $account. Entfernen Sie sie bei Bedarf mit apt und userdel.",
+        FR to "laissés en place : les paquets ajoutés par l'installateur ($packages) et l'utilisateur $account. Supprimez-les avec apt et userdel si vous n'en avez plus besoin.",
+        ES to "se dejan instalados: los paquetes que añadió el instalador ($packages) y el usuario $account. Elimínelos con apt y userdel si ya no los necesita.",
+        RU to "остаются на месте: пакеты, добавленные установщиком ($packages), и пользователь $account. Удалите их через apt и userdel, если они больше не нужны.",
+        UK to "залишаються на місці: пакети, додані інсталятором ($packages), і користувач $account. Видаліть їх через apt і userdel, якщо вони більше не потрібні.",
+        IT to "lasciati al loro posto: i pacchetti aggiunti dal programma di installazione ($packages) e l'utente $account. Rimuovili con apt e userdel se non ti servono più.",
+        JA to "残るもの：インストーラーが追加したパッケージ（$packages）とユーザー $account。不要なら apt と userdel で削除してください。",
+        ZH to "保留不动：安装程序添加的软件包（$packages）和用户 $account。如不再需要，请用 apt 和 userdel 删除。"
     ))
 
     // ---------------------------------------------- Home Assistant

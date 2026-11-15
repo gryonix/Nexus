@@ -118,4 +118,15 @@ class LauncherIconTest {
                 "allowed — it will read as a small picture in a big empty plate",
         )
     }
+
+    @Test
+    fun `the rack sits in the middle like the Apple icon`() {
+        val image = ImageIO.read(File(res(), "mipmap-xxxhdpi/ic_launcher_foreground.png"))
+        val top = (0 until image.height).first { y -> (0 until image.width).any { x -> isInk(image.getRGB(x, y)) } }
+        val inked = (0 until image.width).filter { x -> isInk(image.getRGB(x, top)) }
+        val middle = (inked.first() + inked.last() + 1) / 2.0
+        assertEquals(image.width / 2.0, middle, 2.0, "the rack's top edge is off centre — the icon looks pushed aside")
+    }
+
+    private fun isInk(pixel: Int): Boolean = (pixel ushr 24) > 8 && (pixel shr 16 and 0xFF) <= 200
 }

@@ -59,29 +59,9 @@ final class OperationActivityTests: XCTestCase {
         XCTAssertFalse(OperationPresentation.showsRunningClock(state(error: "boom")))
     }
 
-    // MARK: - The bar
-
-    func testTheBarAppearsOnlyForARunThatCountsItsSteps() {
-        XCTAssertNil(OperationPresentation.barValue(state(progress: "Pulling images")),
-                     "a run with nothing to count drew a bar")
-        XCTAssertEqual(OperationPresentation.barValue(state(fraction: 0.4)), 0.4)
-    }
-
-    /// The bar goes at the end, both ways
-    func testTheBarGoesWhenTheRunEnds() {
-        XCTAssertNil(OperationPresentation.barValue(state(finished: true, fraction: 1)))
-        XCTAssertNil(OperationPresentation.barValue(state(error: "boom", fraction: 0.6)))
-    }
-
-    func testTheBarIsClampedAndRefusesNonsense() {
-        XCTAssertEqual(OperationPresentation.barValue(state(fraction: 1.4)), 1)
-        XCTAssertEqual(OperationPresentation.barValue(state(fraction: -0.2)), 0)
-        XCTAssertNil(OperationPresentation.barValue(state(fraction: .nan)))
-        XCTAssertEqual(OperationPresentation.barValue(state(fraction: .infinity)), nil)
-    }
-
     // MARK: - The card nobody can update
 
+    @MainActor
     func testARunningCardIsGivenADateAfterWhichItIsStale() throws {
         let code = try codeWithoutComments("App/Services/OperationActivities.swift")
         XCTAssertTrue(code.contains("staleDate: staleDate"),
@@ -96,12 +76,13 @@ final class OperationActivityTests: XCTestCase {
                           "long enough that the card this exists for never reaches it")
     }
 
-    /// And the widget has to say so
-    func testTheWidgetSaysWhyACardStopped() throws {
+    func testAQuietCardSaysWhenItLastMoved() throws {
         let widget = try codeWithoutComments("Widgets/Extension/OperationLiveActivity.swift")
-        XCTAssertTrue(widget.contains("context.isStale"),
-                      "the lock screen ignores staleness, so the sentence is never shown")
-        XCTAssertFalse(OperationPresentation.staleNote().isEmpty)
+        XCTAssertTrue(widget.contains("context.isStale"))
+        XCTAssertTrue(widget.contains("LastUpdateLine"))
+        XCTAssertFalse(widget.contains("Open the app"))
+        let state = OperationActivityAttributes.ContentState(progressText: "Pulling", isFinished: false)
+        XCTAssertNotNil(state.updatedAt, "the app stamps every state it sends")
     }
 
     // MARK: - Every live process, not one of four

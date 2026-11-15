@@ -1,5 +1,11 @@
 package com.skaymer.gryonixnexus.app.ui
 
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.outlined.Download
+import com.skaymer.gryonixnexus.app.servers.PendingRules
+import com.skaymer.gryonixnexus.app.ui.design.ApplyPendingBar
+import com.skaymer.gryonixnexus.app.ui.design.ConfirmAlert
+import com.skaymer.gryonixnexus.app.GryonixApplication
 import com.skaymer.gryonixnexus.servercontrol.CommandCatalog.Backups.Schedule
 import android.text.format.Formatter
 import androidx.compose.runtime.mutableStateOf
@@ -9,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.skaymer.gryonixnexus.app.ui.design.AlertAction
 import com.skaymer.gryonixnexus.app.ui.design.IOSAlert
 import com.skaymer.gryonixnexus.app.ui.design.ValueRow
+import com.skaymer.gryonixnexus.app.ui.design.WheelRow
 import com.skaymer.gryonixnexus.catalog.storage.SwapPlan
 import com.skaymer.gryonixnexus.servercontrol.SystemUpdateStatus
 import androidx.compose.foundation.layout.Row
@@ -57,9 +64,10 @@ fun SystemUpdateCard(onOpen: () -> Unit, showDivider: Boolean = true) {
 @Composable
 fun SystemUpdateDialog(deployment: Deployment, model: SystemUpdateViewModel, onClose: () -> Unit) {
     val hosts by model.hosts.collectAsState()
+    val actions = (LocalContext.current.applicationContext as GryonixApplication).hostActions
     LaunchedEffect(deployment.id) { model.load(deployment) }
     IOSSheet(
-        title = stringResource(R.string.system_update_title),
+        title = stringResource(R.string.general_system),
         onClose = onClose,
         closeLabel = stringResource(R.string.close),
     ) {
@@ -73,7 +81,7 @@ fun SystemUpdateDialog(deployment: Deployment, model: SystemUpdateViewModel, onC
                 onStart = { model.start(deployment, node.sshHost) },
                 onAtStart = { part, on -> model.setAtStart(deployment, node.sshHost, part, on) },
                 onAtStop = { part, on -> model.setAtStop(deployment, node.sshHost, part, on) },
-                onSwap = { size -> model.setSwap(deployment, node.sshHost, size) },
+                onReboot = { actions.reboot(deployment, node.sshHost) },
             )
             HostScheduleSection(hosts[node.sshHost]) { schedule ->
                 model.setSchedule(deployment, node.sshHost, schedule)
@@ -99,18 +107,18 @@ private fun HostScheduleSection(state: HostSystemUpdate?, onSave: (Schedule) -> 
             checked = current.isOn,
             onCheckedChange = { on -> draft = if (on) Schedule.Days(1, 4, 0) else Schedule.Off },
             enabled = !state.busy,
-            showDivider = current.isOn || current != saved,
+            showDivider = current.isOn,
         )
         if (current.isOn) ScheduleFieldRows(current, defaultHour = 4) { draft = it }
-        if (current != saved) {
-            ActionRow(
-                text = stringResource(R.string.updates_save),
-                enabled = !state.busy,
-                onClick = { onSave(current) },
-                showDivider = false,
-            )
-        }
     }
+    val asked = draft
+    ApplyPendingBar(
+        visible = saved != null && PendingRules.waits(asked, saved, busy = state.busy),
+        apply = stringResource(R.string.updates_save),
+        cancel = stringResource(R.string.pending_changes_cancel),
+        onApply = { asked?.let(onSave) },
+        onRevert = { draft = saved },
+    )
 }
 
 @Composable
@@ -122,7 +130,7 @@ private fun HostSystemSection(
     onStart: () -> Unit,
     onAtStart: (SystemUpdate.Part, Boolean) -> Unit,
     onAtStop: (SystemUpdate.Part, Boolean) -> Unit,
-    onSwap: (Int?) -> Unit,
+    onReboot: () -> Unit,
 ) {
     val status = state.status
     GroupedSection(header = label, footer = state.errorMessage ?: footer) {
@@ -135,41 +143,82 @@ private fun HostSystemSection(
             text = stringResource(R.string.system_update_run),
             enabled = status != null && !status.isRunning && !state.busy,
             onClick = onStart,
+            leading = {
+                Icon(androidx.compose.material.icons.Icons.Outlined.Download, null, tint = Gryonix.colors.accent)
+            },
         )
         if (status != null && (status.isRunning || (status.exitCode ?: 0) != 0)) {
             RunLog(status.log.takeLast(12).joinToString("\n"))
         }
-        if (status?.needsRestart == true) Muted(stringResource(R.string.system_update_restart))
-        SwapLine(status, enabled = status != null && !state.busy, onSwap = onSwap)
+        if (status?.needsRestart == true) RestartRows(onReboot)
+        UpdateSwitches(state, onAtStart, onAtStop)
+    }
+}
+
+/** System switches first, then the apps */
+@Composable
+private fun UpdateSwitches(
+    state: HostSystemUpdate,
+    onAtStart: (SystemUpdate.Part, Boolean) -> Unit,
+    onAtStop: (SystemUpdate.Part, Boolean) -> Unit,
+) {
+    val status = state.status
+    val enabled = status != null && !state.busy
+    val offersAtStop = status?.offersAtStop == true
+    ToggleRow(
+        title = stringResource(R.string.system_update_at_start_system),
+        checked = status?.systemAtStart ?: false,
+        onCheckedChange = { onAtStart(SystemUpdate.Part.SYSTEM, it) },
+        enabled = enabled,
+    )
+    if (offersAtStop) {
         ToggleRow(
-            title = stringResource(R.string.system_update_at_start_system),
-            checked = status?.systemAtStart ?: false,
-            onCheckedChange = { onAtStart(SystemUpdate.Part.SYSTEM, it) },
-            enabled = status != null && !state.busy,
+            title = stringResource(R.string.system_update_at_stop_system),
+            checked = status?.systemAtStop ?: false,
+            onCheckedChange = { onAtStop(SystemUpdate.Part.SYSTEM, it) },
+            enabled = enabled,
         )
-        val offersAtStop = status?.offersAtStop == true
+    }
+    ToggleRow(
+        title = stringResource(R.string.system_update_at_start_apps),
+        checked = status?.appsAtStart ?: false,
+        onCheckedChange = { onAtStart(SystemUpdate.Part.APPS, it) },
+        enabled = enabled,
+        showDivider = offersAtStop,
+    )
+    if (offersAtStop) {
         ToggleRow(
-            title = stringResource(R.string.system_update_at_start_apps),
-            checked = status?.appsAtStart ?: false,
-            onCheckedChange = { onAtStart(SystemUpdate.Part.APPS, it) },
-            enabled = status != null && !state.busy,
-            showDivider = offersAtStop,
+            title = stringResource(R.string.system_update_at_stop_apps),
+            checked = status?.appsAtStop ?: false,
+            onCheckedChange = { onAtStop(SystemUpdate.Part.APPS, it) },
+            enabled = enabled,
+            showDivider = false,
         )
-        if (offersAtStop) {
-            ToggleRow(
-                title = stringResource(R.string.system_update_at_stop_system),
-                checked = status?.systemAtStop ?: false,
-                onCheckedChange = { onAtStop(SystemUpdate.Part.SYSTEM, it) },
-                enabled = !state.busy,
-            )
-            ToggleRow(
-                title = stringResource(R.string.system_update_at_stop_apps),
-                checked = status?.appsAtStop ?: false,
-                onCheckedChange = { onAtStop(SystemUpdate.Part.APPS, it) },
-                enabled = !state.busy,
-                showDivider = false,
-            )
-        }
+    }
+}
+
+/** The notice, and the switch that restarts the machine */
+@Composable
+private fun RestartRows(onReboot: () -> Unit) {
+    var confirming by remember { mutableStateOf(false) }
+    Muted(stringResource(R.string.system_update_restart))
+    ToggleRow(
+        title = stringResource(R.string.system_reboot_to_finish),
+        checked = confirming,
+        onCheckedChange = { if (it) confirming = true },
+    )
+    if (confirming) {
+        ConfirmAlert(
+            title = stringResource(R.string.actions_reboot_title),
+            message = stringResource(R.string.actions_reboot_message),
+            confirm = stringResource(R.string.actions_reboot_confirm),
+            destructive = true,
+            onConfirm = {
+                confirming = false
+                onReboot()
+            },
+            onCancel = { confirming = false },
+        )
     }
 }
 
@@ -204,26 +253,28 @@ private fun Muted(text: String) {
     )
 }
 
-/** The machine's swap, tapped to pick a new size */
+/** The machine's swap size in whole gigabytes, zero when none */
+fun savedSwapGB(status: SystemUpdateStatus?): Int {
+    val bytes = status?.swapBytes ?: return 0
+    return if (bytes > 0) maxOf(1, Math.round(bytes / 1_073_741_824.0).toInt()) else 0
+}
+
+/** The machine's swap, picked on a wheel */
 @Composable
-private fun SwapLine(status: SystemUpdateStatus?, enabled: Boolean, onSwap: (Int?) -> Unit) {
-    var asking by remember { mutableStateOf(false) }
-    var custom by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-    val value = status?.swapBytes?.takeIf { it > 0 }?.let { Formatter.formatShortFileSize(context, it) }
-        ?: stringResource(R.string.swap_none)
-    ValueRow(stringResource(R.string.storage_swap), value, onClick = if (enabled) ({ asking = true }) else null)
-    if (asking) {
-        IOSAlert(
-            title = stringResource(R.string.swap_title),
-            message = stringResource(R.string.swap_note),
-            onDismiss = { asking = false },
-            actions = SwapPlan.SIZES.map { size ->
-                AlertAction(stringResource(R.string.swap_size, size.toString())) { asking = false; onSwap(size) }
-            } + AlertAction(stringResource(R.string.swap_other)) { asking = false; custom = true } +
-                AlertAction(stringResource(R.string.swap_off), destructive = true) { asking = false; onSwap(null) } +
-                AlertAction(stringResource(R.string.close)) { asking = false },
-        )
+fun SwapLine(status: SystemUpdateStatus?, enabled: Boolean, draft: Int?, onDraft: (Int) -> Unit) {
+    val current = draft ?: savedSwapGB(status)
+    val sizes = if (current in SwapPlan.WHEEL) SwapPlan.WHEEL else (SwapPlan.WHEEL + current).sorted()
+    val none = stringResource(R.string.swap_none)
+    val gigabytes = stringResource(R.string.swap_size, "%d")
+    if (!enabled) {
+        ValueRow(stringResource(R.string.storage_swap), if (current == 0) none else gigabytes.format(current), null)
+        return
     }
-    if (custom) CustomSwapSizeAlert(onSet = { onSwap(it) }, onDismiss = { custom = false })
+    WheelRow(
+        title = stringResource(R.string.storage_swap),
+        choices = sizes.map { if (it == 0) none else gigabytes.format(it) },
+        selected = sizes.indexOf(current),
+        onSelect = { onDraft(sizes[it]) },
+        showDivider = false,
+    )
 }

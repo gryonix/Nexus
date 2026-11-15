@@ -26,16 +26,16 @@ struct AddMachineSheet: View {
                     TextField("Address", text: $address)
                         .textContentType(.URL)
                         .autocorrectionDisabled()
-                        #if os(iOS)
+                        #if os(iOS) || os(tvOS)
                         .textInputAutocapitalization(.never)
                         #endif
                     TextField("SSH port", text: $port)
-                        #if os(iOS)
+                        #if os(iOS) || os(tvOS)
                         .keyboardType(.numberPad)
                         #endif
                     TextField("SSH user", text: $user)
                         .autocorrectionDisabled()
-                        #if os(iOS)
+                        #if os(iOS) || os(tvOS)
                         .textInputAutocapitalization(.never)
                         #endif
                 } header: {
@@ -81,7 +81,7 @@ struct AddMachineSheet: View {
                     InfoSectionHeader("Check", note: "A server is added only after it answers, so the deployment never holds a machine the app cannot reach.")
                 }
             }
-            .navigationTitle(Text("Add a server"))
+            .screenTitle(Text("Add a server"))
             .raisedNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

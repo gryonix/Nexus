@@ -11,7 +11,7 @@ struct GlassCardSurface: ViewModifier {
     @Environment(\.glassCardFloating) private var floating
 
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, macOS 26.0, *), AppChrome.usesGlass {
+        if #available(iOS 26.0, macOS 26.0, tvOS 26.0, *), AppChrome.usesGlass {
             content
                 .glassEffect(glass, in: shape)
                 .overlay {
@@ -36,7 +36,7 @@ struct GlassCardSurface: ViewModifier {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
     }
 
-    @available(iOS 26.0, macOS 26.0, *)
+    @available(iOS 26.0, macOS 26.0, tvOS 26.0, *)
     private var glass: Glass {
         let base = Glass.regular.interactive()
         guard let tint else { return base }
@@ -60,7 +60,7 @@ extension View {
     func glassCardContextMenu<Items: View>(
         @ViewBuilder menuItems: () -> Items
     ) -> some View {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         contentShape(.contextMenuPreview,
                      RoundedRectangle(cornerRadius: GlassCardSurface.defaultCornerRadius,
                                       style: .continuous))
@@ -84,7 +84,7 @@ extension EnvironmentValues {
 
 enum GlassPalette {
     static var cardBase: Color {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         Color(.secondarySystemGroupedBackground)
         #else
         Color(nsColor: .controlBackgroundColor)

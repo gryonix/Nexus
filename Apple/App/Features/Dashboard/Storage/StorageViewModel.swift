@@ -115,7 +115,7 @@ final class StorageViewModel: ObservableObject {
     func run(_ step: StorageStep) async {
         island?.finish("")
         island = IslandRun(title: step.title, serverName: deployment.name,
-                           progressText: UIL10n.string("Working on the disks…"), deployment: deployment)
+                           progressText: UIL10n.string("Working on the disks…"))
         _ = await output(of: step)
         await load()
         if isBusy, stepFailure == nil {

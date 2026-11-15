@@ -1,6 +1,7 @@
 package com.skaymer.gryonixnexus.app.secrets
 
 import com.skaymer.gryonixnexus.servercontrol.DeploymentNode
+import com.skaymer.gryonixnexus.servercontrol.HomePathChoice
 import com.skaymer.gryonixnexus.servercontrol.HostEndpoint
 import com.skaymer.gryonixnexus.servercontrol.HostKeyPinAccounts
 import com.skaymer.gryonixnexus.servercontrol.NodeCapability
@@ -15,6 +16,16 @@ class DeploymentSecretsTests {
     private val id = "9F1C4C2E-0000-0000-0000-000000000001"
     private val store = InMemorySecretStore()
     private val secrets = DeploymentSecrets(store, id)
+
+    @Test
+    fun `the path choice is kept per server and defaults to automatic`() {
+        assertEquals(HomePathChoice.AUTOMATIC, secrets.homePath())
+        secrets.setHomePath(HomePathChoice.LOCAL_NETWORK)
+        assertEquals(HomePathChoice.LOCAL_NETWORK, secrets.homePath())
+        assertEquals(HomePathChoice.AUTOMATIC, DeploymentSecrets(store, "other").homePath())
+        secrets.setHomePath(HomePathChoice.AUTOMATIC)
+        assertNull(store.items["home-path-$id"])
+    }
 
     /** The literal name, because the literal name is the contract */
     @Test

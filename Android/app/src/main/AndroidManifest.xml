@@ -8,14 +8,27 @@
          multicast permission remembered only after a host stops answering. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <!-- The device's own lock in front of the passwords this app holds. Without
          it `BiometricPrompt.authenticate` throws a SecurityException the moment
          it is called — which nothing but running the app can show. -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
+    <!-- Moving servers between devices: the camera reads the QR code,
+         Bluetooth carries the data when there is no shared Wi-Fi. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
 
     <!-- `taskAffinity=""` gives every activity here its own unnamed task.
          The default affinity is the package name, and any app that declares
@@ -28,7 +41,7 @@
         android:taskAffinity=""
         android:allowBackup="false"
         android:networkSecurityConfig="@xml/network_security_config"
-        android:label="@string/app_name"
+        android:label="${appLabel}"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
@@ -52,6 +65,9 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity-alias>
         <activity-alias
             android:name=".app.LauncherRed"
@@ -64,6 +80,9 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity-alias>
         <activity-alias
             android:name=".app.LauncherOrange"
@@ -76,6 +95,9 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity-alias>
         <activity-alias
             android:name=".app.LauncherYellow"
@@ -88,6 +110,9 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity-alias>
         <activity-alias
             android:name=".app.LauncherGreen"
@@ -100,6 +125,9 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity-alias>
         <activity-alias
             android:name=".app.LauncherTeal"
@@ -112,6 +140,9 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity-alias>
         <activity-alias
             android:name=".app.LauncherPurple"
@@ -124,6 +155,9 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity-alias>
         <activity-alias
             android:name=".app.LauncherPink"
@@ -136,6 +170,9 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity-alias>
         <activity-alias
             android:name=".app.LauncherGraphite"
@@ -148,6 +185,9 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity-alias>
         <activity-alias
             android:name=".app.LauncherBlack"
@@ -160,6 +200,9 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity-alias>
         <activity-alias
             android:name=".app.LauncherIndigo"
@@ -172,6 +215,9 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity-alias>
         <activity-alias
             android:name=".app.LauncherBrown"
@@ -184,12 +230,135 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity-alias>
         <!-- Shadowsocks and Xray Reality: the Xray core plus an lwIP stack.
              A second VpnService beside the WireGuard backend's, which comes
              from its AAR — Android runs one VPN at a time, so only one of them
              is ever up, and keeping them apart means a bug in the new one
              cannot take the protocol that already works down with it. -->
+        <!-- The server overview in the quick settings panel. -->
+        <service
+            android:name=".app.widgets.ServerStatusTileService"
+            android:exported="true"
+            android:icon="@drawable/tab_icon_globe"
+            android:label="@string/tile_server_status"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <!-- Play and pause for the audio hub in the quick settings panel. -->
+        <service
+            android:name=".app.widgets.AudioHubTileService"
+            android:exported="true"
+            android:icon="@drawable/tile_icon_music"
+            android:label="@string/tile_audio_hub"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <!-- The VPN switch in the quick settings panel. -->
+        <service
+            android:name=".app.widgets.VpnTileService"
+            android:exported="true"
+            android:icon="@drawable/tab_icon_globe"
+            android:label="@string/widget_vpn"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <activity
+            android:name=".app.widgets.WidgetServerPickerActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.GryonixNexus">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+        <!-- Home-screen widgets, drawn from the snapshot the app writes. -->
+        <receiver
+            android:name=".app.widgets.FleetHealthReceiver"
+            android:exported="true"
+            android:label="@string/widget_fleet">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_fleet" />
+        </receiver>
+        <receiver
+            android:name=".app.widgets.SecurityReceiver"
+            android:exported="true"
+            android:label="@string/widget_security">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_security" />
+        </receiver>
+        <receiver
+            android:name=".app.widgets.BackupsReceiver"
+            android:exported="true"
+            android:label="@string/widget_backups">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_backups" />
+        </receiver>
+        <receiver
+            android:name=".app.widgets.UpdatesReceiver"
+            android:exported="true"
+            android:label="@string/widget_updates">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_updates" />
+        </receiver>
+        <receiver
+            android:name=".app.widgets.ServerLoadReceiver"
+            android:exported="true"
+            android:label="@string/widget_load">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_load" />
+        </receiver>
+        <receiver
+            android:name=".app.widgets.VPNStatusReceiver"
+            android:exported="true"
+            android:label="@string/widget_vpn">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_vpn" />
+        </receiver>
+        <receiver
+            android:name=".app.widgets.DevicesReceiver"
+            android:exported="true"
+            android:label="@string/widget_devices">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_devices" />
+        </receiver>
         <receiver
             android:name=".app.notify.OperationRetryReceiver"
             android:exported="false" />
@@ -200,7 +369,7 @@
             android:name=".app.push.AlertActionReceiver"
             android:exported="false" />
         <service
-            android:name=".vpn.XrayVpnService"
+            android:name=".app.vpn.XrayVpnService"
             android:exported="false"
             android:permission="android.permission.BIND_VPN_SERVICE">
             <intent-filter>
@@ -208,7 +377,11 @@
             </intent-filter>
         </service>
         <service
-            android:name=".push.GryonixMessagingService"
+            android:name=".app.notify.OperationKeepAlive"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+        <service
+            android:name=".app.push.GryonixMessagingService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />

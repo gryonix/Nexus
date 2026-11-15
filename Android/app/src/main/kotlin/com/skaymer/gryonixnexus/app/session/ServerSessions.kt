@@ -1,5 +1,6 @@
 package com.skaymer.gryonixnexus.app.session
 
+import com.skaymer.gryonixnexus.app.servers.DemoDeployments
 import com.skaymer.gryonixnexus.app.secrets.DeploymentSecrets
 import com.skaymer.gryonixnexus.app.secrets.SecretStore
 import com.skaymer.gryonixnexus.servercontrol.Deployment
@@ -9,6 +10,10 @@ import com.skaymer.gryonixnexus.servercontrol.SSHHostID
 import com.skaymer.gryonixnexus.transport.SSHClients
 import com.skaymer.gryonixnexus.transport.SSHConnectionSettings
 import com.skaymer.gryonixnexus.transport.SSHJCommandRunner
+import com.skaymer.gryonixnexus.transport.SSHJFileBrowser
+import com.skaymer.gryonixnexus.servercontrol.RemoteFileBrowser
+import com.skaymer.gryonixnexus.servercontrol.SSHCommandRunner
+import com.skaymer.gryonixnexus.app.servers.demo.DemoCommandRunner
 import com.skaymer.gryonixnexus.transport.TOFUHostKeyVerifier
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -35,18 +40,22 @@ class ServerSessions(
         /** The machines and where to reach them */
         val machines: Map<SSHHostID, HostEndpoint>,
         val usesPasswordAuth: Boolean,
+        val homeLANAddress: String?,
+        val homePath: com.skaymer.gryonixnexus.servercontrol.HomePathChoice,
     ) {
-        constructor(deployment: Deployment) : this(
+        constructor(deployment: Deployment, secrets: DeploymentSecrets) : this(
             host = deployment.entry.host,
             port = deployment.entry.port,
             user = deployment.entry.user,
             homeWGAddress = deployment.homeWGAddress,
             machines = deployment.nodes.associate { it.sshHost to it.endpoint },
             usesPasswordAuth = deployment.usesPasswordAuth,
+            homeLANAddress = secrets.homeAddress(),
+            homePath = secrets.homePath(),
         )
     }
 
-    private class Live(val fingerprint: Fingerprint, val runner: SSHJCommandRunner)
+    private class Live(val fingerprint: Fingerprint, val runner: SSHCommandRunner)
 
     private val live = mutableMapOf<String, Live>()
     private val lock = Mutex()
@@ -70,11 +79,14 @@ class ServerSessions(
             vpsHost = deployment.entry.host,
             vpsPort = deployment.entry.port,
             username = deployment.entry.user,
+            homeUsername = deployment.effectiveHomeUser,
             homeHost = deployment.homeWGAddress.orEmpty(),
             privateKeySeed = secrets.identitySeed() ?: ByteArray(0),
             passwords = passwords,
             pinnedVPSHostKey = secrets.hostKeyPin(DeploymentNode.LegacySlot.VPS),
             pinnedHomeHostKey = secrets.hostKeyPin(DeploymentNode.LegacySlot.HOME),
+            homeLANHost = secrets.homeAddress().takeIf { deployment.hasHomeHost },
+            homePath = secrets.homePath(),
             additionalNodes = SSHConnectionSettings.additionalNodes(deployment) { host ->
                 when (val kind = host.kind) {
                     is SSHHostID.Kind.Slot -> secrets.hostKeyPin(kind.slot)
@@ -85,8 +97,8 @@ class ServerSessions(
     }
 
     /** A runner for this deployment */
-    suspend fun runner(deployment: Deployment): SSHJCommandRunner = lock.withLock {
-        val fingerprint = Fingerprint(deployment)
+    suspend fun runner(deployment: Deployment): SSHCommandRunner = lock.withLock {
+        val fingerprint = Fingerprint(deployment, DeploymentSecrets(store, deployment.id))
         live[deployment.id]?.let { existing ->
             if (existing.fingerprint == fingerprint) return@withLock existing.runner
             existing.runner.disconnect()
@@ -113,9 +125,10 @@ class ServerSessions(
     }
 
     /** A session of its OWN, kept by nobody */
-    fun detached(deployment: Deployment): SSHJCommandRunner = build(deployment)
+    fun detached(deployment: Deployment): SSHCommandRunner = build(deployment)
 
-    private fun build(deployment: Deployment): SSHJCommandRunner {
+    private fun build(deployment: Deployment): SSHCommandRunner {
+        if (DemoDeployments.isDemoID(deployment.id)) return DemoCommandRunner(deployment)
         com.skaymer.gryonixnexus.app.licensing.LicenseGate.check(deployment)
         val settings = settings(deployment)
         val secrets = DeploymentSecrets(store, deployment.id)
@@ -127,7 +140,12 @@ class ServerSessions(
                     is SSHHostID.Kind.Node -> secrets.setHostKeyPin(key, kind.id)
                 }
             },
-            connect = { address, host -> dial(address, host, settings, deployment, secrets) }
+            connect = { address, host -> dial(address, host, settings, deployment, secrets) },
+            connectThrough = { address, host, through ->
+                withContext(Dispatchers.IO) {
+                    dialDirect(address.host, address.port, host, settings, deployment, secrets, via = through)
+                }
+            },
         )
     }
 
@@ -138,6 +156,9 @@ class ServerSessions(
         deployment: Deployment,
         secrets: DeploymentSecrets,
     ): SSHClient = withContext(Dispatchers.IO) {
+        if (DemoDeployments.isDemoID(deployment.id)) throw java.net.ConnectException(
+            com.skaymer.gryonixnexus.app.notify.OperationNotices.text(com.skaymer.gryonixnexus.R.string.demo_server_note),
+        )
         val access = settingsStore?.let {
             com.skaymer.gryonixnexus.app.servers.ServerAccessStore.options(it, deployment.id)
         }
@@ -392,3 +413,7 @@ class ServerSessions(
         }
     }
 }
+
+/** The file browser a session offers, demo machines included */
+fun fileBrowser(runner: SSHCommandRunner): RemoteFileBrowser =
+    runner as? RemoteFileBrowser ?: SSHJFileBrowser(runner as SSHJCommandRunner)

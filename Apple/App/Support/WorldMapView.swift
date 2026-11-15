@@ -30,9 +30,11 @@ struct WorldMapView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .background { sizeReader }
         .contentShape(Rectangle())
+        #if !os(tvOS)
         .onTapGesture(count: 2) { withAnimation(.snappy) { viewport.reset(in: cardSize) } }
         .onTapGesture(coordinateSpace: .local) { toggleCountry(at: $0) }
         .gesture(magnify(in: cardSize).simultaneously(with: drag(in: cardSize)))
+        #endif
         .overlay(alignment: .topTrailing) { zoomOutButton }
         .overlay(alignment: .bottomTrailing) { expandButton }
         .onChange(of: selected) { old, new in record(from: old, to: new) }
@@ -90,6 +92,7 @@ struct WorldMapView: View {
         }
     }
 
+    #if !os(tvOS)
     private func magnify(in size: CGSize) -> some Gesture {
         MagnifyGesture()
             .onChanged { value in
@@ -116,6 +119,7 @@ struct WorldMapView: View {
             }
             .onEnded { _ in gestureBase = nil }
     }
+    #endif
 
     /// Panning only makes sense zoomed in
     private var canPan: Bool { viewport.isZoomedIn }
@@ -294,7 +298,7 @@ extension WorldMapView {
         Color.primary.opacity(scheme == .dark ? 0.3 : 0.14)
     }
 
-    #if os(iOS)
+    #if os(iOS) || os(tvOS)
     static let plate = Color(.secondarySystemGroupedBackground)
     static let pageBackground = Color(.systemGroupedBackground)
     #else

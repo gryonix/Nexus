@@ -76,6 +76,53 @@ public struct AgentAutoBackupOperations: AutoBackupManaging {
         _ = try await mapping { try await client.setBackupDrives(request) }
     }
 
+    // MARK: - Parts
+
+    public func loadParts() async throws -> BackupPartsState {
+        let policy = try await mapping { try await client.getBackupSchedule() }
+        return Self.parts(from: policy)
+    }
+
+    public func saveParts(_ change: BackupPartsChange) async throws {
+        var wire = change.shared.map(Self.wire) ?? Gryonixnexusd_V1_BackupPartChoice()
+        wire.services = change.services.mapValues(Self.wire)
+        let request = wire
+        _ = try await mapping { try await client.setBackupParts(request) }
+    }
+
+    /// The policy's parts half; an older agent sends none
+    static func parts(from policy: Gryonixnexusd_V1_BackupSchedulePolicy) -> BackupPartsState {
+        guard policy.hasParts else { return BackupPartsState(supported: false) }
+        return BackupPartsState(choice: choice(policy.parts), services: policy.parts.services.mapValues(choice))
+    }
+
+    private static func choice(_ wire: Gryonixnexusd_V1_BackupPartChoice) -> BackupPartChoice {
+        BackupPartChoice(regular: parts(wire.regular), beforeUpdate: parts(wire.beforeUpdate))
+    }
+
+    private static func wire(_ choice: BackupPartChoice) -> Gryonixnexusd_V1_BackupPartChoice {
+        var wire = Gryonixnexusd_V1_BackupPartChoice()
+        wire.regular = Self.wire(choice.regular)
+        wire.beforeUpdate = Self.wire(choice.beforeUpdate)
+        return wire
+    }
+
+    private static func parts(_ wire: Gryonixnexusd_V1_BackupParts) -> Set<BackupPart> {
+        var parts: Set<BackupPart> = []
+        if wire.files { parts.insert(.files) }
+        if wire.settings { parts.insert(.settings) }
+        if wire.databases { parts.insert(.databases) }
+        return parts
+    }
+
+    private static func wire(_ parts: Set<BackupPart>) -> Gryonixnexusd_V1_BackupParts {
+        var wire = Gryonixnexusd_V1_BackupParts()
+        wire.files = parts.contains(.files)
+        wire.settings = parts.contains(.settings)
+        wire.databases = parts.contains(.databases)
+        return wire
+    }
+
     /// The policy's drive half; an older agent sends none
     static func drives(from policy: Gryonixnexusd_V1_BackupSchedulePolicy) -> BackupDrivesState {
         guard policy.hasDrives else { return BackupDrivesState(supported: false) }

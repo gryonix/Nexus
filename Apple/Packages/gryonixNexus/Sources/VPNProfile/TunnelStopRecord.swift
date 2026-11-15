@@ -9,9 +9,7 @@ public struct TunnelStopRecord {
     let url: URL?
 
     public init(groupIdentifier: String = AppGroup.identifier) {
-        url = FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: groupIdentifier)?
-            .appendingPathComponent(Self.fileName)
+        url = AppGroup.writableURL(groupIdentifier)?.appendingPathComponent(Self.fileName)
     }
 
     init(url: URL?) {

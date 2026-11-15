@@ -4,8 +4,6 @@ import SwiftUI
 /// The order the server's DNS relay asks resolvers in
 struct VPNDNSPrioritySection: View {
     @ObservedObject var viewModel: DashboardViewModel
-    @State private var typing = false
-    @State private var typed = ""
 
     private var priority: VPNDNSPriority? { viewModel.vpnDNSPriority }
     private var local: LocalDNS { LocalDNS(viewModel.vpnDNS) }
@@ -16,18 +14,20 @@ struct VPNDNSPrioritySection: View {
                 ForEach(Array(priority.resolvers.enumerated()), id: \.element) { index, entry in
                     row(index: index, entry: entry, in: priority)
                 }
-                if VPNDNSPriorityEditing.canAdd(to: priority.resolvers) { addMenu(priority) }
+                if VPNDNSPriorityEditing.canAdd(to: priority.resolvers) {
+                    addMenu(priority)
+                    addressRow(priority.resolvers)
+                }
             } header: {
                 InfoSectionHeader("DNS order", note: "Devices that use your server's DNS ask these in order. When one does not answer, the next one does — so the internet keeps working while your own resolver is down.")
             } footer: {
-                Text("A resolver that stops answering waits at the end of the order for 30 seconds.")
-            }
-            .alert("Resolver address", isPresented: $typing) {
-                TextField(text: $typed) { Text(verbatim: "1.1.1.1") }
-                Button("Add") { addTyped() }
-                Button("Cancel", role: .cancel) { typed = "" }
-            } message: {
-                Text("An IPv4 or IPv6 address of a DNS server.")
+                VStack(alignment: .leading, spacing: 6) {
+                    if local.isOffered, priority.resolvers.first != VPNDNSPriority.local {
+                        Text("Your server's DNS is not first: devices ask the DNS chosen above before it.")
+                            .foregroundStyle(.orange)
+                    }
+                    Text("A resolver that stops answering waits at the end of the order for 30 seconds.")
+                }
             }
         }
     }
@@ -39,24 +39,32 @@ struct VPNDNSPrioritySection: View {
                 .foregroundStyle(.secondary)
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: VPNDNSPriorityEditing.name(of: entry, local: local))
+                if index == 0 {
+                    Text("Chosen above, always first").font(.caption).foregroundStyle(.secondary)
+                }
                 if !priority.isReachable(at: index) {
                     Text("Not answering").font(.caption).foregroundStyle(.orange)
                 }
             }
             Spacer()
-            rowMenu(index: index, order: priority.resolvers)
+            if index == 0 {
+                Image(systemName: "lock.fill")
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel(Text("Chosen above, always first"))
+            } else {
+                rowMenu(index: index, order: priority.resolvers)
+            }
         }
     }
 
     private func rowMenu(index: Int, order: [String]) -> some View {
         Menu {
             Button("Move up") { save(VPNDNSPriorityEditing.moveUp(index, in: order)) }
-                .disabled(index == 0)
+                .disabled(!VPNDNSPriorityEditing.canMoveUp(index))
             Button("Move down") { save(VPNDNSPriorityEditing.moveDown(index, in: order)) }
-                .disabled(index == order.count - 1)
+                .disabled(!VPNDNSPriorityEditing.canMoveDown(index, in: order))
             Button("Remove", role: .destructive) { save(VPNDNSPriorityEditing.remove(index, from: order)) }
                 .dangerTint()
-                .disabled(order.count == 1)
         } label: {
             Image(systemName: "ellipsis.circle")
                 .accessibilityLabel(Text("Change the order"))
@@ -76,16 +84,19 @@ struct VPNDNSPrioritySection: View {
                     save(VPNDNSPriorityEditing.add(dns.addresses[0], to: priority.resolvers))
                 }
             }
-            Button("Other address…") { typing = true }
         } label: {
             Label("Add a resolver", systemImage: "plus.circle")
         }
     }
 
-    private func addTyped() {
-        defer { typed = "" }
-        guard let order = priority?.resolvers, let parsed = PublicDNS.parse(typed), parsed.count == 1 else { return }
-        save(VPNDNSPriorityEditing.add(parsed[0], to: order))
+    private func addressRow(_ order: [String]) -> some View {
+        PendingTextRow(id: "dns-resolver", title: "Resolver address", prompt: "1.1.1.1", saved: "",
+                       edits: viewModel.rowEdits, text: .apply, spokenName: false, clearsAfterApply: true,
+                       valid: { PublicDNS.parse($0)?.count == 1 }) { typed in
+            guard let parsed = PublicDNS.parse(typed), parsed.count == 1 else { return false }
+            await viewModel.setVPNDNSPriority(VPNDNSPriorityEditing.add(parsed[0], to: order))
+            return true
+        }
     }
 
     private func save(_ order: [String]) {

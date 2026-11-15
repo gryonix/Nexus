@@ -42,10 +42,7 @@ struct OperationLiveActivity: Widget {
                     OperationRunGlyph(state: context.state, diameter: diameter)
                 }
             } compactTrailing: {
-                if let percent = OperationPresentation.percentText(context.state) {
-                    CompactIslandPercent(text: percent,
-                                         tint: OperationPresentation.tint(outcome))
-                } else if OperationPresentation.showsRunningClock(context.state) {
+                if OperationPresentation.showsRunningClock(context.state) {
                     CompactIslandTimer(since: context.attributes.startedAt)
                 }
             } minimal: {
@@ -100,8 +97,6 @@ struct OperationLiveActivity: Widget {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
-            OperationBar(context: context, outcome: outcome)
-                .padding(.top, 2)
             if context.state.stopArmed == true, outcome == .running {
                 StopQuestion()
             }
@@ -109,11 +104,8 @@ struct OperationLiveActivity: Widget {
                 FailedCardActions(context: context)
                     .padding(.top, 4)
             }
-            if context.isStale, !context.state.isFinished {
-                Text(verbatim: OperationPresentation.staleNote())
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(2)
+            if context.isStale, !context.state.isFinished, let updatedAt = context.state.updatedAt {
+                LastUpdateLine(updatedAt: updatedAt)
             }
         }
         .padding()
@@ -124,18 +116,11 @@ private struct ExpandedIslandFigures: View {
     let attributes: OperationActivityAttributes
     let tint: Color
 
-    private var startedAt: Date { attributes.startedAt }
-
     var body: some View {
-        HStack(spacing: 6) {
-            Text(verbatim: OperationPresentation.stepText(state) ?? OperationPresentation.percentText(state) ?? "—")
-                .font(.caption.monospacedDigit().weight(.semibold))
+        if OperationPresentation.showsRunningClock(state) {
+            TunnelSessionTimer(since: attributes.startedAt, font: .caption.monospacedDigit().weight(.semibold))
                 .foregroundStyle(tint)
-                .lineLimit(1)
-            if OperationPresentation.showsRunningClock(state) {
-                TunnelSessionTimer(since: startedAt, font: .caption.monospacedDigit())
-                    .frame(width: OperationLiveActivity.expandedTimerWidth, alignment: .trailing)
-            }
+                .frame(width: OperationLiveActivity.expandedTimerWidth, alignment: .trailing)
         }
     }
 }
@@ -207,19 +192,6 @@ private struct FailedCardActions: View {
     }
 }
 
-/// The share of steps the server has finished
-private struct OperationBar: View {
-    let context: ActivityViewContext<OperationActivityAttributes>
-    let outcome: OperationPresentation.Outcome
-
-    var body: some View {
-        let tint = OperationPresentation.tint(outcome)
-        if let value = OperationPresentation.barValue(context.state) {
-            ProgressView(value: value).tint(tint)
-        }
-    }
-}
-
 /// The finished run's large mark
 private struct FinishedIslandGlyph: View {
     let outcome: OperationPresentation.Outcome
@@ -256,7 +228,7 @@ private struct FinishedIslandSummary: View {
     }
 }
 
-/// Server, current step and the bar under them
+/// Server and the current step
 private struct ExpandedIslandDetail: View {
     let context: ActivityViewContext<OperationActivityAttributes>
     let outcome: OperationPresentation.Outcome
@@ -270,15 +242,11 @@ private struct ExpandedIslandDetail: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
-            OperationBar(context: context, outcome: outcome)
             if context.state.stopArmed == true, outcome == .running {
                 StopQuestion()
             }
-            if context.isStale, !context.state.isFinished {
-                Text(verbatim: OperationPresentation.staleNote())
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(2)
+            if context.isStale, !context.state.isFinished, let updatedAt = context.state.updatedAt {
+                LastUpdateLine(updatedAt: updatedAt)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -335,6 +303,20 @@ private struct ExpandedIslandBottom: View {
             }
             .padding(.horizontal, OperationLiveActivity.islandInset)
         }
+    }
+}
+/// When a quiet card last moved, counting up by itself
+struct LastUpdateLine: View {
+    let updatedAt: Date
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text("Last update")
+            Text(updatedAt, style: .relative)
+        }
+        .font(.caption2)
+        .foregroundStyle(.tertiary)
+        .lineLimit(1)
     }
 }
 #endif

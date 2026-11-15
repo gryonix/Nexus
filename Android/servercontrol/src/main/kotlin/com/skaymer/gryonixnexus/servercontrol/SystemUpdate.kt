@@ -22,6 +22,8 @@ data class SystemUpdateStatus(
     val swapFileBytes: Long = 0,
     /** The system's own timer; null when the updater predates it */
     val schedule: CommandCatalog.Backups.Schedule? = null,
+    /** The host's reboot timer; null when the updater predates it */
+    val rebootSchedule: RebootSchedule? = null,
     val log: List<String> = emptyList(),
 ) {
     companion object {
@@ -48,10 +50,64 @@ data class SystemUpdateStatus(
                 swapBytes = fields["swap"]?.toLongOrNull() ?: 0,
                 swapFileBytes = fields["swapfile"]?.toLongOrNull() ?: 0,
                 schedule = fields["schedule"]?.let { CommandCatalog.Backups.Schedule.fromWrapperArgument(it) },
+                rebootSchedule = fields["reboot_schedule"]?.let { RebootSchedule.fromWrapperArgument(it) },
                 log = log,
             )
         }
     }
+}
+
+/** When the host restarts by itself */
+sealed class RebootSchedule {
+    abstract val wrapperArgument: String
+
+    /** Hour and minute of the restart, 04:00 when off */
+    fun timeOfDay(): Pair<Int, Int> = when (this) {
+        Off -> 4 to 0
+        is Daily -> hour to minute
+        is Weekly -> hour to minute
+    }
+
+    fun at(hour: Int, minute: Int): RebootSchedule = when (this) {
+        Off -> Off
+        is Daily -> copy(hour = hour, minute = minute)
+        is Weekly -> copy(hour = hour, minute = minute)
+    }
+
+    object Off : RebootSchedule() {
+        override val wrapperArgument = "off"
+    }
+
+    data class Daily(val hour: Int, val minute: Int) : RebootSchedule() {
+        override val wrapperArgument get() = "daily@${clock(hour, minute)}"
+    }
+
+    /** Weekday 1 is Monday, 7 is Sunday */
+    data class Weekly(val weekday: Int, val hour: Int, val minute: Int) : RebootSchedule() {
+        override val wrapperArgument get() = "weekly:$weekday@${clock(hour, minute)}"
+    }
+
+    companion object {
+        fun fromWrapperArgument(value: String): RebootSchedule? {
+            if (value == "off") return Off
+            val head = value.substringBefore('@')
+            val time = value.substringAfter('@', "").split(":").mapNotNull { it.toIntOrNull() }
+            if (time.size != 2 || time[0] !in 0..23 || time[1] !in 0..59) return null
+            if (head == "daily") return Daily(time[0], time[1])
+            val day = head.removePrefix("weekly:").toIntOrNull()
+            return if (head.startsWith("weekly:") && day != null && day in 1..7) Weekly(day, time[0], time[1]) else null
+        }
+
+        private fun clock(hour: Int, minute: Int) =
+            String.format(java.util.Locale.ROOT, "%02d:%02d", hour.coerceIn(0, 23), minute.coerceIn(0, 59))
+    }
+}
+
+/** What the agent accepts as a machine's host name */
+object HostNameRules {
+    fun isValid(name: String): Boolean =
+        name.length in 1..63 && !name.startsWith("-") && !name.endsWith("-") &&
+            name.all { it in 'a'..'z' || it in '0'..'9' || it == '-' }
 }
 
 /** Commands for the updater the agent puts on each host */
@@ -73,6 +129,9 @@ object SystemUpdate {
 
     fun scheduleCommand(schedule: CommandCatalog.Backups.Schedule): String =
         "sudo -n $SCRIPT_PATH schedule ${schedule.wrapperArgument}"
+
+    fun rebootScheduleCommand(schedule: RebootSchedule): String =
+        "sudo -n $SCRIPT_PATH reboot-schedule ${schedule.wrapperArgument}"
 
     /** A swap file of `sizeGB`, or none when null */
     fun swapCommand(sizeGB: Int?): String = "sudo -n $SCRIPT_PATH swap ${sizeGB?.toString() ?: "off"}"
@@ -107,6 +166,9 @@ class SystemUpdateOperations(private val runner: SSHCommandRunner) {
 
     suspend fun setSchedule(schedule: CommandCatalog.Backups.Schedule, host: SSHHostID): SystemUpdateStatus =
         parsed(SystemUpdate.scheduleCommand(schedule), host)
+
+    suspend fun setRebootSchedule(schedule: RebootSchedule, host: SSHHostID): SystemUpdateStatus =
+        parsed(SystemUpdate.rebootScheduleCommand(schedule), host)
 
     suspend fun setSwap(sizeGB: Int?, host: SSHHostID): SystemUpdateStatus =
         parsed(SystemUpdate.swapCommand(sizeGB), host)

@@ -2,6 +2,7 @@ package com.skaymer.gryonixnexus.catalog.services
 
 import com.skaymer.gryonixnexus.catalog.ArchiveBackupPlan
 import com.skaymer.gryonixnexus.catalog.BackupDatabase
+import com.skaymer.gryonixnexus.catalog.BackupPart
 import com.skaymer.gryonixnexus.catalog.BackupPlan
 import com.skaymer.gryonixnexus.catalog.BackupSpec
 import com.skaymer.gryonixnexus.catalog.BackupWrapperSpec
@@ -289,6 +290,7 @@ class SeafileService : ManagedService {
                 plan = BackupPlan.Archive(ArchiveBackupPlan(
                     composeProject = COMPOSE_PROJECT,
                     dataPath = data,
+                    dataPart = BackupPart.FILES,
                     databases = listOf(
                         BackupDatabase(BackupDatabase.Engine.MYSQL, "db",
                                        "ccnet_db.sql", "ccnet_db"),

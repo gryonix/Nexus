@@ -15,7 +15,7 @@ struct RunningProcessButton: View {
 
     private func button(_ action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Label("Go to the process", systemImage: "arrow.up.forward.app")
+            ToolbarIcon("Go to the process", systemImage: "arrow.up.forward.app")
         }
     }
 }

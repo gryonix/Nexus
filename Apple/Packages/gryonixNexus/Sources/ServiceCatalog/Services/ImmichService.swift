@@ -124,6 +124,7 @@ public struct ImmichService: ManagedService {
                 plan: .archive(ArchiveBackupPlan(
                     composeProject: Self.composeProject,
                     dataPath: "\(path)/library",
+                    dataPart: .files,
                     databases: [BackupDatabase(engine: .postgres, service: "database",
                                                fileName: "immich.sql")],
                     quiesceServices: [],

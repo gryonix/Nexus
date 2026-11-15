@@ -77,7 +77,9 @@ final class LockControlTests: XCTestCase {
 
     func testUpdateServiceAcquiresItsOwnLockBeforeRunning() throws {
         let wrapper = updateWrapper(in: try script(mixed))
-        XCTAssertTrue(wrapper.contains(#"gd_with_lock "update-$svc" gd_update_service_locked "$svc""#),
+        XCTAssertTrue(wrapper.contains(#"local rc=0 body=gd_update_service_locked"#),
+                      "the locked body is the default the entry point hands off to")
+        XCTAssertTrue(wrapper.contains(#"gd_with_lock "update-$svc" "$body" "$svc""#),
                       "the entry point must hand off to the locked body under its own lock")
         XCTAssertTrue(wrapper.contains("gd_update_service_locked() {"))
     }

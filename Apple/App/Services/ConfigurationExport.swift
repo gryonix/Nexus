@@ -173,6 +173,11 @@ extension ConfiguratorDraft {
         settings.machineAtHome = machineAtHome ?? false
         settings.homeAssistantUSBDevice = (homeAssistantUSBDevice ?? "")
             .trimmingCharacters(in: .whitespaces)
+        settings.shairportMode = shairportMode ?? defaults.shairportMode
+        settings.shairportName = (shairportName ?? defaults.shairportName).trimmingCharacters(in: .whitespaces)
+        settings.shairportOutput = (shairportOutput ?? defaults.shairportOutput)
+            .trimmingCharacters(in: .whitespaces)
+        settings.uxplayName = (uxplayName ?? defaults.uxplayName).trimmingCharacters(in: .whitespaces)
         settings.minecraftBedrockVersion = (minecraftBedrockVersion ?? "").trimmingCharacters(in: .whitespaces)
         settings.minecraftBedrockPort = port(minecraftBedrockPort ?? "", defaults.minecraftBedrockPort)
         settings.openWebUIAllowSignups = openWebUIAllowSignups ?? defaults.openWebUIAllowSignups

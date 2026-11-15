@@ -9,7 +9,8 @@ object ShellSections {
         metricsRaw: String?,
         vpnRaw: String?,
         containersRaw: String?,
-        terminalRaw: String?
+        terminalRaw: String?,
+        aiOn: Boolean = false
     ): List<AppTab> {
         val metrics = DisplaySettings.metrics(metricsRaw)
         val vpn = DisplaySettings.vpn(vpnRaw)
@@ -21,6 +22,7 @@ object ShellSections {
                 AppTab.VPN -> vpn.showsTab
                 AppTab.CONTAINERS -> containers.showsTab
                 AppTab.TERMINAL -> terminal.showsTab
+                AppTab.AI -> aiOn
                 else -> true
             }
         }

@@ -1,11 +1,22 @@
 package com.skaymer.gryonixnexus.app.ui
 
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.Security
+import com.skaymer.gryonixnexus.app.ui.design.GroupedContentPadding
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.PowerOff
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Handyman
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -49,6 +60,8 @@ fun HostActionsCard(
     actions: HostActionsViewModel,
     /** Waking this machine, where that is offered — see `WakeOnLANViewModel` */
     wake: WakeOnLANViewModel,
+    onRepair: (() -> Unit)? = null,
+    onReinstall: (() -> Unit)? = null,
 ) {
     val state by actions.state.collectAsState()
     val machines = remember(deployment) { HostActionsViewModel.order(deployment) }
@@ -61,12 +74,11 @@ fun HostActionsCard(
     var poweringOff by remember(deployment.id) { mutableStateOf(false) }
 
     LaunchedEffect(deployment.id, hasGuard) {
-        if (hasGuard) actions.refreshLockdown(deployment)
+        if (hasGuard) actions.refreshLockdownIfStale(deployment)
     }
     LaunchedEffect(deployment.id) { wake.refreshQuietly(deployment) }
 
-    Column(verticalArrangement = GroupedSpacing) {
-        SectionHeader(stringResource(R.string.actions_title))
+    GroupedSection(header = stringResource(R.string.actions_title)) {
         TileActionGroup(
             buildList {
                 add(
@@ -91,9 +103,7 @@ fun HostActionsCard(
                     machines.forEach { node ->
                         add(
                             TileAction(
-                                title = stringResource(
-                                    R.string.actions_reboot_machine, machineName(node)
-                                ),
+                                title = rebootTitle(node),
                                 icon = Icons.Filled.PowerSettingsNew,
                                 onClick = { rebooting = node.sshHost },
                                 enabled = state.running == null,
@@ -101,6 +111,12 @@ fun HostActionsCard(
                             )
                         )
                     }
+                }
+                onRepair?.let {
+                    add(TileAction(stringResource(R.string.repair_server), Icons.Filled.Handyman, it, state.running == null))
+                }
+                onReinstall?.let {
+                    add(TileAction(stringResource(R.string.actions_reinstall_services), Icons.Filled.Sync, it, state.running == null))
                 }
                 if (WakeOnLANViewModel.isOffered(deployment)) {
                     add(
@@ -122,76 +138,8 @@ fun HostActionsCard(
                     )
                 }
             },
-            Modifier.padding(horizontal = Metrics.listInset),
+            Modifier.padding(16.dp),
         )
-
-        if (hasGuard) {
-            GroupedSection(
-                footer = (state.lockdown as? LockdownRead.Failed)?.message
-                    ?: stringResource(R.string.actions_lockdown_explains),
-            ) {
-                GroupedRow(
-                    showDivider = pages.isNotEmpty(),
-                    trailing = {
-                        RefreshButton(
-                            contentDescription = stringResource(R.string.refresh_lockdown_again),
-                            onClick = { actions.refreshLockdown(deployment) },
-                            busy = state.lockdown is LockdownRead.Loading,
-                        )
-                        when (val read = state.lockdown) {
-                            is LockdownRead.Idle, is LockdownRead.Loading -> Unit
-                            is LockdownRead.Loaded -> IOSSwitch(
-                                checked = read.state.isActive,
-                                onCheckedChange = { actions.setLockdown(deployment, it) },
-                            )
-                            is LockdownRead.Failed -> Text(
-                                stringResource(R.string.security_could_not_read),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Gryonix.colors.warning,
-                            )
-                        }
-                    },
-                ) {
-                    RowLabel(
-                        stringResource(R.string.actions_lockdown),
-                        stringResource(R.string.actions_lockdown_caption),
-                    )
-                }
-                if (pages.isNotEmpty()) {
-                    ActionRow(
-                        text = stringResource(R.string.actions_lockdown_pages),
-                        onClick = { expanded = !expanded },
-                        showDivider = expanded,
-                    )
-                }
-                if (expanded) {
-                    pages.forEach { page ->
-                        val current = state.lockdown.value
-                        GroupedRow(
-                            showDivider = page != pages.last(),
-                            trailing = {
-                                IOSSwitch(
-                                    checked = current?.guards(page.host) == true,
-                                    enabled = current != null,
-                                    onCheckedChange = {
-                                        actions.setLockdown(deployment, page.host, it)
-                                    },
-                                )
-                            },
-                        ) {
-                            RowLabel(page.name, page.host)
-                        }
-                    }
-                }
-            }
-        } else if (pages.isNotEmpty()) {
-            Text(
-                stringResource(R.string.actions_lockdown_needs_vpn),
-                style = MaterialTheme.typography.bodySmall,
-                color = Gryonix.colors.secondaryLabel,
-                modifier = Modifier.padding(horizontal = Metrics.listInset + 4.dp),
-            )
-        }
     }
 
     if (confirmingSSH) {
@@ -289,6 +237,15 @@ private fun WakeNoteAlert(note: WakeOnLANViewModel.Note, onDismiss: () -> Unit) 
 private fun machineName(node: DeploymentNode): String =
     node.name.ifEmpty { node.endpoint.host }
 
+/** What the reboot tile for one of several machines says */
+@Composable
+fun rebootTitle(node: DeploymentNode): String = when {
+    node.name.isNotEmpty() -> stringResource(R.string.actions_reboot_machine, node.name)
+    node.legacySlot == DeploymentNode.LegacySlot.VPS -> stringResource(R.string.actions_reboot_vps)
+    node.legacySlot == DeploymentNode.LegacySlot.HOME -> stringResource(R.string.actions_reboot_home)
+    else -> stringResource(R.string.actions_reboot_machine, node.endpoint.host)
+}
+
 @Composable
 private fun ConfirmDialog(
     title: String,
@@ -306,4 +263,94 @@ private fun ConfirmDialog(
         onConfirm = onConfirm,
         onCancel = onCancel,
     )
+}
+
+@Composable
+fun LockdownPage(
+    deployment: Deployment,
+    actions: HostActionsViewModel,
+    openAPI: com.skaymer.gryonixnexus.app.servers.OpenAPIViewModel? = null,
+) {
+    val state by actions.state.collectAsState()
+    val pages = remember(deployment) { HostActionsViewModel.lockdownPages(deployment) }
+    val hasGuard = remember(deployment) { HostActionsViewModel.hasAdminLockdown(deployment) }
+    val apiServices = remember(deployment) {
+        if (openAPI != null && offersOpenAPI(deployment)) com.skaymer.gryonixnexus.app.servers.OpenAPIViewModel.services(deployment) else emptyList()
+    }
+    var apiService by remember(deployment.id) { mutableStateOf<com.skaymer.gryonixnexus.catalog.ServiceID?>(null) }
+    LaunchedEffect(deployment.id) { if (apiServices.isNotEmpty()) openAPI?.refresh(deployment) }
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(GroupedContentPadding),
+        verticalArrangement = GroupedSpacing,
+    ) {
+        if (hasGuard) {
+            val current = state.lockdown.value
+            GroupedSection(
+                header = stringResource(R.string.actions_lockdown),
+                note = stringResource(R.string.actions_lockdown_explains),
+                onRefresh = { actions.refreshLockdown(deployment) },
+                refreshDescription = stringResource(R.string.refresh_lockdown_again),
+                refreshing = state.lockdown is LockdownRead.Loading,
+                footer = (state.lockdown as? LockdownRead.Failed)?.message,
+            ) {
+                GroupedRow(
+                    showDivider = false,
+                    leading = {
+                        Icon(Icons.Outlined.Security, contentDescription = null, modifier = Modifier.size(22.dp))
+                    },
+                    trailing = {
+                        IOSSwitch(
+                            checked = current?.isActive == true,
+                            enabled = current != null,
+                            onCheckedChange = { actions.setLockdown(deployment, it) },
+                            onColor = Gryonix.colors.success,
+                        )
+                    },
+                ) { RowLabel(stringResource(R.string.actions_lockdown_short)) }
+            }
+            if (apiServices.isNotEmpty() && openAPI != null) AllOpenAPISection(deployment, apiServices, openAPI)
+            if (pages.isNotEmpty()) {
+                GroupedSection(header = stringResource(R.string.lockdown_panels)) {
+                    pages.forEach { page ->
+                        GroupedRow(
+                            showDivider = page != pages.last(),
+                            trailing = {
+                                IOSSwitch(
+                                    checked = current?.guards(page.host) == true,
+                                    enabled = current != null,
+                                    onCheckedChange = { actions.setLockdown(deployment, page.host, it) },
+                                    onColor = Gryonix.colors.success,
+                                )
+                                if (page.id in apiServices) {
+                                    IconButton(onClick = { apiService = page.id }) {
+                                        Icon(
+                                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                            contentDescription = stringResource(R.string.api_access_row),
+                                            tint = Gryonix.colors.tertiaryLabel,
+                                        )
+                                    }
+                                }
+                            },
+                        ) { RowLabel(page.name, page.host) }
+                    }
+                }
+            }
+        } else if (pages.isNotEmpty()) {
+            Text(
+                stringResource(R.string.actions_lockdown_needs_vpn),
+                style = MaterialTheme.typography.bodySmall,
+                color = Gryonix.colors.secondaryLabel,
+                modifier = Modifier.padding(horizontal = Metrics.listInset + 4.dp),
+            )
+        }
+    }
+    val opened = apiService
+    if (opened != null && openAPI != null) {
+        val page = pages.firstOrNull { it.id == opened }
+        ServiceOpenAPISheet(
+            deployment, opened, page?.name ?: opened.rawValue, openAPI,
+            siteGuarded = page?.let { state.lockdown.value?.guards(it.host) },
+            onClose = { apiService = null },
+        )
+    }
 }

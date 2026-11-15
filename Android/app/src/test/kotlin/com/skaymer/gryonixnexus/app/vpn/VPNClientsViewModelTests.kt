@@ -96,6 +96,22 @@ class VPNClientsViewModelTests {
         )
 
     @Test
+    fun `only this phone's own devices are removed, and their tunnels forgotten`() = runTest(StandardTestDispatcher()) {
+        val panel = Panel(mutableMapOf(
+            wireguard to mutableListOf(VPNClientDevice("id-own", "phone", ""), VPNClientDevice("id-other", "laptop", "")),
+        ))
+        val own = OwnVpnDevices.inMemory().apply { remember(server.id, wireguard.rawValue, "id-own") }
+        val forgotten = mutableListOf<String>()
+        val model = VPNClientsViewModel(
+            scope = this, operations = { panel }, ownDevices = own,
+            onRemoved = { serverId, clientId -> forgotten += "$serverId/$clientId" },
+        )
+        assertEquals(emptyList<String>(), model.removeOwnDevices(server))
+        assertEquals(listOf("remove ${wireguard.rawValue} id-own"), panel.asked)
+        assertEquals(listOf("S-1/id-own"), forgotten)
+    }
+
+    @Test
     fun `the list shown is the one the panel answered with`() = runTest(StandardTestDispatcher()) {
         val panel = Panel(mutableMapOf(wireguard to mutableListOf(
             VPNClientDevice("id-1", "phone", "10.9.0.2/32")
@@ -143,6 +159,24 @@ class VPNClientsViewModelTests {
         older.loadDNSPriority(server)
         runCurrent()
         assertNull(older.state.value.dnsPriority)
+    }
+
+    @Test
+    fun `a stored order without the chosen DNS first is put right`() = runTest(StandardTestDispatcher()) {
+        val saved = mutableListOf<List<String>>()
+        val broken = object : VPNClientManaging by Panel() {
+            override suspend fun defaultDNS() = VPNDNSDefaults(listOf("10.53.0.53"), "10.53.0.53", listOf(ServiceID.PIHOLE))
+            override suspend fun dnsPriority() = VPNDNSPriority(listOf("94.140.14.14", "1.1.1.1"))
+            override suspend fun setDNSPriority(resolvers: List<String>) = VPNDNSPriority(resolvers).also { saved += resolvers }
+        }
+        val model = VPNClientsViewModel(scope = this, operations = { broken })
+        model.loadDNSPriority(server)
+        runCurrent()
+        assertTrue(saved.isEmpty(), "nothing is changed before the chosen DNS is known")
+        model.loadDefaultDNS(server)
+        runCurrent()
+        assertEquals(listOf(listOf("local", "94.140.14.14", "1.1.1.1")), saved)
+        assertEquals(listOf("local", "94.140.14.14", "1.1.1.1"), model.state.value.dnsPriority?.resolvers)
     }
 
     @Test

@@ -30,6 +30,14 @@ data class AdoptState(
     val isRunning: Boolean get() = stage != null
 }
 
+/** Whether the app could sign in over SSH */
+sealed interface ProbeState {
+    data object Unchecked : ProbeState
+    data object Checking : ProbeState
+    data object Ok : ProbeState
+    data class Failed(val message: String) : ProbeState
+}
+
 /** Adopting a server that already runs the agent */
 class AdoptViewModel(
     private val scope: CoroutineScope,
@@ -44,8 +52,34 @@ class AdoptViewModel(
     private val _state = MutableStateFlow(AdoptState())
     val state: StateFlow<AdoptState> = _state.asStateFlow()
 
+    private val _probe = MutableStateFlow<ProbeState>(ProbeState.Unchecked)
+    val probe: StateFlow<ProbeState> = _probe.asStateFlow()
+
     fun reset() {
         _state.value = AdoptState()
+        _probe.value = ProbeState.Unchecked
+    }
+
+    /** Any change to the address asks for a new check */
+    fun forgetProbe() {
+        if (_probe.value != ProbeState.Checking) _probe.value = ProbeState.Unchecked
+    }
+
+    /** Signs in once and runs a harmless echo */
+    fun probe(deployment: Deployment) {
+        if (_probe.value == ProbeState.Checking) return
+        _probe.value = ProbeState.Checking
+        scope.launch {
+            _probe.value = try {
+                val answer = runners(deployment).run(PING_COMMAND, deployment.servicesHost, 20.seconds)
+                if (answer.stdout.contains(PING_TOKEN)) ProbeState.Ok else ProbeState.Failed("")
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                ProbeState.Failed(failure.message ?: failure.toString())
+            }
+            release(deployment)
+        }
     }
 
     fun start(deployment: Deployment) {
@@ -120,5 +154,7 @@ class AdoptViewModel(
 
     companion object {
         const val PAIR_CODE_COMMAND = "sudo /usr/local/bin/gryonixnexusd pair-code"
+        const val PING_TOKEN = "GRYONIXNEXUS_PING"
+        const val PING_COMMAND = "echo $PING_TOKEN"
     }
 }

@@ -1,5 +1,7 @@
 package com.skaymer.gryonixnexus.app.servers
 
+import com.skaymer.gryonixnexus.app.widgets.WidgetFeed
+
 import com.skaymer.gryonixnexus.R
 import com.skaymer.gryonixnexus.app.notify.OperationNotice
 import com.skaymer.gryonixnexus.app.notify.OperationKind
@@ -33,6 +35,9 @@ import com.skaymer.gryonixnexus.servercontrol.ServiceRestoreManaging
 import com.skaymer.gryonixnexus.agentcontrol.AgentBackupOperations
 import com.skaymer.gryonixnexus.servercontrol.AgentServiceMapping
 import com.skaymer.gryonixnexus.servercontrol.BackupOverview
+import com.skaymer.gryonixnexus.servercontrol.BackupPartChoice
+import com.skaymer.gryonixnexus.servercontrol.BackupPartsChange
+import com.skaymer.gryonixnexus.servercontrol.BackupPartsState
 import com.skaymer.gryonixnexus.servercontrol.FleetBackup
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
@@ -506,6 +511,7 @@ class BackupsViewModel(
                     hasLoadedSchedule = true,
                     scheduleError = null,
                 )
+                WidgetFeed.backups(deployment, settings)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (failure: Exception) {
@@ -525,6 +531,7 @@ class BackupsViewModel(
             _state.value = _state.value.copy(isSaving = true)
             try {
                 schedules(deployment).save(settings, passphrase)
+                WidgetFeed.backups(deployment, settings)
                 _state.value = _state.value.copy(
                     schedule = settings,
                     hasLoadedSchedule = true,
@@ -616,6 +623,8 @@ class BackupsViewModel(
 
     /** USB drives for one server, with their own state */
     fun drives(): BackupDrivesModel = BackupDrivesModel(scope, schedules)
+
+    fun parts(): BackupPartsModel = BackupPartsModel(scope, schedules)
 
     fun authorizeKey(target: Deployment, publicKey: String) {
         if (publicKey.isEmpty()) return
@@ -822,6 +831,10 @@ interface BackupScheduleManaging {
     /** USB drives that take a copy too */
     suspend fun loadDrives(): BackupDrivesState = BackupDrivesState(supported = false)
     suspend fun saveDrives(settings: BackupDriveSettings) {}
+
+    /** Which parts backups copy */
+    suspend fun loadParts(): BackupPartsState = BackupPartsState(supported = false)
+    suspend fun saveParts(change: BackupPartsChange) {}
 }
 
 class SSHBackupSchedule(
@@ -841,6 +854,10 @@ class SSHBackupSchedule(
     override suspend fun loadDrives(): BackupDrivesState = operations.loadDrives()
 
     override suspend fun saveDrives(settings: BackupDriveSettings) = operations.saveDrives(settings)
+
+    override suspend fun loadParts(): BackupPartsState = operations.loadParts()
+
+    override suspend fun saveParts(change: BackupPartsChange) = operations.saveParts(change)
 }
 
 class AgentBackupSchedule(
@@ -860,4 +877,8 @@ class AgentBackupSchedule(
     override suspend fun loadDrives(): BackupDrivesState = operations.loadDrives()
 
     override suspend fun saveDrives(settings: BackupDriveSettings) = operations.saveDrives(settings)
+
+    override suspend fun loadParts(): BackupPartsState = operations.loadParts()
+
+    override suspend fun saveParts(change: BackupPartsChange) = operations.saveParts(change)
 }

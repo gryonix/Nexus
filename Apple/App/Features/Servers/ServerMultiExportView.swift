@@ -4,6 +4,8 @@ import SwiftUI
 struct ServerMultiExportView: View {
     let deployments: [Deployment]
     let onExport: ([Deployment]) -> Void
+    var title: LocalizedStringKey = "Export servers"
+    var actionTitle: LocalizedStringKey = "Export"
 
     @Environment(\.dismiss) private var dismiss
     @State private var selected: Set<UUID> = []
@@ -19,7 +21,7 @@ struct ServerMultiExportView: View {
                             HStack(spacing: 12) {
                                 Image(systemName: deployment.iconSymbol ?? "server.rack")
                                     .foregroundStyle(.tint)
-                                    .frame(width: 24)
+                                    .rowIconFrame(24)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(verbatim: deployment.name)
                                         .foregroundStyle(.primary)
@@ -42,7 +44,7 @@ struct ServerMultiExportView: View {
                     Text("Each server is exported with its credentials, so treat the files like passwords.")
                 }
             }
-            .navigationTitle("Export servers")
+            .screenTitle(title)
             .raisedNavigationTitle()
             #if os(macOS)
             .frame(minWidth: 440, minHeight: 320)
@@ -52,7 +54,7 @@ struct ServerMultiExportView: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Export") {
+                    Button(actionTitle) {
                         onExport(deployments.filter { selected.contains($0.id) })
                     }
                     .disabled(selected.isEmpty)

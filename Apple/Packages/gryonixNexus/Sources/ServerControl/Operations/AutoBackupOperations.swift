@@ -36,6 +36,11 @@ public protocol AutoBackupManaging: Sendable {
     func loadDrives() async throws -> BackupDrivesState
 
     func saveDrives(_ settings: BackupDriveSettings) async throws
+
+    /// Which parts backups copy
+    func loadParts() async throws -> BackupPartsState
+
+    func saveParts(_ change: BackupPartsChange) async throws
 }
 
 /// Which implementation a deployment's BACKUP SCHEDULE goes through
@@ -188,6 +193,47 @@ public struct AutoBackupOperations: AutoBackupManaging {
                     "this server's backup wrapper is older than USB drives — run Repair server on it first")
             }
             throw ServerControlError.commandFailure(command: "set backup drives", exitCode: result.exitCode,
+                                                    stderr: result.stderr)
+        }
+    }
+
+    // MARK: - Parts
+
+    public func loadParts() async throws -> BackupPartsState {
+        guard let host = hosts.first else { return BackupPartsState(supported: false) }
+        let result = try await runner.run(CommandCatalog.Backups.showParts, on: host,
+                                          timeout: deployment.timeouts.duration(for: .quick))
+        guard result.succeeded else {
+            if result.stderr.contains(Self.unsupportedAction) { return BackupPartsState(supported: false) }
+            throw ServerControlError.commandFailure(command: "show backup parts", exitCode: result.exitCode,
+                                                    stderr: result.stderr)
+        }
+        return BackupPartsParsing.state(result.stdout)
+    }
+
+    public func saveParts(_ change: BackupPartsChange) async throws {
+        let targets = (change.shared.map { [(String?.none, $0)] } ?? [])
+            + change.services.sorted { $0.key < $1.key }.map { (Optional($0.key), $0.value) }
+        for host in hosts {
+            for (service, choice) in targets {
+                for (scope, parts) in [("backup", choice.regular), ("update", choice.beforeUpdate)] {
+                    try await saveParts(scope: scope, service: service, parts: parts, on: host)
+                }
+            }
+        }
+    }
+
+    private func saveParts(scope: String, service: String?, parts: Set<BackupPart>,
+                           on host: SSHHostID) async throws {
+        let command = CommandCatalog.Backups.setParts(scope: scope, service: service,
+                                                      parts: BackupPartsParsing.words(parts))
+        let result = try await runner.run(command, on: host, timeout: deployment.timeouts.duration(for: .quick))
+        guard result.succeeded else {
+            if result.stderr.contains(Self.unsupportedAction) {
+                throw ServerControlError.notConfigured(
+                    "this server's backup wrapper is older than backup parts — run Repair server on it first")
+            }
+            throw ServerControlError.commandFailure(command: "set backup parts", exitCode: result.exitCode,
                                                     stderr: result.stderr)
         }
     }

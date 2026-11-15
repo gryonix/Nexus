@@ -6,9 +6,11 @@ public struct SSHConnectionSettings: Sendable {
     public var vpsHost: String
     public var vpsPort: Int
     public var username: String
+    public var homeUsername: String
     public var homeHost: String
     public var homePort: Int
     public var homeLANHost: String?
+    public var homePath: HomePathChoice = .automatic
     public var privateKeySeed: Data
     public var passwords: [SSHHostID: String] = [:]
     public var pinnedVPSHostKey: String?
@@ -84,6 +86,7 @@ public struct SSHConnectionSettings: Sendable {
         vpsHost: String,
         vpsPort: Int = 22,
         username: String,
+        homeUsername: String? = nil,
         homeHost: String,
         homePort: Int = 22,
         homeLANHost: String? = nil,
@@ -95,6 +98,7 @@ public struct SSHConnectionSettings: Sendable {
         self.vpsHost = vpsHost
         self.vpsPort = vpsPort
         self.username = username
+        self.homeUsername = homeUsername ?? username
         self.homeHost = homeHost
         self.homePort = homePort
         self.homeLANHost = homeLANHost
@@ -128,6 +132,7 @@ public struct SSHConnectionSettings: Sendable {
             vpsHost: config.vpsHost,
             vpsPort: config.sshPort,
             username: config.sshUser,
+            homeUsername: config.homeSSHUser.isEmpty ? nil : config.homeSSHUser,
             homeHost: config.homeWGAddress,
             homePort: config.sshPort,
             homeLANHost: homeLANHost,

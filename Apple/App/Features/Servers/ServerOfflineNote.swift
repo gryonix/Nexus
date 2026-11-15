@@ -72,11 +72,9 @@ struct ServerOfflineNote: View {
                 wake()
             } label: {
                 HStack(spacing: 8) {
-                    if waking {
-                        ProgressView().controlSize(.small)
-                    } else {
-                        Image(systemName: "power")
-                    }
+                    Image(systemName: "power")
+                        .opacity(waking ? 0 : 1)
+                        .overlay { if waking { ProgressView().controlSize(.small) } }
                     Text("Wake up")
                 }
                 .font((compact ? Font.subheadline : .body).weight(.semibold))
@@ -86,14 +84,19 @@ struct ServerOfflineNote: View {
             .prominentActionButtonStyle()
             .controlSize(compact ? .regular : .large)
             .disabled(waking)
-            if let wakeMessage {
-                Text(verbatim: wakeMessage)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(3)
-            }
+            wakeResult
         }
         .padding(.top, 4)
+        .transaction { $0.animation = nil }
+    }
+
+    /// The last result, in a constant-height slot
+    private var wakeResult: some View {
+        Text(verbatim: wakeMessage ?? "\n")
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .lineLimit(2, reservesSpace: true)
+            .opacity(wakeMessage == nil ? 0 : 1)
     }
 
     private func wake() {

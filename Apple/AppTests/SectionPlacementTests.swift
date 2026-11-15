@@ -13,8 +13,8 @@ final class SectionPlacementTests: XCTestCase {
     /// The bar somebody who has never touched it gets
     func testTheDefaultOrderIsTheOneTheOwnerAskedFor() {
         XCTAssertEqual(TabBarSettings(defaults: defaults("tabs.order.test")).order,
-                       [.servers, .metrics, .containers, .vpn, .terminal, .configurator, .settings],
-                       "servers, metrics, vpn, terminal, configurator, settings — containers rides beside metrics, and both it and terminal are hidden by their placement, not by their position")
+                       [.servers, .metrics, .containers, .vpn, .terminal, .ai, .configurator, .settings],
+                       "servers, metrics, vpn, terminal, AI, configurator, settings — containers rides beside metrics, terminal is hidden by its placement and AI by its module, not by their position")
     }
 
     func testAnUntouchedOldOrderIsBroughtForwardWholesale() {

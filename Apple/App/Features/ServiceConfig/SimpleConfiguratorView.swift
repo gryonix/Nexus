@@ -8,9 +8,7 @@ struct SimpleConfiguratorView: View {
     var body: some View {
         CardList {
             ForEach(ScenarioOption.all) { option in
-                NavigationLink {
-                    SimpleWizardView(topology: option.topology, scope: option.scope)
-                } label: {
+                NavigationLink(value: option) {
                     HStack(spacing: 14) {
                         Image(systemName: option.systemImage)
                             .font(.title2)
@@ -27,14 +25,13 @@ struct SimpleConfiguratorView: View {
                 }
             }
         }
-        .navigationTitle("Configurator")
+        .screenTitle("Configurator")
     }
 }
 
 /// The setup itself
 struct SimpleWizardView: View {
     @StateObject private var viewModel: ServiceConfigViewModel
-    @State private var dismiss = DismissHandle()
     @State private var index = 0
     @State private var didPrepare = false
     @State private var showHistory = false
@@ -43,15 +40,18 @@ struct SimpleWizardView: View {
     /// The protocol whose comparison sheet is open, if any
     @State private var protocolInfo: VPNProtocolInfo?
     private let isRestoring: Bool
+    private let onLeave: (() -> Void)?
 
     init(topology: Topology, scope: DeploymentScope = .publicInternet,
          restoring config: ConfiguratorDraft? = nil,
-         existingServer: Deployment? = nil) {
+         existingServer: Deployment? = nil,
+         onLeave: (() -> Void)? = nil) {
         _viewModel = StateObject(wrappedValue: ServiceConfigViewModel(topology: topology,
                                                                       initialScope: scope,
                                                                       restoringConfig: config,
                                                                       existingServer: existingServer))
         isRestoring = config != nil
+        self.onLeave = onLeave
     }
 
     private enum Step: Hashable {
@@ -88,10 +88,6 @@ struct SimpleWizardView: View {
     }
 
     var body: some View {
-        screen.dismissHandle(dismiss)
-    }
-
-    @ViewBuilder private var screen: some View {
         ScrollViewReader { scroller in
             debugTasks(sheets(chrome), scroller: scroller)
         }
@@ -112,7 +108,7 @@ struct SimpleWizardView: View {
             #if os(macOS)
             .formStyle(.grouped)
             #endif
-            .navigationTitle("Setup")
+            .screenTitle("Setup")
             .raisedNavigationTitle()
             .onChange(of: current, initial: true) { _, step in
                 if step == .vpnProtocol { standingOnVPNStep = true }
@@ -128,12 +124,7 @@ struct SimpleWizardView: View {
     @ToolbarContentBuilder
     private var wizardToolbar: some ToolbarContent {
         ToolbarItem(placement: .wizardBack) {
-            Button {
-                if current == .vpnProtocol { standingOnVPNStep = false }
-                if index > 0 { withAnimation { index -= 1 } } else { dismiss() }
-            } label: {
-                Label("Back", systemImage: "chevron.left")
-            }
+            WizardBackButton(stepBack: stepBack, onLeave: onLeave)
         }
         ToolbarItem(placement: .primaryAction) {
             Button {
@@ -168,7 +159,8 @@ struct SimpleWizardView: View {
             .navigationDestination(isPresented: showResult) {
                 if let bundle = viewModel.bundle {
                     SimpleResultView(bundle: bundle, deployment: viewModel.savedDeployment,
-                                     openPorts: viewModel.openPorts)
+                                     openPorts: viewModel.openPorts,
+                                     onLeave: { viewModel.bundle = nil })
                 }
             }
             .task {
@@ -503,6 +495,9 @@ struct SimpleWizardView: View {
             } header: {
                 InfoSectionHeader("Your domain", note: "The domain name your services will use, e.g. example.com. You can add more — every service answers on all of them, and with mail each gets its own mailboxes. Swipe a domain to remove it.")
             }
+            if viewModel.scope == .cloudflareTunnel {
+                CloudflareTunnelTokenSection()
+            }
         }
         .onAppear { viewModel.useDemoAddressesIfLocked() }
     }
@@ -510,9 +505,8 @@ struct SimpleWizardView: View {
     private var addressStep: some View {
         Group {
         Section {
-            TechnicalField(title: viewModel.localOnly ? "Local address"
-                              : (viewModel.topology == .singleHost ? "Server address" : "VPS address"),
-                           prompt: viewModel.localOnly ? "192.168.1.50" : "203.0.113.10",
+            TechnicalField(title: viewModel.addressTitle,
+                           prompt: viewModel.addressPrompt,
                            text: viewModel.localOnly ? localAddressBinding : $viewModel.publicIP,
                            ownAddress: true)
             DistributionPicker(
@@ -528,13 +522,11 @@ struct SimpleWizardView: View {
         } header: {
             Text("Your server")
         } footer: {
-            if viewModel.localOnly {
-                Text("A LAN IP address or a .local hostname your devices can already reach — not a domain you'd register (like example.com). This is both the server's address and its Caddy site name, self-signed.")
-            } else {
-                Text(viewModel.topology == .singleHost
-                     ? "The public IP address of your server."
-                     : "The public IP address of your VPS, and the local server's address on your network — an IP or a .local name. Keep this device on that network while installing.")
-            }
+            Text(viewModel.addressFooter)
+        }
+
+        if viewModel.scope == .tailscaleOnly {
+            TailscaleKeySection(viewModel: viewModel)
         }
 
         if viewModel.scope == .publicInternet || viewModel.topology == .vpsRelayWithHomeBackend {
@@ -655,9 +647,7 @@ struct SimpleWizardView: View {
             if !viewModel.localOnly {
                 summaryRow("Domain", viewModel.domain.isEmpty ? "—" : viewModel.domain)
             }
-            summaryRow(viewModel.localOnly ? "Local address"
-                        : (viewModel.topology == .singleHost ? "Server address" : "VPS address"),
-                       viewModel.publicIP.isEmpty ? "—" : viewModel.publicIP)
+            summaryRow(viewModel.addressTitle, viewModel.publicIP.isEmpty ? "—" : viewModel.publicIP)
             if viewModel.isPairTopology {
                 summaryRow("Local server on your network",
                            viewModel.homeNetworkAddress.isEmpty ? "—" : viewModel.homeNetworkAddress)
@@ -717,6 +707,13 @@ struct SimpleWizardView: View {
         .padding(.bottom, 12)
     }
 
+    private func stepBack() -> Bool {
+        if current == .vpnProtocol { standingOnVPNStep = false }
+        guard index > 0 else { return false }
+        withAnimation { index -= 1 }
+        return true
+    }
+
     private func advance() {
         if current == .vpnProtocol { standingOnVPNStep = false }
         withAnimation { index += 1 }
@@ -727,7 +724,9 @@ struct SimpleWizardView: View {
         case .services: return questions.allSatisfy { viewModel.isAnswered($0) }
         case .vpnProtocol: return !viewModel.vpnProtocols.isEmpty
         case .domain: return !viewModel.domain.trimmingCharacters(in: .whitespaces).isEmpty
-        case .address: return !viewModel.publicIP.trimmingCharacters(in: .whitespaces).isEmpty
+        case .address:
+            return !viewModel.publicIP.trimmingCharacters(in: .whitespaces).isEmpty
+                && (viewModel.scope != .tailscaleOnly || viewModel.hasTailscaleKey)
         case .dns: return acknowledged.contains(current)
         default: return true
         }
@@ -780,6 +779,24 @@ struct SimpleWizardView: View {
             return "Needs about 8 GB of memory on its own and several minutes for its first start. Forgejo is the same git hosting on a fraction of that."
         case .adguardHome:
             return "Works from anywhere: it serves the filter over DNS-over-HTTPS through the same HTTPS name as its panel."
+        case .shairportSync:
+            return "Turns this machine into an AirPlay speaker for your iPhone, iPad and Mac."
+        case .uxplay:
+            return "Shows the screen of your iPhone, iPad or Mac on the TV this machine is connected to. DRM-protected video (Netflix and similar) cannot be shown — that is an Apple restriction."
+        case .odio:
+            return "Turns this machine into a music hub for the house: Spotify Connect, UPnP, Bluetooth, Snapcast and a web player. It asks for a password and works on your home network only."
+        case .snapserver:
+            return "Plays the same music in sync in every room. Put a multi-room speaker on each machine that stands next to speakers."
+        case .snapclient:
+            return "Plays the multi-room server's music through this machine's speakers, in sync with the other rooms. The audio hub (odio) already includes it."
+        case .upmpdcli:
+            return "Lets Android phones and other DLNA apps play music through this machine's speakers. The audio hub (odio) already includes it."
+        case .bluealsa:
+            return "Lets any phone connect over Bluetooth, without a PIN, and play through this machine's speakers. The machine needs Bluetooth. The audio hub (odio) already includes it."
+        case .mympd:
+            return "A music library for files on this machine or a USB drive, with a web player on port 8019 for your home network. The audio hub (odio) already includes it."
+        case .raspotify:
+            return "Lets the Spotify app on any phone or computer play through this machine's speakers. Needs Spotify Premium. The audio hub (odio) already includes it."
         case .pihole:
             return "Serves plain DNS only — right for a machine on your own network, which your router points at. Devices elsewhere need AdGuard Home instead."
         default:

@@ -57,6 +57,26 @@ public struct ServiceID: RawRepresentable, Sendable, Hashable, Codable, Comparab
     /// Zigbee devices, through a stick on the machine
     public static let zigbee2MQTT = ServiceID(rawValue: "zigbee2mqtt")
 
+    /// Turns the machine into an AirPlay speaker
+    public static let shairportSync = ServiceID(rawValue: "shairport-sync")
+
+    /// Shows an iPhone or Mac screen on the TV
+    public static let uxplay = ServiceID(rawValue: "uxplay")
+
+    /// Music players for the whole house on one machine
+    public static let odio = ServiceID(rawValue: "odio")
+
+    /// Single audio players, each installed on its own
+    public static let snapserver = ServiceID(rawValue: "snapserver")
+    public static let snapclient = ServiceID(rawValue: "snapclient")
+    public static let upmpdcli = ServiceID(rawValue: "upmpdcli")
+    public static let bluealsa = ServiceID(rawValue: "bluealsa")
+    public static let raspotify = ServiceID(rawValue: "raspotify")
+    public static let mympd = ServiceID(rawValue: "mympd")
+
+    /// Players the audio hub already brings
+    public static let audioHubPlayers: Set<ServiceID> = [.snapclient, .upmpdcli, .bluealsa, .raspotify, .mympd]
+
     /// The hub's own add-ons: never offered, and never installed, alone
     public static let smartHomeAddOns: Set<ServiceID> = [.mosquitto, .zigbee2MQTT]
 

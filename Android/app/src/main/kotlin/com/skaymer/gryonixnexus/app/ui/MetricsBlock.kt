@@ -89,6 +89,7 @@ private fun Readings(
             "${MetricsFormat.bytes(snapshot.diskUsedBytes)} / " +
                 MetricsFormat.bytes(snapshot.diskTotalBytes)
         ),
+        swapReading(snapshot),
     )
     Box(Modifier.fillMaxWidth().height(MetricBlock.height(compact).dp)) {
         val spread = Arrangement.spacedBy(MetricBlock.gap(compact).dp, Alignment.CenterVertically)
@@ -187,6 +188,19 @@ private fun Caption(label: String?, value: String) {
 }
 
 private data class Reading(val label: String, val fraction: Double?, val detail: String?)
+
+/** Swap load, or "Off" when the machine has none */
+@Composable
+private fun swapReading(snapshot: HostMetricsSnapshot): Reading {
+    val label = stringResource(R.string.metrics_swap)
+    val fraction = snapshot.swapUsedFraction
+    return when {
+        snapshot.isPartial -> Reading(label, null, null)
+        fraction == null -> Reading(label, null, stringResource(R.string.metrics_swap_off))
+        else -> Reading(label, fraction,
+            "${MetricsFormat.bytes(snapshot.swapUsedBytes)} / ${MetricsFormat.bytes(snapshot.swapTotalBytes)}")
+    }
+}
 
 /** "Line": the words above, one continuous track underneath */
 @Composable

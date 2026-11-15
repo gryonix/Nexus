@@ -54,7 +54,10 @@ object DetachedJobs {
 
     enum class Kind(val raw: String) {
         UPDATE("update"), BACKUP("backup"), RESTORE("restore"),
-        UNINSTALL("uninstall"), CONTROL("control");
+        UNINSTALL("uninstall"), CONTROL("control"),
+
+        /** A measurement whose output the screen reads itself */
+        MEASURE("measure");
 
         companion object {
             fun from(raw: String): Kind? = entries.firstOrNull { it.raw == raw }

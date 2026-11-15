@@ -156,8 +156,14 @@ final class UpdateControlTests: XCTestCase {
         let between = String(wrapper[unknownPrint.upperBound..<currentPrint.lowerBound])
         XCTAssertTrue(between.contains(#"elif [ "$moved" -eq 0 ]; then"#),
                       "the current marker must sit in the else-branch of the unknown test, not next to it")
-        XCTAssertEqual(wrapper.components(separatedBy: "'\(UpdateControlSections.currentMarker)'").count - 1, 1,
-                       "there must be exactly one place that can print 'up to date'")
+        let selfCheckStart = try XCTUnwrap(wrapper.range(of: "gd_self_check() {"))
+        let selfCheckEnd = try XCTUnwrap(wrapper.range(of: "\n}\n", range: selfCheckStart.upperBound..<wrapper.endIndex))
+        let selfCheck = String(wrapper[selfCheckStart.upperBound..<selfCheckEnd.lowerBound])
+        let marker = "'\(UpdateControlSections.currentMarker)'"
+        XCTAssertEqual(wrapper.components(separatedBy: marker).count - selfCheck.components(separatedBy: marker).count, 1,
+                       "there must be exactly one place outside mailcow's own check that can print 'up to date'")
+        XCTAssertTrue(selfCheck.contains("current) printf '%s %s\\n' \(marker) mailcow"),
+                      "mailcow is up to date only when its updater says so")
         for reason in ["registry_unreachable", "not_pulled", "docker_unavailable"] {
             XCTAssertTrue(wrapper.contains("'\(UpdateControlSections.unknownMarker)' \"$svc\" '\(reason)'")
                           || wrapper.contains("\"$unknown\""),

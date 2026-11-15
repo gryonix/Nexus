@@ -165,7 +165,7 @@ struct MenuBarVPNView: View {
 
     /// Brings the window forward and points it somewhere
     private func activate(_ destination: AppLink.Destination) {
-        NSApp.setActivationPolicy(.regular)
+        DockPresence.shared.showForWindow()
         NSApp.activate(ignoringOtherApps: true)
         openURL(AppLink.url(for: destination))
     }

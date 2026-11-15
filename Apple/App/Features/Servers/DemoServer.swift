@@ -1,6 +1,7 @@
 import Foundation
 import ServerControl
 import ServiceCatalog
+import VPNTunnel
 
 /// The servers shown while the list is empty
 enum DemoServer {
@@ -88,6 +89,17 @@ enum DemoServer {
     static func isDemo(_ deployment: Deployment) -> Bool {
         isBuiltIn(deployment.id)
             || (isInstalled(deployment.id) && isDocumentationHost(deployment.entry.host))
+    }
+
+    /// Takes demo servers out of what the widgets offer
+    static func forgetInWidgets() {
+        Task.detached(priority: .utility) {
+            let store = FleetSnapshotStore()
+            let demo = (store.read()?.servers ?? []).map(\.id).filter { isDemo($0) }
+            guard !demo.isEmpty else { return }
+            demo.forEach { store.forgetServer(id: $0) }
+            WidgetRefresh.reload()
+        }
     }
 
     static func isDemo(_ deploymentID: UUID) -> Bool {

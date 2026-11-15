@@ -33,8 +33,8 @@ struct DiskHealthView: View {
                 }
             }
         }
-        .navigationTitle("Disk health")
-        #if os(iOS)
+        .screenTitle("Disk health")
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {

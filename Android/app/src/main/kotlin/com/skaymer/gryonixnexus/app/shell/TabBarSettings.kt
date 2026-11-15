@@ -14,6 +14,7 @@ class TabBarSettings(private val store: SettingsStore) {
         const val GROUP_SERVICES = ServiceGrouping.OVERRIDE_KEY
         /** The same key the other app writes — see [sitesCollapsible] */
         const val SITES_COLLAPSIBLE = "dashboard.sitesCollapsible"
+        const val SECTION_LABELS = "dashboard.sectionLabels"
     }
 
     private val _order = MutableStateFlow(reconcile(storedOrder(), store))
@@ -43,6 +44,15 @@ class TabBarSettings(private val store: SettingsStore) {
     fun setSitesCollapsible(value: Boolean) {
         _sitesCollapsible.value = value
         store.setBoolean(Keys.SITES_COLLAPSIBLE, value)
+    }
+
+    /** Server sections drawn as icons rather than words */
+    private val _sectionIcons = MutableStateFlow(store.string(Keys.SECTION_LABELS) == "icons")
+    val sectionIcons: StateFlow<Boolean> = _sectionIcons.asStateFlow()
+
+    fun setSectionIcons(value: Boolean) {
+        _sectionIcons.value = value
+        store.setString(Keys.SECTION_LABELS, if (value) "icons" else "text")
     }
 
     fun sitesPlateExpanded(folded: Boolean): Boolean = !_sitesCollapsible.value || !folded

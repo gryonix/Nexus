@@ -22,12 +22,9 @@ extension View {
 private struct BottomBarClearance: ViewModifier {
     @Environment(\.barClearance) private var clearance
 
+    /// One branch only: a flip would rebuild every screen below
     func body(content: Content) -> some View {
-        if clearance > 0 {
-            content.contentMargins(.bottom, clearance, for: .scrollContent)
-        } else {
-            content
-        }
+        content.contentMargins(.bottom, clearance > 0 ? clearance : nil, for: .scrollContent)
     }
 }
 #endif

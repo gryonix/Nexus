@@ -1,5 +1,7 @@
 package com.skaymer.gryonixnexus.app.ui
 
+import com.skaymer.gryonixnexus.app.ui.design.LargeTitleScroll
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Box
 import com.skaymer.gryonixnexus.app.shell.AppTourState
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.History
@@ -40,10 +43,10 @@ import com.skaymer.gryonixnexus.app.updates.AppUpdateViewModel
 import com.skaymer.gryonixnexus.app.ui.design.DisclosureChevron
 import com.skaymer.gryonixnexus.app.ui.design.Gryonix
 import com.skaymer.gryonixnexus.app.ui.design.GroupedRow
-import com.skaymer.gryonixnexus.app.ui.design.IOSBarButton
-import com.skaymer.gryonixnexus.app.ui.design.IOSNavBar
-import com.skaymer.gryonixnexus.app.ui.design.IOSTabBar
-import com.skaymer.gryonixnexus.app.ui.design.IOSTabItem
+import com.skaymer.gryonixnexus.app.ui.design.BarIconButton
+import com.skaymer.gryonixnexus.app.ui.design.AppTopBar
+import com.skaymer.gryonixnexus.app.ui.design.AppBottomBar
+import com.skaymer.gryonixnexus.app.ui.design.BottomBarItem
 import com.skaymer.gryonixnexus.app.ui.design.RowLabel
 import com.skaymer.gryonixnexus.R
 import com.skaymer.gryonixnexus.app.terminal.TerminalDirectHostStore
@@ -57,6 +60,7 @@ import com.skaymer.gryonixnexus.app.configurator.ScenarioOption
 import com.skaymer.gryonixnexus.app.install.InstallRegistry
 import com.skaymer.gryonixnexus.app.secrets.DNSCredentials
 import com.skaymer.gryonixnexus.app.secrets.CloudflareTokenStore
+import com.skaymer.gryonixnexus.app.secrets.DeploymentSecrets
 import com.skaymer.gryonixnexus.app.secrets.SecretStore
 import com.skaymer.gryonixnexus.app.metrics.HistoryViewModel
 import com.skaymer.gryonixnexus.app.access.AccessViewModel
@@ -98,6 +102,9 @@ import com.skaymer.gryonixnexus.app.shell.DisplaySettings
 import com.skaymer.gryonixnexus.app.shell.ServerSectionSettings
 import com.skaymer.gryonixnexus.app.shell.SettingsStore
 import com.skaymer.gryonixnexus.app.shell.WelcomeState
+import androidx.compose.ui.platform.LocalContext
+import com.skaymer.gryonixnexus.app.GryonixApplication
+import com.skaymer.gryonixnexus.app.shell.AppModule
 import com.skaymer.gryonixnexus.app.shell.ShellSections
 import com.skaymer.gryonixnexus.app.shell.TabBarSettings
 import com.skaymer.gryonixnexus.core.Artifact
@@ -191,13 +198,16 @@ fun AppShell(
     val order by tabs.order.collectAsState()
     val hidden by tabs.hidden.collectAsState()
 
-    val visible = remember(revision, order, hidden) {
+    val modulesOn by (LocalContext.current.applicationContext as GryonixApplication).modules.on.collectAsState()
+    val aiOn = AppModule.AI in modulesOn
+    val visible = remember(revision, order, hidden, aiOn) {
         ShellSections.visible(
             tabs.visibleTabs,
             metricsRaw = store.string(DisplaySettings.METRICS_PLACEMENT_KEY),
             vpnRaw = store.string(DisplaySettings.VPN_PLACEMENT_KEY),
             containersRaw = store.string(DisplaySettings.CONTAINERS_PLACEMENT_KEY),
-            terminalRaw = store.string(DisplaySettings.TERMINAL_PLACEMENT_KEY)
+            terminalRaw = store.string(DisplaySettings.TERMINAL_PLACEMENT_KEY),
+            aiOn = aiOn,
         )
     }
 
@@ -227,6 +237,9 @@ fun AppShell(
     LaunchedEffect(license) { fleet.reload() }
     LicensePromptHost(store, fleet)
 
+    val alertAsked by navigator.askedSection.collectAsState()
+    LaunchedEffect(alertAsked) { if (alertAsked != null) selected = AppTab.SERVERS.key }
+
     val requestedSection by navigator.openSection.collectAsState()
     LaunchedEffect(requestedSection) {
         val tab = requestedSection ?: return@LaunchedEffect
@@ -237,10 +250,12 @@ fun AppShell(
 
     var openArtifact by remember { mutableStateOf<Artifact?>(null) }
     var addingHost by rememberSaveable { mutableStateOf(false) }
+    var addForm by rememberSaveable(stateSaver = AddHostForm.Saver) { mutableStateOf(AddHostForm()) }
     val fleetBar = remember { FleetBarCommands() }
     val metricsBar = remember { MetricsBarCommands() }
     val pushed = remember { PushedScreen() }
     val serverPushed = remember { PushedScreen() }
+    val serverBar = remember { ServerBarCommands() }
     var installing by rememberSaveable { mutableStateOf(false) }
     var wizardScenario by rememberSaveable { mutableStateOf<String?>(null) }
     var showingHistory by rememberSaveable { mutableStateOf(false) }
@@ -271,6 +286,7 @@ fun AppShell(
         }
     }
     val savedDeployment by configurator.savedDeployment.collectAsState()
+    val configuratorForm by configurator.form.collectAsState()
     val generated by configurator.bundle.collectAsState()
     val showingArtifact = openArtifact != null && current == AppTab.CONFIGURATOR
     val showingAddHost = addingHost && current == AppTab.SERVERS && !showingMoreList
@@ -280,7 +296,11 @@ fun AppShell(
         !showingMoreList && !showingArtifact && !showingInstall
     BackHandler(enabled = showingServer) { navigator.closeServer() }
     BackHandler(enabled = showingArtifact) { openArtifact = null }
-    BackHandler(enabled = showingAddHost) { addingHost = false }
+    val leaveAddHost = {
+        if (addForm.step == AddHostForm.Step.DETAILS) addForm.step = AddHostForm.Step.CONNECTION
+        else addingHost = false
+    }
+    BackHandler(enabled = showingAddHost) { leaveAddHost() }
     BackHandler(enabled = showingInstall) { installing = false }
     BackHandler(enabled = showingWizard) {
         wizardScenario = null
@@ -320,13 +340,15 @@ fun AppShell(
         )
     }
 
+    val titleScroll = remember { LargeTitleScroll() }
+    LaunchedEffect(current, showingServer, pushed.isShowing, showingMoreList) { titleScroll.reset() }
     Box(Modifier.fillMaxSize()) {
         Scaffold(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().nestedScroll(titleScroll),
             topBar = {
                 val back: (() -> Unit)? = when {
                     showingInstall -> ({ installing = false })
-                    showingAddHost -> ({ addingHost = false })
+                    showingAddHost -> leaveAddHost
                     showingArtifact -> ({ openArtifact = null })
                     showingServer ->
                         if (serverPushed.isShowing) serverPushed.onBack
@@ -338,9 +360,12 @@ fun AppShell(
                     pushed.isShowing -> pushed.onBack
                     else -> null
                 }
-                IOSNavBar(
+                AppTopBar(
                     title = when {
-                        showingAddHost -> stringResource(R.string.add_machine)
+                        showingAddHost -> stringResource(
+                            if (addForm.step == AddHostForm.Step.CONNECTION) R.string.add_server_connect_title
+                            else R.string.add_server_details_title,
+                        )
                         showingInstall -> stringResource(R.string.install_title)
                         showingArtifact -> openArtifact!!.fileName
                         showingServer ->
@@ -352,9 +377,15 @@ fun AppShell(
                         pushed.isShowing -> pushed.title.orEmpty()
                         else -> stringResource(current.titleRes)
                     },
-                    large = back == null,
                     onBack = back,
+                    collapsed = titleScroll.collapsed,
                     actions = {
+                        if (showingServer && !serverPushed.isShowing) ServerBarMenu(serverBar)
+                        if (showingServer) serverPushed.onRefresh?.let { refresh ->
+                            BarIconButton(onClick = refresh) {
+                                Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.security_action_reload))
+                            }
+                        }
                         if (current == AppTab.SERVERS && !showingServer && !showingAddHost &&
                             !showingMoreList && !pushed.isShowing
                         ) {
@@ -366,7 +397,7 @@ fun AppShell(
                             MetricsBarActions(metricsBar)
                         }
                         if (showingWizard) {
-                            IOSBarButton(onClick = { showingHistory = true }) {
+                            BarIconButton(onClick = { showingHistory = true }) {
                                 Icon(
                                     Icons.Filled.History,
                                     contentDescription = stringResource(R.string.configurator_history_open),
@@ -375,7 +406,7 @@ fun AppShell(
                             }
                         }
                         if (inOverflow && !showingMoreList) {
-                            IOSBarButton(onClick = { showingMoreList = true }) {
+                            BarIconButton(onClick = { showingMoreList = true }) {
                                 Icon(
                                     Icons.AutoMirrored.Filled.List,
                                     contentDescription = stringResource(R.string.all_sections),
@@ -389,9 +420,9 @@ fun AppShell(
             bottomBar = {
                 Column(Modifier.appTourTarget(AppTourTarget.SECTION_BAR)) {
                     RunningJobsStrip(runningJobs)
-                    IOSTabBar {
+                    AppBottomBar {
                         onBar.forEach { tab ->
-                            IOSTabItem(
+                            BottomBarItem(
                                 icon = tab.icon(tunnelActive = tunnelCarriesASession),
                                 label = stringResource(tab.titleRes),
                                 selected = !showingMoreList && tab == current,
@@ -402,7 +433,7 @@ fun AppShell(
                             )
                         }
                         if (behindMore.isNotEmpty()) {
-                            IOSTabItem(
+                            BottomBarItem(
                                 icon = Icons.Filled.MoreHoriz,
                                 label = stringResource(R.string.tab_more),
                                 selected = showingMoreList || inOverflow,
@@ -420,8 +451,9 @@ fun AppShell(
                         selected = tab.key
                         showingMoreList = false
                     }
-                    showingAddHost -> AddHostScreen(fleet, secrets, adopt) { id ->
+                    showingAddHost -> AddHostScreen(addForm, fleet, secrets, adopt) { id ->
                         addingHost = false
+                        addForm = AddHostForm()
                         navigator.open(id)
                     }
                     showingServer -> ServerScreen(
@@ -438,19 +470,25 @@ fun AppShell(
                         shellUsers = shellUsers,
                         agentRemoval = agentRemoval,
                         systemUpdates = systemUpdates,
+                        serverBar = serverBar,
                     )
                     showingArtifact -> ArtifactScreen(openArtifact!!)
-                    showingInstall -> InstallScreen(
+                    showingInstall -> {
+                        LaunchedEffect(savedDeployment!!.id) {
+                            DeploymentSecrets(secrets, savedDeployment!!.id).setHomeAddress(configuratorForm.homeNetworkAddress)
+                        }
+                        InstallScreen(
                         installs.model(
                             deployment = savedDeployment!!,
                             bundle = generated!!,
                             appPublicKey = configurator.appPublicKey(),
-                            homeAddress = configurator.form.value.homeNetworkAddress.trim(),
+                            homeAddress = configuratorForm.homeNetworkAddress.trim(),
                         )
                     ) {
                         installing = false
                         selected = AppTab.SERVERS.key
                         if (LicenseGate.unlocked) navigator.open(savedDeployment!!.id)
+                    }
                     }
                     else -> AnimatedContent(
                         targetState = current,
@@ -467,7 +505,12 @@ fun AppShell(
                         pushed = pushed,
                         onChangeRealitySite = addService::changeRealitySite,
                         onRenewRealityKey = addService::renewRealityKey,
-                        onAddServer = { if (LicensePrompt.allow()) addingHost = true },
+                        onAddServer = {
+                            if (LicensePrompt.allow()) {
+                                addForm = AddHostForm()
+                                addingHost = true
+                            }
+                        },
                         onInstall = { installing = true },
                         onOpenArtifact = { openArtifact = it },
                         onForget = onForget,
@@ -591,12 +634,14 @@ private fun SectionContent(
             bar = fleetBar,
             onAddServer = onAddServer,
             onWake = { wakeOnLAN.wake(it) },
+            onlyServerOpened = { navigator.openedOnlyServer },
+            markOnlyServerOpened = { navigator.openedOnlyServer = true },
         )
         AppTab.METRICS -> LicenseLocked(exceptDemo = true, demoOn = demoOn) {
             MetricsSection(fleet, history, board, panels,
                            bar = metricsBar, pushed = pushed)
         }
-        AppTab.CONFIGURATOR -> LicenseLocked { ConfiguratorSection(
+        AppTab.CONFIGURATOR -> LicenseLocked(exceptDemo = true, demoOn = demoOn) { ConfiguratorSection(
             model = configurator,
             scenarioID = wizardScenario,
             cloudflare = cloudflare,
@@ -608,15 +653,19 @@ private fun SectionContent(
             onOpenArtifact = onOpenArtifact,
         ) }
         AppTab.VPN -> LicenseLocked(exceptDemo = true, demoOn = demoOn) {
+            val app = LocalContext.current.applicationContext as GryonixApplication
+            val modulesOn by app.modules.on.collectAsState()
             VPNSection(fleet, vpnClients, pushed = pushed, tunnel = vpnTunnel,
                        onChangeRealitySite = onChangeRealitySite,
-                       onRenewRealityKey = onRenewRealityKey)
+                       onRenewRealityKey = onRenewRealityKey,
+                       advanced = if (AppModule.VPN_ADVANCED in modulesOn) app.advancedVpn else null)
         }
         AppTab.CONTAINERS -> LicenseLocked(exceptDemo = true, demoOn = demoOn) { ContainersSection(fleet, containers) }
         AppTab.SETTINGS ->
             SettingsSection(tabs, store, fleet, cloudflare, dnsCredentials,
                             secrets = secrets, appUpdates = appUpdates, pushed = pushed)
-        AppTab.TERMINAL -> LicenseLocked { TerminalTab(fleet, terminals, terminalHosts, shellUsers) }
+        AppTab.TERMINAL -> LicenseLocked(exceptDemo = true, demoOn = demoOn) { TerminalTab(fleet, terminals, terminalHosts, shellUsers) }
+        AppTab.AI -> AiSection()
         else -> NotBuiltYet(tab)
     }
 }

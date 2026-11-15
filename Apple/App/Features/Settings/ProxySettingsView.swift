@@ -48,7 +48,7 @@ struct ProxySettingsView: View {
         .formRowButtons()
         #endif
         .bottomBarClearance()
-        .navigationTitle("Proxies")
+        .screenTitle("Proxies")
         .raisedNavigationTitle()
         .task {
             proxies = ProxyStore.all()
@@ -107,7 +107,7 @@ struct ProxyEditorView: View {
                             .labelsHidden()
                             .textFieldStyle(.plain)
                             .multilineTextAlignment(.trailing)
-                            #if os(iOS)
+                            #if os(iOS) || os(tvOS)
                             .keyboardType(.numberPad)
                             #endif
                     }
@@ -129,8 +129,8 @@ struct ProxyEditorView: View {
             .formRowButtons()
             .frame(minWidth: 420, minHeight: 320)
             #endif
-            .navigationTitle(proxy.host.isEmpty ? "Add a proxy" : "Proxy")
-            #if os(iOS)
+            .screenTitle(proxy.host.isEmpty ? "Add a proxy" : "Proxy")
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
@@ -158,7 +158,7 @@ struct ProxyEditorView: View {
                 .labelsHidden()
                 .textFieldStyle(.plain)
                 .multilineTextAlignment(.trailing)
-                #if os(iOS)
+                #if os(iOS) || os(tvOS)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 #endif

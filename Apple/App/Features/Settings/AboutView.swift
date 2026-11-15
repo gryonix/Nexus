@@ -65,7 +65,7 @@ struct AboutView: View {
             }
         }
         .bottomBarClearance()
-        .navigationTitle("About")
+        .screenTitle("About")
         .raisedNavigationTitle()
     }
 }
@@ -160,17 +160,30 @@ struct OpenSourceLicense: Identifiable, Hashable {
 
 struct LicenseTextView: View {
     let license: OpenSourceLicense
+    /// One row per line
+    private let lines: [String]
+
+    init(license: OpenSourceLicense) {
+        self.license = license
+        let text = license.text().flatMap { $0.isEmpty ? nil : $0 }
+            ?? String(localized: "This license text is missing from the build.")
+        lines = text.components(separatedBy: "\n")
+    }
 
     var body: some View {
         ScrollView {
-            Text(verbatim: license.text() ?? String(localized: "This license text is missing from the build."))
-                .font(.system(.footnote, design: .monospaced))
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
+            LazyVStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                    Text(verbatim: line.isEmpty ? " " : line)
+                        .font(.system(.footnote, design: .monospaced))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .textSelection(.enabled)
+            .padding()
         }
         .bottomBarClearance()
-        .navigationTitle(Text(verbatim: license.name))
+        .screenTitle(Text(verbatim: license.name))
         .raisedNavigationTitle()
     }
 }

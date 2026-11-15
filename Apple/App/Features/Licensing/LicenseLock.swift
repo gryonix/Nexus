@@ -28,7 +28,7 @@ struct LicenseLockedModifier: ViewModifier {
     @AppStorage(DemoServer.enabledKey) private var demoFleet = true
 
     func body(content: Content) -> some View {
-        if license.status.isActive || (exceptDemo && demoFleet) {
+        if license.status.isActive || (exceptDemo && (demoFleet || DemoServer.isEnabled)) {
             content
         } else {
             content

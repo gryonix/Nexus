@@ -85,7 +85,7 @@ struct WelcomeContent: View {
             Image(systemName: symbol)
                 .font(.title3)
                 .foregroundStyle(.tint)
-                .frame(width: 30)
+                .rowIconFrame(30)
             VStack(alignment: .leading, spacing: 3) {
                 Text(title).font(.headline)
                 Text(detail).font(.callout).foregroundStyle(.secondary)

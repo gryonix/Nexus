@@ -40,7 +40,7 @@ struct ModelsView: View {
                 fetchSection
             }
         }
-        .navigationTitle(Text("Models"))
+        .screenTitle(Text("Models"))
         .task { await load() }
         #if DEBUG
         .task {

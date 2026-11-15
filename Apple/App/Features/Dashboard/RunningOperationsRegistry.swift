@@ -23,26 +23,50 @@ final class RunningOperationsRegistry: ObservableObject {
                serverName: String = "",
                deployment: Deployment? = nil,
                opensSheet: Bool = true,
+               onLockScreen: Bool = true,
                downloadBackup: ((String) async throws -> Data)? = nil) {
-        if let deployment {
+        if let deployment, onLockScreen {
             LiveActivityJobs.shared.track(state.id, title: state.title, on: deployment)
             RunningJobsWatcher.shared.settleWhenServerEnds(state, on: deployment)
         }
         entries.append(Entry(state: state, downloadBackup: downloadBackup, deployment: deployment))
         if opensSheet { presented = state }
+        guard onLockScreen else { return }
         putOnLockScreen(state, serverName: serverName, deploymentID: deployment?.id,
                         canStop: deployment?.usesAgent == true)
     }
 
     func adopt(_ state: LongOperationState, serverName: String = "",
-               deployment: Deployment? = nil, jobID: String? = nil) {
+               deployment: Deployment? = nil, jobID: String? = nil, kind: OperationKind? = nil,
+               onLockScreen: Bool = true) {
         guard !entries.contains(where: { $0.id == state.id }) else { return }
-        if let deployment {
+        if let deployment, onLockScreen {
             LiveActivityJobs.shared.track(state.id, title: state.title, on: deployment, jobID: jobID)
         }
         entries.append(Entry(state: state, downloadBackup: nil, jobID: jobID, deployment: deployment))
+        guard onLockScreen else { return }
         putOnLockScreen(state, serverName: serverName, jobID: jobID, deploymentID: deployment?.id,
-                        canStop: deployment?.usesAgent == true)
+                        canStop: deployment?.usesAgent == true, kind: kind)
+    }
+
+    /// Ties a started job to its server's open window
+    func bind(jobID: String, deploymentID: UUID) {
+        guard !holds(jobID: jobID) else { return }
+        let open = entries.indices.filter {
+            entries[$0].deployment?.id == deploymentID && entries[$0].jobID == nil && !entries[$0].state.isFinished
+        }
+        guard let newest = open.last else { return }
+        entries[newest].jobID = jobID
+    }
+
+    /// Whether an open window still waits for its job's id
+    func awaitsJob(on deploymentID: UUID) -> Bool {
+        entries.contains { $0.deployment?.id == deploymentID && $0.jobID == nil && !$0.state.isFinished }
+    }
+
+    /// Whether a window already follows this server job
+    func holds(jobID: String) -> Bool {
+        entries.contains { $0.jobID == jobID }
     }
 
     /// Opens the sheet of a server run by job id
@@ -51,6 +75,12 @@ final class RunningOperationsRegistry: ObservableObject {
         guard let entry = entries.first(where: { $0.jobID == jobID }) else { return false }
         presented = entry.state
         return true
+    }
+
+    /// Adds a line to a running operation's log
+    func note(_ line: String, on id: UUID) {
+        guard let state = entries.first(where: { $0.id == id })?.state else { return }
+        state.log = OutputTail.tail(state.log + line + "\n", maxCharacters: OutputTail.logCharacters)
     }
 
     /// Reopens an operation's sheet from the banner
@@ -134,7 +164,7 @@ final class RunningOperationsRegistry: ObservableObject {
     private static let lockScreenUpdateSeconds: Double = 2
 
     private func putOnLockScreen(_ state: LongOperationState, serverName: String, jobID: String? = nil,
-                                 deploymentID: UUID? = nil, canStop: Bool = false) {
+                                 deploymentID: UUID? = nil, canStop: Bool = false, kind: OperationKind? = nil) {
         guard !state.isFinished else { return }
         PendingAgentInstalls.shared.yieldLockScreen(matching: state.title)
         graces[state.id] = BackgroundGrace()
@@ -145,7 +175,8 @@ final class RunningOperationsRegistry: ObservableObject {
                                          progress: state.progress,
                                          jobID: jobID,
                                          deploymentID: deploymentID,
-                                         canStop: canStop)
+                                         canStop: canStop,
+                                         kind: kind)
 
         var watchers: Set<AnyCancellable> = []
         Publishers.CombineLatest(state.$progressText, state.$progress)
@@ -163,12 +194,20 @@ final class RunningOperationsRegistry: ObservableObject {
             .filter { $0 || $1 != nil }
             .first()
             .sink { [weak self] _, error in
+                self?.lockScreenWatchers[state.id] = nil
+                self?.graces.removeValue(forKey: state.id)?.end()
+                // A lost connection is not the end: ask the server
+                if error != nil || state.continuesOnServer, LiveActivityJobs.shared.isServerLed(state.id) {
+                    Task {
+                        await LiveActivityJobs.shared.settle(state.id, text: state.progressText, error: error,
+                                                             canRetry: state.retry != nil)
+                    }
+                    return
+                }
                 OperationActivities.shared.end(id: state.id,
                                                progressText: state.progressText,
                                                errorMessage: error,
                                                canRetry: state.retry != nil)
-                self?.lockScreenWatchers[state.id] = nil
-                self?.graces.removeValue(forKey: state.id)?.end()
                 LiveActivityJobs.shared.forget(state.id)
             }
             .store(in: &watchers)

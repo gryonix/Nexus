@@ -20,13 +20,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-/** The chevron that says a row opens a popup menu */
+/** The ⇕ that says a row opens a popup menu */
 @Composable
 fun PopupChevron() {
     Icon(
         Icons.Filled.UnfoldMore,
         contentDescription = null,
-        tint = Gryonix.colors.tertiaryLabel,
+        tint = Gryonix.colors.accent,
         modifier = Modifier.size(18.dp),
     )
 }
@@ -47,6 +47,7 @@ fun MenuValueRow(
             value = value,
             onClick = { if (enabled) open = true },
             showDivider = showDivider,
+            valueColor = Gryonix.colors.accent,
             chevron = { PopupChevron() },
         )
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {

@@ -20,6 +20,15 @@ extension DemoAgentState {
             return sshState(machine).demoPayload
         case "/gryonixnexusd.v1.Security/ListSshUsers":
             return sshUsers(machine).demoPayload
+        case "/gryonixnexusd.v1.Security/AuthorizeAppKey":
+            let asked = try Gryonixnexusd_V1_AuthorizeAppKeyRequest(serializedBytes: request)
+            var answer = sshUsers(machine)
+            answer.users = answer.users.map { user in
+                var user = user
+                if user.name == asked.user { user.appKeyPresent = true }
+                return user
+            }
+            return answer.demoPayload
         case "/gryonixnexusd.v1.Security/SetSshKeyOnlyUsers":
             let asked = try Gryonixnexusd_V1_SetSshKeyOnlyUsersRequest(serializedBytes: request)
             var stored = memory(machine)

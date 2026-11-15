@@ -42,6 +42,11 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.text.font.FontFamily
 import com.skaymer.gryonixnexus.app.ui.design.ActionRow
+import com.skaymer.gryonixnexus.app.ui.design.MenuValueRow
+import com.skaymer.gryonixnexus.app.ui.design.MenuCheckItem
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.filled.PowerSettingsNew
 import com.skaymer.gryonixnexus.app.ui.design.DisclosureChevron
 import com.skaymer.gryonixnexus.app.ui.design.GroupedContentPadding
 import com.skaymer.gryonixnexus.app.ui.design.GroupedSpacing
@@ -59,10 +64,14 @@ import com.skaymer.gryonixnexus.app.ui.design.PlainButton
 import com.skaymer.gryonixnexus.app.ui.design.RowLabel
 import com.skaymer.gryonixnexus.app.ui.design.ToggleRow
 import com.skaymer.gryonixnexus.R
+import androidx.compose.material.icons.outlined.AddCircleOutline
+import com.skaymer.gryonixnexus.app.ui.design.SheetAction
+import com.skaymer.gryonixnexus.app.ui.design.IOSSheet
 import com.skaymer.gryonixnexus.agentcontrol.VPNClientConfiguration
 import com.skaymer.gryonixnexus.agentcontrol.VPNClientDevice
 import com.skaymer.gryonixnexus.agentcontrol.VPNClientProtocols
 import com.skaymer.gryonixnexus.app.servers.FleetRepository
+import com.skaymer.gryonixnexus.app.vpn.AdvancedVpnStore
 import com.skaymer.gryonixnexus.app.vpn.TunnelChoice
 import com.skaymer.gryonixnexus.app.vpn.VPNAccess
 import com.skaymer.gryonixnexus.app.vpn.VPNClientsState
@@ -88,6 +97,7 @@ fun VPNSection(
     pushed: PushedScreen? = null,
     onChangeRealitySite: (Deployment, String) -> Unit = { _, _ -> },
     onRenewRealityKey: (Deployment, suspend () -> Unit) -> Unit = { _, _ -> },
+    advanced: AdvancedVpnStore? = null,
 ) {
     val allDeployments by fleet.deployments.collectAsState()
     val deployments = remember(allDeployments, only) {
@@ -96,12 +106,22 @@ fun VPNSection(
     val manageable = remember(deployments) { VPNAccess.manageable(deployments) }
     val panelOnly = remember(deployments) { VPNAccess.panelOnly(deployments) }
 
-    if (manageable.isEmpty() && panelOnly.isEmpty()) {
+    if (manageable.isEmpty() && panelOnly.isEmpty() && (tunnel == null || only != null)) {
         EmptySection(R.string.vpn_no_vpn, R.string.vpn_no_vpn_hint)
         return
     }
 
     var openServerID by rememberSaveable { mutableStateOf<String?>(null) }
+    var advancedOpen by rememberSaveable { mutableStateOf(false) }
+    if (advancedOpen && advanced != null && tunnel != null) {
+        val start = rememberTunnelStarter(tunnel)
+        AdvancedVpnScreen(
+            store = advanced,
+            onApply = { text -> start(TunnelStart("Advanced", text, ServiceID.XRAY_REALITY, "Advanced", null)) },
+            onClose = { advancedOpen = false },
+        )
+        return
+    }
     val opened = remember(manageable, openServerID, only) {
         if (only != null) manageable.firstOrNull()
         else manageable.firstOrNull { it.id == openServerID }
@@ -124,7 +144,7 @@ fun VPNSection(
         contentPadding = GroupedContentPadding,
         verticalArrangement = GroupedSpacing,
     ) {
-        if (manageable.isNotEmpty() && tunnel != null) {
+        if (tunnel != null && (only == null || manageable.isNotEmpty())) {
             item { ThisDeviceCard(tunnel, manageable, clients) }
         }
         if (manageable.isNotEmpty()) {
@@ -142,7 +162,7 @@ fun VPNSection(
                             RowLabel(
                                 title = deployment.name,
                                 subtitle = VPNClientProtocols.installed(deployment.services)
-                                    .joinToString(", ") { protocolName(it) },
+                                    .joinToString(" · ") { protocolName(it) },
                             )
                         }
                     }
@@ -157,6 +177,27 @@ fun VPNSection(
         }
         tunnel?.noticeSettings?.let { settings ->
             item { SessionNoticeSection(settings) }
+        }
+        if (advanced != null && tunnel != null) {
+            item { AdvancedVpnEntry { advancedOpen = true } }
+        }
+    }
+}
+
+/** Entry to the VPN Advanced module, at the bottom */
+@Composable
+private fun AdvancedVpnEntry(onOpen: () -> Unit) {
+    GroupedSection {
+        GroupedRow(
+            showDivider = false,
+            onClick = onOpen,
+            leading = { Icon(Icons.Outlined.Tune, null, tint = Gryonix.colors.accent) },
+            trailing = { DisclosureChevron() },
+        ) {
+            RowLabel(
+                title = stringResource(R.string.module_vpn_advanced),
+                subtitle = stringResource(R.string.module_vpn_advanced_note),
+            )
         }
     }
 }
@@ -219,19 +260,9 @@ private fun ServerDevices(
         Modifier.fillMaxSize().background(Gryonix.colors.groupedBackground),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(
-            Modifier.padding(top = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            SwitcherRow(
-                label = stringResource(R.string.vpn_pick_protocol),
-                segments = installed,
-                selected = protocol,
-                name = { protocolName(it) },
-                onSelect = { protocolRaw = it.rawValue },
-            )
+        Devices(server, protocol, clients, tunnel, onChangeRealitySite, onRenewRealityKey, Modifier.weight(1f)) {
+            ProtocolSection(installed, protocol) { protocolRaw = it.rawValue }
         }
-        Devices(server, protocol, clients, tunnel, onChangeRealitySite, onRenewRealityKey, Modifier.weight(1f))
     }
 }
 
@@ -245,6 +276,7 @@ private fun Devices(
     onChangeRealitySite: (Deployment, String) -> Unit,
     onRenewRealityKey: (Deployment, suspend () -> Unit) -> Unit,
     modifier: Modifier = Modifier,
+    protocolPicker: @Composable () -> Unit = {},
 ) {
     LaunchedEffect(server.id, protocol.rawValue) { clients.load(server, protocol) }
     LaunchedEffect(server.id) {
@@ -257,13 +289,15 @@ private fun Devices(
     var comparing by remember { mutableStateOf(false) }
     var removing by remember { mutableStateOf<VPNClientDevice?>(null) }
     var showing by remember { mutableStateOf<Pair<VPNClientConfiguration, VPNClientDevice>?>(null) }
+    var addingDevice by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LazyColumn(
         modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Metrics.sectionGap),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 12.dp, bottom = 24.dp),
     ) {
+        item { protocolPicker() }
         if (tunnel != null && tunnel.canCarry(protocol)) {
             item { TunnelRow(tunnel, server, protocol, clients) }
         }
@@ -277,13 +311,14 @@ private fun Devices(
         state.dnsPriority?.let { priority ->
             item { VPNDNSPrioritySection(server, clients, priority, state.localDNS) }
         }
+        if (server.usesAgent) item { VPNSpeedRow(server) }
         if (VPNMoveViewModel.offers(server)) {
             item { VPNPlacementSection(server) }
         }
-        item { AddDeviceSection(server, protocol, state, clients) }
         item {
             DeviceList(
                 state,
+                onAdd = { addingDevice = true },
                 onShow = { device ->
                     scope.launch { showing = clients.configuration(server, protocol, device.id)?.let { it to device } }
                 },
@@ -294,6 +329,7 @@ private fun Devices(
 
     DeviceDialogs(server, protocol, clients, tunnel, state, removing, showing, comparing,
         onCloseRemoving = { removing = null }, onCloseShowing = { showing = null }, onCloseComparing = { comparing = false })
+    if (addingDevice) AddDeviceSheet(server, protocol, state, clients) { addingDevice = false }
 }
 
 /** The DNS new devices get */
@@ -305,44 +341,65 @@ private fun DefaultDNSSection(
     onCompare: () -> Unit,
 ) {
     val local = state.localDNS
-    val note = if (local.isGone(state.defaultDNS)) R.string.dns_local_gone else R.string.dns_section_note
-    GroupedSection(header = stringResource(R.string.dns_row), footer = stringResource(note)) {
+    GroupedSection(
+        header = stringResource(R.string.dns_row),
+        note = stringResource(R.string.dns_section_note),
+        footer = if (local.isGone(state.defaultDNS)) stringResource(R.string.dns_local_gone) else null,
+    ) {
         DNSRow(state.defaultDNS, onChoose = { clients.setDefaultDNS(server, it) }, local = local)
-        ActionRow(text = stringResource(R.string.dns_compare), onClick = onCompare, showDivider = false)
+        ActionRow(
+            text = stringResource(R.string.dns_compare),
+            onClick = onCompare,
+            showDivider = false,
+            leading = { Icon(Icons.Outlined.Info, null, tint = Gryonix.colors.accent) },
+        )
     }
 }
 
-/** A name and a DNS for a new device */
+/** A new device's name and DNS, on its own sheet */
 @Composable
-private fun AddDeviceSection(
+internal fun AddDeviceSheet(
     server: Deployment,
     protocol: ServiceID,
     state: VPNClientsState,
     clients: VPNClientsViewModel,
+    onClose: () -> Unit,
 ) {
     var newName by rememberSaveable { mutableStateOf("") }
     var newDNS by remember(state.defaultDNS) { mutableStateOf(state.defaultDNS) }
     val proxy = protocol == ServiceID.SHADOWSOCKS || protocol == ServiceID.XRAY_REALITY
-    GroupedSection(
-        footer = state.errorMessage ?: stringResource(
-            when {
-                state.localDNS.isGone(newDNS) -> R.string.dns_local_gone
-                proxy -> R.string.dns_proxy_note
-                else -> R.string.dns_written_note
+    IOSSheet(
+        title = stringResource(R.string.vpn_new_device),
+        onClose = onClose,
+        closeLabel = stringResource(R.string.vpn_cancel),
+        action = SheetAction(
+            title = stringResource(R.string.vpn_add),
+            enabled = newName.isNotBlank() && !state.isBusy,
+            onSelect = {
+                clients.add(server, protocol, newName.trim(), newDNS)
+                onClose()
             },
         ),
     ) {
-        FieldRow(label = stringResource(R.string.vpn_add_name), value = newName, onValueChange = { newName = it })
-        DNSRow(newDNS, onChoose = { newDNS = it }, local = state.localDNS)
-        ActionRow(
-            text = stringResource(R.string.vpn_add),
-            enabled = newName.isNotBlank() && !state.isBusy,
-            onClick = {
-                clients.add(server, protocol, newName.trim(), newDNS)
-                newName = ""
-            },
-            showDivider = false,
-        )
+        GroupedSection(header = stringResource(R.string.name_label)) {
+            FieldRow(
+                label = stringResource(R.string.vpn_device_name),
+                value = newName,
+                onValueChange = { newName = it },
+                showDivider = false,
+            )
+        }
+        GroupedSection(
+            footer = stringResource(
+                when {
+                    state.localDNS.isGone(newDNS) -> R.string.dns_local_gone
+                    proxy -> R.string.dns_proxy_note
+                    else -> R.string.dns_written_note
+                },
+            ),
+        ) {
+            DNSRow(newDNS, onChoose = { newDNS = it }, local = state.localDNS)
+        }
     }
 }
 
@@ -350,22 +407,25 @@ private fun AddDeviceSection(
 @Composable
 private fun DeviceList(
     state: VPNClientsState,
+    onAdd: () -> Unit,
     onShow: (VPNClientDevice) -> Unit,
     onRemove: (VPNClientDevice) -> Unit,
 ) {
-    when {
-        state.saysThereAreNone -> Text(
-            stringResource(R.string.vpn_no_devices),
-            style = MaterialTheme.typography.bodyMedium,
-            color = Gryonix.colors.secondaryLabel,
-            modifier = Modifier.padding(horizontal = Metrics.listInset + 4.dp),
-        )
-        !state.hasAnswered && state.isBusy -> DevicesLoading()
-        else -> GroupedSection {
-            state.devices.forEach { device ->
-                DeviceRow(device, state, showDivider = device != state.devices.last(), onShow, onRemove)
+    if (!state.hasAnswered && state.isBusy) return DevicesLoading()
+    GroupedSection(header = stringResource(R.string.vpn_devices), footer = state.errorMessage) {
+        if (state.saysThereAreNone) {
+            GroupedRow {
+                Text(stringResource(R.string.vpn_no_devices), style = MaterialTheme.typography.bodyMedium,
+                    color = Gryonix.colors.secondaryLabel)
             }
         }
+        state.devices.forEach { device -> DeviceRow(device, state, showDivider = true, onShow, onRemove) }
+        ActionRow(
+            text = stringResource(R.string.vpn_add_device),
+            onClick = onAdd,
+            showDivider = false,
+            leading = { Icon(Icons.Outlined.AddCircleOutline, null, tint = Gryonix.colors.accent) },
+        )
     }
 }
 
@@ -575,34 +635,28 @@ private fun PanelOnly(servers: List<Deployment>) {
 private fun protocolName(id: ServiceID): String =
     ServiceRegistry.service(id)?.displayName ?: id.rawValue
 
+/** "Protocol — WireGuard ⇕" and "About WireGuard", as on iOS */
 @Composable
-private fun <T> SwitcherRow(
-    label: String,
-    segments: List<T>,
-    selected: T,
-    name: (T) -> String,
-    onSelect: (T) -> Unit,
-) {
-    if (segments.isEmpty()) return
-    Column {
-        Text(
-            label.uppercase(),
-            style = MaterialTheme.typography.bodySmall,
-            color = Gryonix.colors.secondaryLabel,
-            modifier = Modifier.padding(
-                start = Metrics.listInset + 4.dp,
-                end = Metrics.listInset + 4.dp,
-                bottom = 6.dp,
-            ),
-        )
-        IOSSegmentedControl(
-            segments = segments,
-            selected = selected,
-            modifier = Modifier.padding(horizontal = Metrics.listInset),
-            label = { name(it) },
-            onSelect = onSelect,
-        )
+private fun ProtocolSection(installed: List<ServiceID>, selected: ServiceID, onSelect: (ServiceID) -> Unit) {
+    if (installed.size <= 1) return
+    var about by remember { mutableStateOf<VPNProtocolInfo?>(null) }
+    val info = VPNProtocolInfo.of(selected)
+    GroupedSection(header = stringResource(R.string.vpn_pick_protocol), note = stringResource(R.string.vpn_protocol_note)) {
+        MenuValueRow(stringResource(R.string.vpn_pick_protocol), protocolName(selected), showDivider = info != null) { close ->
+            installed.forEach { id ->
+                MenuCheckItem(protocolName(id), checked = id == selected) { close(); onSelect(id) }
+            }
+        }
+        if (info != null) {
+            ActionRow(
+                text = stringResource(R.string.vpn_info_about, protocolName(selected)),
+                onClick = { about = info },
+                showDivider = false,
+                leading = { Icon(Icons.Outlined.Info, null, tint = Gryonix.colors.accent) },
+            )
+        }
     }
+    about?.let { VPNProtocolInfoSheet(it) { about = null } }
 }
 
 @Composable
@@ -625,22 +679,26 @@ private fun TunnelRow(
         }
     }
     val panelsClosed = protocol != ServiceID.WIREGUARD_VPN && ServiceID.VPN_PANEL in server.services
-    GroupedSection(
-        footer = (state as? VpnTunnel.State.Failed)?.message
-            ?: if (panelsClosed) stringResource(R.string.vpn_panels_wireguard_only) else null,
-    ) {
-        GroupedRow(
-            showDivider = false,
-            trailing = { TunnelRowAction(state, onConnect = connectHere, onDisconnect = tunnel::disconnect) },
-        ) {
-            RowLabel(
-                title = stringResource(R.string.vpn_this_device),
-                subtitle = when (val current = state) {
-                    is VpnTunnel.State.Up -> stringResource(R.string.vpn_connected_as, current.device)
-                    is VpnTunnel.State.Working -> stringResource(R.string.vpn_working)
-                    is VpnTunnel.State.Failed -> stringResource(R.string.vpn_not_connected)
-                    VpnTunnel.State.Down -> stringResource(R.string.vpn_not_connected)
-                },
+    val footer = (state as? VpnTunnel.State.Failed)?.message
+        ?: if (panelsClosed) stringResource(R.string.vpn_panels_wireguard_only)
+        else if (com.skaymer.gryonixnexus.app.servers.DemoDeployments.isDemoID(server.id)) stringResource(R.string.vpn_demo_unprotected)
+        else null
+    GroupedSection(header = stringResource(R.string.vpn_this_device), footer = footer) {
+        when (val current = state) {
+            is VpnTunnel.State.Up, is VpnTunnel.State.Working -> GroupedRow(
+                showDivider = false,
+                trailing = { TunnelRowAction(current, onConnect = connectHere, onDisconnect = tunnel::disconnect) },
+            ) {
+                RowLabel(
+                    if (current is VpnTunnel.State.Up) stringResource(R.string.vpn_connected_as, current.device)
+                    else stringResource(R.string.vpn_working),
+                )
+            }
+            else -> ActionRow(
+                text = stringResource(R.string.vpn_connect),
+                onClick = connectHere,
+                showDivider = false,
+                leading = { Icon(Icons.Filled.PowerSettingsNew, null, tint = Gryonix.colors.accent) },
             )
         }
     }

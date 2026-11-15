@@ -95,20 +95,39 @@ object ForwardedPorts {
     /** DNS serves the home network, never the internet */
     private val homeOnlyPorts = setOf(53)
 
-    fun tcp(services: List<ManagedService>, context: ServiceContext): List<Int> {
+    fun tcp(services: List<ManagedService>, context: ServiceContext, excluding: Set<String> = emptySet()): List<Int> {
         val ports = sortedSetOf(80)
-        if (services.any { it.webIngress(context) != null }) ports.add(443)
-        ports += carried(services, context, FirewallPort.Proto.TCP)
+        if (services.any { it.webIngress(context)?.homeOnly == false }) ports.add(443)
+        ports += carried(services, context, FirewallPort.Proto.TCP, excluding)
         return ports.toList()
     }
 
-    fun udp(services: List<ManagedService>, context: ServiceContext): List<Int> =
-        carried(services, context, FirewallPort.Proto.UDP).sorted()
+    fun udp(services: List<ManagedService>, context: ServiceContext, excluding: Set<String> = emptySet()): List<Int> =
+        carried(services, context, FirewallPort.Proto.UDP, excluding).sorted()
 
-    private fun carried(services: List<ManagedService>, context: ServiceContext, proto: FirewallPort.Proto): Set<Int> =
-        services.filter { !it.requiresHomeMachine }
+    /** A service's own TCP ports, without the shared web ports */
+    fun ownTCP(service: ManagedService, context: ServiceContext): List<Int> =
+        tcp(listOf(service), context).filter { it != 80 && it != 443 }
+
+    private fun carried(
+        services: List<ManagedService>,
+        context: ServiceContext,
+        proto: FirewallPort.Proto,
+        excluding: Set<String>,
+    ): Set<Int> =
+        services.filter { !it.requiresHomeMachine && it.id.rawValue !in excluding }
             .flatMap { it.firewallPorts(context) }
             .filter { it.proto == proto && it.port !in homeOnlyPorts }
             .map { it.port }
             .toSet()
+}
+
+/** Ports the agent keeps to private addresses */
+object HomeOnlyPorts {
+    /** Own ports of home-only services, without web ports */
+    fun of(services: List<ManagedService>, context: ServiceContext): List<FirewallPort> =
+        services.flatMap { it.firewallPorts(context) }
+            .filter { it.port != 80 && it.port != 443 }
+            .distinctBy { it.proto to it.port }
+            .sortedWith(compareBy({ it.port }, { it.proto.wireValue }))
 }

@@ -57,7 +57,7 @@ final class PanelConfigGoldenTests: XCTestCase {
                                                        deviceName: entry.name)
             XCTAssertFalse(built.profile.endpoint.isEmpty, entry.name)
             XCTAssertFalse(built.profile.addresses.isEmpty, entry.name)
-            XCTAssertEqual(built.profile.allowedIPs, ["0.0.0.0/0"], entry.name)
+            XCTAssertEqual(built.profile.allowedIPs, ["0.0.0.0/0", "::/0"], entry.name)
             XCTAssertEqual(built.profile.mtu, 1280, entry.name)
             XCTAssertEqual(built.profile.dns, ["1.1.1.1"], entry.name)
             XCTAssertEqual(built.secret,

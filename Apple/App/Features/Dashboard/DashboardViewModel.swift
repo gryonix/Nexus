@@ -58,6 +58,8 @@ final class LongOperationState: ObservableObject, Identifiable {
     var downloadHost: SSHHostID?
 
     var reattachDeployment: Deployment?
+    /// The server still runs it
+    var continuesOnServer = false
     /// Runs the same operation again, when that makes sense
     var retry: (() -> Void)?
 
@@ -86,6 +88,9 @@ struct QuickActionResult: Identifiable {
 @MainActor
 final class DashboardViewModel: ObservableObject {
     @Published private(set) var deployment: Deployment
+
+    /// Row edits waiting for the bar
+    let rowEdits = PendingRowEdits()
 
     /// Settings sent with the next install only
     var oneTimeInstallSettings: [String: String] = [:]
@@ -133,6 +138,9 @@ final class DashboardViewModel: ObservableObject {
 
     // Services — generic, keyed by service id
     @Published var adminLockdown: Loadable<AdminLockdownState> = .idle
+    @Published var publicPortVerdicts: [ServiceID: PublicPortProbe.Verdict] = [:]
+    /// Why a home-only switch did not fully apply
+    @Published var homeOnlyFailures: [ServiceID: String] = [:]
 
     @Published var serviceStatuses: [ServiceID: Loadable<[ContainerStatus]>] = [:]
     @Published var serviceBackups: [ServiceID: Loadable<[BackupEntry]>] = [:]
@@ -142,6 +150,9 @@ final class DashboardViewModel: ObservableObject {
     @Published var autoBackup = AutoBackupSettings()
     @Published private(set) var autoBackupAnswered = false
     @Published var autoBackupError: String?
+    /// Which parts backups copy, as the server holds it
+    @Published var backupParts = BackupPartsState()
+    @Published var backupPartsError: String?
     @Published var backupDestination = BackupDestinationState()
     @Published private(set) var backupDestinationAnswered = false
     @Published var backupDestinationBusy = false
@@ -158,10 +169,11 @@ final class DashboardViewModel: ObservableObject {
     @Published var connectionError: String?
     @Published var isRefreshing = false
 
-    func present(_ operation: LongOperationState, opensSheet: Bool = true) {
+    func present(_ operation: LongOperationState, opensSheet: Bool = true, onLockScreen: Bool = true) {
         RunningOperationsRegistry.shared.start(operation, serverName: deployment.name,
                                                deployment: deployment,
                                                opensSheet: opensSheet,
+                                               onLockScreen: onLockScreen,
                                                downloadBackup: { [weak self, weak operation] path in
             guard let self else { throw CancellationError() }
             return try await self.downloadBackup(at: path, on: operation?.downloadHost)
@@ -289,6 +301,26 @@ final class DashboardViewModel: ObservableObject {
         return AgentAutoBackupOperations(client: client, gate: agentGate)
     }
 
+    /// App APIs open without the VPN
+    lazy var openAPI = OpenAPIModel { [weak self] in
+        guard let self else { throw CancellationError() }
+        return try await self.openAPIAgent()
+    }
+
+    /// The API switches need the agent
+    var offersOpenAPI: Bool { deployment.usesAgent && Self.agentTransportAvailable }
+
+    private func openAPIAgent() async throws -> AgentOpenAPI {
+        let refusal = ServerControlError.commandFailed(
+            command: "open API", exitCode: nil,
+            stderr: UIL10n.string("This server is not managed by the gryonixNexus agent."))
+        guard offersOpenAPI else { throw refusal }
+        guard #available(macOS 15.0, *) else { throw refusal }
+        let runner = try await session()
+        let client = try await AgentConnection.client(deployment: deployment, runner: runner)
+        return AgentOpenAPI(client: client, gate: agentGate)
+    }
+
     /// The seam for the admin-guard toggle
     private func lockdownSeam() async throws -> any AdminLockdownManaging {
         let runner = try await session()
@@ -369,8 +401,10 @@ final class DashboardViewModel: ObservableObject {
             ptrIP: deployment.entry.host,
             tunnelEndpoint: "\(deployment.entry.host):\(WireGuardDefaults.listenPort)",
             relayWGPort: UInt32(WireGuardDefaults.listenPort),
-            relayForwardedPorts: ForwardedPorts.tcp(services: services, context: context).map { UInt32($0) },
-            relayForwardedUDPPorts: ForwardedPorts.udp(services: services, context: context).map { UInt32($0) },
+            relayForwardedPorts: ForwardedPorts.tcp(services: services, context: context,
+                                               excluding: deployment.homeOnlyIDs).map { UInt32($0) },
+            relayForwardedUDPPorts: ForwardedPorts.udp(services: services, context: context,
+                                                       excluding: deployment.homeOnlyIDs).map { UInt32($0) },
             homeWGAddress: deployment.homeWGAddress ?? "",
             dashboardPublicKey: devicePublicKey)
     }
@@ -484,7 +518,7 @@ final class DashboardViewModel: ObservableObject {
     @Published var isReadingSecurity = false
 
     /// When the CrowdSec status last came from the host
-    private var securityReadAt: Date?
+    private var securityTriedAt: Date?
 
     /// Whether the Security card is shown at all
     var canShowSecurity: Bool {
@@ -496,13 +530,13 @@ final class DashboardViewModel: ObservableObject {
     func loadSecurity() async {
         guard #available(macOS 15.0, *), canShowSecurity else { return }
         isReadingSecurity = true
+        securityTriedAt = Date()
         defer { isReadingSecurity = false }
         do {
             securityStatus = try await onLiveSession { try await securityOperations().status() }
-            securityReadAt = Date()
+            securityTriedAt = Date()
         } catch {
             securityStatus = .unknown
-            securityReadAt = nil
             sessionMaybeStale = true
         }
         publishFleetStateToWidgets()
@@ -511,8 +545,7 @@ final class DashboardViewModel: ObservableObject {
     /// Re-read only when the answer is missing, failed or old
     func loadSecurityIfStale(maxAge: TimeInterval = DashboardViewModel.securityFreshness) async {
         guard !isReadingSecurity else { return }
-        if let readAt = securityReadAt, securityStatus?.isKnown == true,
-           Date().timeIntervalSince(readAt) < maxAge { return }
+        if Self.isFresh(triedAt: securityTriedAt, known: securityStatus?.isKnown == true, maxAge: maxAge) { return }
         await loadSecurity()
     }
 
@@ -536,7 +569,16 @@ final class DashboardViewModel: ObservableObject {
     }
 
     /// How long an answer is trusted
-    nonisolated static let securityFreshness: TimeInterval = 45
+    nonisolated static let securityFreshness: TimeInterval = 300
+    /// A failed read is tried again after this long
+    nonisolated static let securityRetryAfter: TimeInterval = 45
+
+    /// Whether a read tried then needs no new one yet
+    nonisolated static func isFresh(triedAt tried: Date?, known: Bool, maxAge: TimeInterval,
+                                    now: Date = Date()) -> Bool {
+        guard let tried else { return false }
+        return now.timeIntervalSince(tried) < (known ? maxAge : min(maxAge, securityRetryAfter))
+    }
 
     @available(macOS 15.0, *)
     private func securityOperations() async throws -> AgentSecurityOperations {
@@ -651,7 +693,7 @@ final class DashboardViewModel: ObservableObject {
     @Published var isReadingSSHPasswordAccess = false
 
     /// When the host last said what its SSH accepts
-    private var sshPasswordAccessReadAt: Date?
+    private var sshPasswordAccessTriedAt: Date?
 
     var sshLoginUser: String { deployment.dashboardConfig.sshUser }
 
@@ -661,21 +703,20 @@ final class DashboardViewModel: ObservableObject {
         let key = await Self.devicePublicKey(for: deployment)
         guard !key.isEmpty || DemoFleet.covers(deployment) else {
             sshPasswordAccess = .unknown
-            sshPasswordAccessReadAt = nil
             return
         }
         isReadingSSHPasswordAccess = true
+        sshPasswordAccessTriedAt = Date()
         defer { isReadingSSHPasswordAccess = false }
         do {
             sshPasswordAccess = try await onLiveSession {
                 try await securityOperations()
                     .sshPasswordAccess(loginUser: sshLoginUser, appPublicKey: key)
             }
-            sshPasswordAccessReadAt = Date()
+            sshPasswordAccessTriedAt = Date()
             await readAccountsWhenTheHostReadsOpen()
         } catch {
             sshPasswordAccess = .unknown
-            sshPasswordAccessReadAt = nil
             sessionMaybeStale = true
         }
     }
@@ -738,14 +779,14 @@ final class DashboardViewModel: ObservableObject {
     private func adoptHostAccessFromUsers() {
         guard let answer = sshUsers, answer.host.isKnown else { return }
         sshPasswordAccess = answer.hostAccess
-        sshPasswordAccessReadAt = Date()
+        sshPasswordAccessTriedAt = Date()
     }
 
     /// Re-read only when the answer is missing, failed or old
     func loadSSHPasswordAccessIfStale(maxAge: TimeInterval = DashboardViewModel.securityFreshness) async {
         guard !isReadingSSHPasswordAccess, !isChangingSSHPassword else { return }
-        if let readAt = sshPasswordAccessReadAt, sshPasswordAccess?.isKnown == true,
-           Date().timeIntervalSince(readAt) < maxAge { return }
+        if Self.isFresh(triedAt: sshPasswordAccessTriedAt, known: sshPasswordAccess?.isKnown == true,
+                        maxAge: maxAge) { return }
         await loadSSHPasswordAccess()
     }
 
@@ -827,6 +868,8 @@ final class DashboardViewModel: ObservableObject {
     }
 
     @Published var agentVersion: String?
+    /// The agent's own footprint; nil from an older agent
+    @Published var agentHealth: Gryonixnexusd_V1_AgentHealth?
 
     @discardableResult
     func installAgent(reinstall: Bool = false) async -> Deployment? {
@@ -834,37 +877,34 @@ final class DashboardViewModel: ObservableObject {
         let operation = LongOperationState(
             title: reinstall ? UIL10n.string("Reinstalling the agent") : UIL10n.string("Installing the agent"),
             progressText: UIL10n.string("Sending the agent sources…"))
-        present(operation)
+        present(operation, onLockScreen: false)
+        let resumable = await rememberAgentUpdate()
+        defer { if resumable { PendingAgentUpdates().remove(deployment.id) } }
         do {
             let runner = try await session()
             guard let transfer = runner as? (any SSHCommandRunner & RemoteFileBrowser) else {
                 throw ServerControlError.notConfigured(
                     UIL10n.string("This server is not managed over a real connection."))
             }
-            let build = AgentBuildProgress(state: operation)
-            let others = deployment.agentHosts.filter { $0 != servicesHost }
             let target = self.deployment
-            async let relays: Void = withThrowingTaskGroup(of: Void.self) { group in
-                for host in others {
+            let hosts = [servicesHost] + deployment.agentHosts.filter { $0 != servicesHost }
+            let machines = AgentBuildMachines(state: operation, names: hosts.map { Self.hostDisplayName($0, in: target) })
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                for host in hosts {
+                    let name = Self.hostDisplayName(host, in: target)
                     group.addTask { @MainActor in
-                        try await AgentUpdateOffer.install(on: host, named: Self.hostDisplayName(host, in: target),
-                                                           runner: transfer, state: operation, reinstall: reinstall)
+                        do {
+                            try await AgentUpdateOffer.install(on: host, named: name, runner: transfer,
+                                                               machines: machines, reinstall: reinstall,
+                                                               checksSudo: host != self.servicesHost)
+                        } catch {
+                            machines.finished(name, ok: false)
+                            throw error
+                        }
                     }
                 }
                 try await group.waitForAll()
             }
-            try await AgentBootstrapOperations.install(
-                runner: transfer, host: servicesHost, source: Self.chosenAgentSource, reinstall: reinstall,
-                onPhase: { phase in
-                    Task { @MainActor in operation.progressText = phase }
-                },
-                onOutput: { line in
-                    Task { @MainActor in
-                        operation.log = OutputTail.tail(ANSIStripper.strip(operation.log + line + "\n"), maxCharacters: OutputTail.logCharacters)
-                        build.line(line)
-                    }
-                })
-            try await relays
             var updated: Deployment?
             do {
                 let version = try await probeAgentVersion()
@@ -889,6 +929,15 @@ final class DashboardViewModel: ObservableObject {
             operation.isFinished = true
         }
         return nil
+    }
+
+    /// An update of a running agent resumes after a relaunch
+    private func rememberAgentUpdate() async -> Bool {
+        guard deployment.usesAgent, !DemoServer.isDemo(deployment) else { return false }
+        let target = await Self.chosenAgentSource.offeredVersion(shipped: AgentBootstrapOperations.shippedVersion)
+        PendingAgentUpdates().add([.init(deploymentID: deployment.id, installed: agentVersion ?? "",
+                                         target: target, source: .bundled)])
+        return true
     }
 
     struct SudoPrompt: Identifiable, Equatable {
@@ -987,6 +1036,8 @@ final class DashboardViewModel: ObservableObject {
     @Published var agentCheck: AgentCheck?
     @Published var isCheckingAgent = false
     @Published var agentUpdateOffer: String?
+    /// The version an update would install
+    @Published private(set) var agentUpdateTarget = AgentBootstrapOperations.shippedVersion
 
     var bundledAgentVersion: String { AgentBootstrapOperations.shippedVersion }
 
@@ -1004,7 +1055,8 @@ final class DashboardViewModel: ObservableObject {
             let version = try await probeAgentVersion()
             agentVersion = version.isEmpty ? nil : version
             agentCheck = version.isEmpty ? .installedUnknownVersion : .installed(version: version)
-            if AgentVersion.isNewer(bundledAgentVersion, than: version) {
+            agentUpdateTarget = await Self.chosenAgentSource.offeredVersion(shipped: bundledAgentVersion)
+            if AgentVersion.isNewer(agentUpdateTarget, than: version) {
                 agentUpdateOffer = version
             }
             guard !deployment.usesAgent else { return nil }
@@ -1026,11 +1078,32 @@ final class DashboardViewModel: ObservableObject {
             guard let client = try? await AgentConnection.client(deployment: deployment, runner: runner)
             else { return }
             let state = try await client.getState()
+            if let on = try? await client.getAppModules() {
+                ModuleSettings.shared.adopt(server: deployment.id.uuidString, on: Set(on))
+            }
+            await syncServiceNames(client)
             agentVersion = state.agentVersion
+            agentHealth = state.hasAgentHealth ? state.agentHealth : nil
             homeDoors = Dictionary(state.homeDoors.map { ($0.serviceID, Int($0.port)) }) { first, _ in first }
             meshAddress = state.meshAddress.isEmpty ? nil : state.meshAddress
+            adoptServerServices(state.services)
         } catch {
             agentVersion = nil
+            agentHealth = nil
+        }
+    }
+
+    /// Adds services another device installed on this server
+    func adoptServerServices(_ reported: [Gryonixnexusd_V1_Service]) {
+        let found = AgentServiceMapping.installedByApp(reported.map { (id: $0.id, outside: $0.installedOutside) })
+        let missing = found.subtracting(deployment.services)
+        guard !missing.isEmpty else { return }
+        var next = deployment
+        next.services.formUnion(missing)
+        deployment = next
+        onDeploymentCorrected?(next)
+        Task {
+            for service in self.services where missing.contains(service.id) { await refreshService(service) }
         }
     }
 
@@ -1084,13 +1157,7 @@ final class DashboardViewModel: ObservableObject {
         isApplyingSelfUpdate = true
         selfUpdateError = nil
         selfUpdateProgress = UIL10n.string("Starting…")
-        let island = IslandRun(title: UIL10n.string("Updating the agent"), serverName: deployment.name,
-                               progressText: selfUpdateProgress ?? "", deployment: deployment)
-        defer {
-            isApplyingSelfUpdate = false
-            island.finish(selfUpdateError == nil ? UIL10n.string("The agent is updated.") : "",
-                          error: selfUpdateError)
-        }
+        defer { isApplyingSelfUpdate = false }
         var heardFromAgent = false
         do {
             let runner = try await session()
@@ -1099,7 +1166,6 @@ final class DashboardViewModel: ObservableObject {
                 heardFromAgent = true
                 if !event.text.isEmpty {
                     selfUpdateProgress = event.text
-                    island.update(event.text)
                 }
                 if event.phase == .failed {
                     selfUpdateError = event.reason.isEmpty ? UIL10n.string("The update failed.") : event.reason
@@ -1194,6 +1260,7 @@ final class DashboardViewModel: ObservableObject {
             let follower = planFollower(installer, operation: operation, purpose: purpose)
             let started = try await follower.start(requests)
             AgentPlanRecord.remember(planID: started.id, steps: steps, deployment: deployment.id, purpose: purpose)
+            RunningOperationsRegistry.shared.bind(jobID: started.id, deploymentID: deployment.id)
             LiveActivityJobs.shared.jobStarted(started.id, on: deployment.id)
             let plan = try await followThroughDisconnects(follower, from: started, operation: operation,
                                                           machine: machine)
@@ -1266,6 +1333,7 @@ final class DashboardViewModel: ObservableObject {
             if service.id == .cloudflared {
                 context.settings[AgentInstallSettings.cloudflaredTokenKey] = try await prepareTunnel(operation: operation)
             }
+            await TailscaleKeyStore.apply(to: &context, service: service.id, installed: planned.services)
             requests.append((service.id, context))
         }
         return (planned, requests)
@@ -1316,6 +1384,7 @@ final class DashboardViewModel: ObservableObject {
     private func resumePlan() async {
         guard let record = AgentPlanRecord.stored(deployment: deployment.id),
               !LiveActivityJobs.shared.isFollowing(record.planID),
+              !RunningOperationsRegistry.shared.holds(jobID: record.planID),
               let installer = try? await installOperations() else { return }
         let steps = record.steps
         guard !steps.isEmpty else { return AgentPlanRecord.forget(deployment: deployment.id) }
@@ -1323,6 +1392,7 @@ final class DashboardViewModel: ObservableObject {
             title: Self.planTitle(record.purpose, steps: steps, server: deployment.name),
             progressText: UIL10n.string("Catching up with the server…"))
         present(operation, opensSheet: false)
+        RunningOperationsRegistry.shared.bind(jobID: record.planID, deploymentID: deployment.id)
         LiveActivityJobs.shared.jobStarted(record.planID, on: deployment.id)
         do {
             let current = try await installer.plan(record.planID)
@@ -1351,6 +1421,7 @@ final class DashboardViewModel: ObservableObject {
             operation.progressText = UIL10n.string(
                 "%@ is installed. Its credentials are in the install report.", service.displayName)
         } catch is InstallContinuesOnServer {
+            operation.continuesOnServer = true
             operation.progressText = UIL10n.string(
                 "Installing on the server. You can close the app — the server carries on, and this screen picks the run back up.")
         } catch {
@@ -1411,19 +1482,42 @@ final class DashboardViewModel: ObservableObject {
         let finished = [service.id] + alsoProtocols
         installingNow.formUnion(finished)
         defer { installingNow.subtract(finished) }
+        let earlierLog = operation.log
         do {
             let installed = try await installOnServer(service, alsoProtocols: alsoProtocols,
                                                       operation: operation, isBatch: isBatch)
             forget(finished)
             return installed
         } catch {
-            if Self.isLostConnection(error),
-               InstallJobStore().job(deployment: deploymentID, service: service.id)?.jobID.isEmpty == false {
-                throw InstallContinuesOnServer()
+            guard Self.isLostConnection(error),
+                  let jobID = InstallJobStore().job(deployment: deploymentID, service: service.id)?.jobID,
+                  !jobID.isEmpty else {
+                forget(finished)
+                throw error
             }
+            return try await followDroppedInstall(service, jobID: jobID, alsoProtocols: alsoProtocols,
+                                                  after: earlierLog, operation: operation)
+        }
+    }
+
+    /// Follows a dropped install to its end
+    private func followDroppedInstall(_ service: any ManagedService, jobID: String, alsoProtocols: Set<ServiceID>,
+                                      after earlierLog: String, operation: LongOperationState) async throws -> Deployment {
+        let finished = [service.id] + alsoProtocols
+        operation.progressText = UIL10n.string("Catching up with the server…")
+        do {
+            try await rejoin(jobID: jobID, of: service, after: earlierLog, operation: operation)
+        } catch where Self.isLostConnection(error) {
+            throw InstallContinuesOnServer()
+        } catch {
             forget(finished)
             throw error
         }
+        forget(finished)
+        let settings = ServiceDefaultHostnames.pinningSiblings(
+            adding: service.id, to: deployment.serviceSettings,
+            installed: deployment.services, domain: deployment.domain)
+        return await recordInstalled(service, settings: settings, vpnProtocols: Set(finished), operation: operation)
     }
 
     /// Installs a moved VPN, rejoining after a dropped connection
@@ -1513,6 +1607,7 @@ final class DashboardViewModel: ObservableObject {
             context.settings[AgentInstallSettings.vpnProtocolsKey] = protocols
         }
         context.settings.merge(oneTimeInstallSettings) { _, once in once }
+        await TailscaleKeyStore.apply(to: &context, service: service.id, installed: planned.services)
         if service.id == .cloudflared {
             context.settings[AgentInstallSettings.cloudflaredTokenKey] =
                 try await prepareTunnel(operation: operation)
@@ -1562,8 +1657,8 @@ final class DashboardViewModel: ObservableObject {
     static func forwardedPorts(of deployment: Deployment) -> [Int] {
         let services = deployment.servicesBehindRelay
         let context = deployment.serviceContext
-        return ForwardedPorts.tcp(services: services, context: context)
-            + ForwardedPorts.udp(services: services, context: context).map { -$0 }
+        return ForwardedPorts.tcp(services: services, context: context, excluding: deployment.homeOnlyIDs)
+            + ForwardedPorts.udp(services: services, context: context, excluding: deployment.homeOnlyIDs).map { -$0 }
     }
 
     /// DNS names and relay forwards for a newly added service
@@ -1695,6 +1790,22 @@ final class DashboardViewModel: ObservableObject {
         }
     }
 
+    /// Tunnel MTU, kernel or program, CPU and UDP drops
+    func vpnSpeedFacts() async throws -> Gryonixnexusd_V1_VpnSpeedFacts {
+        guard #available(macOS 15.0, *) else { throw CancellationError() }
+        let runner = try await session()
+        let client = try await AgentConnection.client(deployment: deployment, runner: runner, host: deployment.vpnHost)
+        return try await client.getVPNSpeedFacts()
+    }
+
+    /// Switches AmneziaWG between the kernel and the program
+    func setAmneziaKernel(_ enabled: Bool) async throws -> Gryonixnexusd_V1_VpnSpeedFacts {
+        guard #available(macOS 15.0, *) else { throw CancellationError() }
+        let runner = try await session()
+        let client = try await AgentConnection.client(deployment: deployment, runner: runner, host: deployment.vpnHost)
+        return try await client.setAmneziaKernel(enabled)
+    }
+
     /// The relay's role, when this service runs on the relay
     func surfaceRole(for service: ServiceID?) -> Gryonixnexusd_V1_HostRole? {
         agentHost(for: service) == nil ? nil : .vpsRelay
@@ -1704,6 +1815,12 @@ final class DashboardViewModel: ObservableObject {
     func agentHost(for service: ServiceID?) -> SSHHostID? {
         guard let service, deployment.vpnRunsOnRelay, ServiceID.vpnFamily.contains(service) else { return nil }
         return deployment.vpnHost
+    }
+
+    func checkInstall(_ services: [ServiceID]) async -> [InstallFinding] {
+        guard deployment.usesAgent, #available(macOS 15.0, *),
+              let operations = try? await installOperations() else { return [] }
+        return (try? await operations.check(services)) ?? []
     }
 
     private func installOperations(for service: ServiceID? = nil) async throws -> AgentInstallOperations {
@@ -1806,6 +1923,7 @@ final class DashboardViewModel: ObservableObject {
                 group.addTask { await self.loadSSHPasswordAccess() }
             }
             group.addTask { await self.importInstallReportsIfNeeded() }
+            group.addTask { await self.loadAgentVersion() }
         }
     }
 
@@ -1884,7 +2002,7 @@ final class DashboardViewModel: ObservableObject {
     private var servicesHost: SSHHostID { deployment.servicesHost }
 
     /// When the panel guard last answered
-    private var adminLockdownReadAt: Date?
+    private var adminLockdownTriedAt: Date?
 
     func refreshAdminLockdown() async {
         await loadLockdown { ops in try await ops.status() }
@@ -1893,8 +2011,7 @@ final class DashboardViewModel: ObservableObject {
     /// Re-read only when the answer is missing, failed or old
     func refreshAdminLockdownIfStale(maxAge: TimeInterval = DashboardViewModel.securityFreshness) async {
         guard hasAdminLockdown, !adminLockdown.isLoading else { return }
-        if adminLockdown.value != nil, let readAt = adminLockdownReadAt,
-           Date().timeIntervalSince(readAt) < maxAge { return }
+        if Self.isFresh(triedAt: adminLockdownTriedAt, known: adminLockdown.value != nil, maxAge: maxAge) { return }
         await refreshAdminLockdown()
     }
 
@@ -1936,18 +2053,20 @@ final class DashboardViewModel: ObservableObject {
     }
 
     /// Turns one page's protection on/off
-    func setLockdown(host: String, guarded: Bool) async {
+    func setLockdown(host: String, guarded: Bool, clearingDeny: Bool = false) async {
         guard let current = adminLockdown.value else { return }
         let all = Set(lockdownPages.map(\.host))
         var wanted = Set(all.filter(current.guards))
         if guarded { wanted.insert(host) } else { wanted.remove(host) }
         let context = deployment.serviceContext
         let expanded = wanted.flatMap { [$0] + context.mirroredHostnames(of: $0) }
+        let refusing = deployment.hostsRefusingVPN
+        let deny: [String]? = refusing.isEmpty && !clearingDeny ? nil : refusing
         await loadLockdown { ops in
-            if wanted == all {
+            if wanted == all, deny == nil {
                 return try await ops.set(true)
             }
-            return try await ops.set(hosts: expanded.sorted())
+            return try await ops.set(hosts: expanded.sorted(), denyVPN: deny)
         }
     }
 
@@ -1962,11 +2081,31 @@ final class DashboardViewModel: ObservableObject {
         await load(\.homeForwarding) { ops in try await ops.ipForwarding(on: .home) }
     }
 
+    private var firstLoadClaimed = false
+
+    /// Pauses before reading again what a dropped link spoiled
+    nonisolated static let retryPauses: [Duration] = [.seconds(2), .seconds(6)]
+
+    /// Reads everything again while a read failed on the link
+    func retryWhatFailed(pauses: [Duration] = DashboardViewModel.retryPauses) async {
+        for pause in pauses {
+            guard sessionMaybeStale else { return }
+            try? await Task.sleep(for: pause)
+            await refreshAll()
+        }
+    }
+
+    /// True once per screen model, for its first load
+    func claimFirstLoad() -> Bool {
+        defer { firstLoadClaimed = true }
+        return !firstLoadClaimed
+    }
+
     /// Every reading for one machine
     private func loadHost(_ host: SSHHostID, wireGuard: Bool) async {
         await loadHostMetrics(on: host)
         if wireGuard {
-            await loadHostReading(into: \.hostWireGuard, host: host) { ops in
+            await loadHostReading(into: \.hostWireGuard, host: host, quietWhenSudoDenied: true) { ops in
                 try await ops.wgStatus(on: host)
             }
         }
@@ -1977,6 +2116,7 @@ final class DashboardViewModel: ObservableObject {
     private func loadHostReading<T>(
         into keyPath: ReferenceWritableKeyPath<DashboardViewModel, [SSHHostID: Loadable<T>]>,
         host: SSHHostID,
+        quietWhenSudoDenied: Bool = false,
         _ probe: @escaping (StatusOperations) async throws -> T
     ) async {
         self[keyPath: keyPath][host] = .loading
@@ -1985,6 +2125,10 @@ final class DashboardViewModel: ObservableObject {
             let value = try await probe(StatusOperations(runner: runner, config: config))
             self[keyPath: keyPath][host] = .loaded(value)
         } catch {
+            if quietWhenSudoDenied, case ServerControlError.sudoPasswordRequired = error {
+                self[keyPath: keyPath][host] = .idle
+                return
+            }
             sessionMaybeStale = true
             self[keyPath: keyPath][host] = .failed(Self.message(for: error))
         }
@@ -2104,14 +2248,14 @@ final class DashboardViewModel: ObservableObject {
 
     private func loadLockdown(_ probe: @escaping (any AdminLockdownManaging) async throws -> AdminLockdownState) async {
         adminLockdown = .loading
+        adminLockdownTriedAt = Date()
         do {
             let state = try await onLiveSession { try await probe(try await lockdownSeam()) }
             adminLockdown = .loaded(state)
-            adminLockdownReadAt = Date()
+            adminLockdownTriedAt = Date()
         } catch {
             sessionMaybeStale = true
             adminLockdown = .failed(Self.message(for: error))
-            adminLockdownReadAt = nil
         }
     }
 
@@ -2240,17 +2384,17 @@ final class DashboardViewModel: ObservableObject {
 
     func restart(_ service: any ManagedService) async {
         await power(.restart, service,
-                    successMessage: UIL10n.string("%@ was restarted.", service.displayName))
+                    successMessage: UIL10n.string("%@ was restarted.", title(of: service)))
     }
 
     func start(_ service: any ManagedService) async {
         await power(.start, service,
-                    successMessage: UIL10n.string("%@ was started.", service.displayName))
+                    successMessage: UIL10n.string("%@ was started.", title(of: service)))
     }
 
     func stop(_ service: any ManagedService) async {
         await power(.stop, service,
-                    successMessage: UIL10n.string("%@ was stopped.", service.displayName))
+                    successMessage: UIL10n.string("%@ was stopped.", title(of: service)))
     }
 
     /// A bounded tail of one service's log, read over SSH
@@ -2487,7 +2631,7 @@ final class DashboardViewModel: ObservableObject {
 
     func runUpdateNow(_ service: any ManagedService) async {
         let operation = LongOperationState(
-            title: UIL10n.string("Updating %@", service.displayName),
+            title: UIL10n.string("Updating %@", title(of: service)),
             progressText: UIL10n.string("Backing up, then updating. This may take up to 10 minutes.")
         )
         operation.retry = { [weak self] in Task { await self?.runUpdateNow(service) } }
@@ -2593,7 +2737,7 @@ final class DashboardViewModel: ObservableObject {
     /// Removes the service from the machine
     func uninstall(_ service: any ManagedService, purge: PurgeOptions) async -> Deployment? {
         let operation = LongOperationState(
-            title: UIL10n.string("Removing %@", service.displayName),
+            title: UIL10n.string("Removing %@", title(of: service)),
             progressText: UIL10n.string("Stopping and removing containers…"))
         present(operation)
         let remaining = Self.remainingVPNProtocols(after: service, in: deployment.services)
@@ -2759,7 +2903,7 @@ final class DashboardViewModel: ObservableObject {
     func runWrapperBackup(_ service: any ManagedService,
                           encrypt: Bool? = nil, passphrase: String? = nil, opensSheet: Bool = true) async {
         let operation = LongOperationState(
-            title: UIL10n.string("Backing up %@", service.displayName),
+            title: UIL10n.string("Backing up %@", title(of: service)),
             progressText: deployment.usesAgent
                 ? UIL10n.string("The backup may take a few minutes. It runs on the server, so you can close the app.")
                 : UIL10n.string("The backup may take a few minutes. Keep the app open.")
@@ -2787,7 +2931,7 @@ final class DashboardViewModel: ObservableObject {
     }
 
     func runEncryptedBackup(_ service: any ManagedService, passphrase: String) async {
-        let operation = LongOperationState(title: UIL10n.string("Encrypted backup of %@", service.displayName),
+        let operation = LongOperationState(title: UIL10n.string("Encrypted backup of %@", title(of: service)),
                                            progressText: UIL10n.string("Stopping the container…"))
         operation.downloadHost = backupDownloadHost(for: service.id)
         present(operation)
@@ -2838,6 +2982,13 @@ final class DashboardViewModel: ObservableObject {
         guard deployment.usesAgent, Self.agentTransportAvailable else { return false }
         return deployment.services.contains(.headscale)
     }
+
+    /// Devices are listed in the user's Tailscale account
+    var usesTailscaleAccount: Bool {
+        deployment.services.contains(.tailscaleNode) && !deployment.services.contains(.headscale)
+    }
+
+    static let tailscaleDevicesURL = URL(string: "https://login.tailscale.com/admin/machines")!
 
     // MARK: Containers
 
@@ -3018,21 +3169,6 @@ final class DashboardViewModel: ObservableObject {
         return text.contains("VPN panel") && text.contains("Connection refused")
     }
 
-    /// Records where the VPN already runs; nothing moves
-    @available(macOS 15.0, *)
-    func recordVPNOnOtherMachine() async -> String {
-        guard let other = deployment.otherVPNHost,
-              let id = deployment.installedVPNServices.filter({ $0 != .vpnPanel })
-                .sorted(by: { $0.rawValue < $1.rawValue }).first else { return "" }
-        do {
-            _ = try await vpnClientOperations(on: other).list(protocol: id)
-            correctVPNPlacement()
-            return UIL10n.string("Recorded where the VPN runs.")
-        } catch {
-            return Self.message(for: error)
-        }
-    }
-
     /// Records that the VPN runs on the other machine
     private func correctVPNPlacement() {
         let corrected = deployment.movingVPN(toRelay: !deployment.vpnRunsOnRelay)
@@ -3062,6 +3198,7 @@ final class DashboardViewModel: ObservableObject {
     private func recordForWidgets(protocol id: ServiceID,
                                   devices: [VPNClientDevice]?,
                                   failure: String?) {
+        guard !DemoServer.isDemo(deployment) else { return }
         let deploymentID = deployment.id
         let name = deployment.name
         let reading = devices.map {
@@ -3080,7 +3217,7 @@ final class DashboardViewModel: ObservableObject {
 
     /// Puts a host reading where a widget can draw it
     func publishFleetStateToWidgets() {
-        guard !DemoServer.isEnabled || !DemoHostMetrics.covers(deployment) else { return }
+        guard !DemoServer.isDemo(deployment) else { return }
         let deploymentID = deployment.id
         let name = deployment.name
         let now = Date()
@@ -3139,7 +3276,7 @@ final class DashboardViewModel: ObservableObject {
     }
 
     private func publishMetricsToWidgets(_ snapshot: HostMetricsSnapshot, from host: SSHHostID) {
-        guard host == deployment.servicesHost, !DemoHostMetrics.covers(deployment) else { return }
+        guard host == deployment.servicesHost, !DemoServer.isDemo(deployment) else { return }
         let deploymentID = deployment.id
         let name = deployment.name
         let label = deployment.metricsMachineLabel(for: host) ?? name
@@ -3185,15 +3322,23 @@ final class DashboardViewModel: ObservableObject {
 
     var vpnDefaultDNS: [String] { vpnDNS.dns }
 
+    /// True once the chosen DNS came from the server
+    private(set) var vpnDNSKnown = false
+
     func loadVPNDefaultDNS() async {
         guard #available(macOS 15.0, *) else { return }
-        if let loaded = try? await vpnClientOperations().defaultDNS() { vpnDNS = withHomeResolvers(loaded) }
+        if let loaded = try? await vpnClientOperations().defaultDNS() {
+            vpnDNS = withHomeResolvers(loaded)
+            vpnDNSKnown = true
+        }
     }
 
     func setVPNDefaultDNS(_ dns: [String]) async {
         guard #available(macOS 15.0, *) else { return }
         do {
             vpnDNS = withHomeResolvers(try await vpnClientOperations().setDefaultDNS(dns))
+            vpnDNSKnown = true
+            await keepChosenDNSFirst()
         } catch {
             quickActionResult = QuickActionResult(message: Self.message(for: error), isError: true)
         }
@@ -3218,6 +3363,20 @@ final class DashboardViewModel: ObservableObject {
     func loadVPNDNSPriority() async {
         guard #available(macOS 15.0, *) else { return }
         vpnDNSPriority = try? await vpnClientOperations().dnsPriority()
+        await keepChosenDNSFirst()
+    }
+
+    /// The order entry the devices' chosen DNS takes
+    var vpnChosenDNSEntry: String {
+        VPNDNSPriorityEditing.chosenEntry(for: vpnDefaultDNS, localAddress: vpnDNS.localAddress)
+    }
+
+    /// Puts the devices' chosen DNS first in the relay order
+    func keepChosenDNSFirst() async {
+        guard vpnDNSKnown, let order = vpnDNSPriority?.resolvers else { return }
+        let pinned = VPNDNSPriorityEditing.pin(order, first: vpnChosenDNSEntry)
+        guard pinned != order else { return }
+        await setVPNDNSPriority(pinned)
     }
 
     func setVPNDNSPriority(_ resolvers: [String]) async {
@@ -3235,6 +3394,9 @@ final class DashboardViewModel: ObservableObject {
                                  message: UIL10n.string("The device was removed.")) { ops in
             try await ops.remove(protocol: id, clientID: clientID)
         }
+        guard !(quickActionResult?.isError ?? false) else { return }
+        // Its tunnels here lost their keys too
+        await TunnelController.shared.removeProfiles(forServer: deployment.id, protocolID: id, deviceID: clientID)
     }
 
     @available(macOS 15.0, *)
@@ -3356,7 +3518,7 @@ final class DashboardViewModel: ObservableObject {
     func runRestore(_ service: any ManagedService, from source: RestoreSource,
                     passphrase: String?) async {
         let operation = LongOperationState(
-            title: UIL10n.string("Restoring %@", service.displayName),
+            title: UIL10n.string("Restoring %@", title(of: service)),
             progressText: UIL10n.string("The restore may take a while. Keep the app open.")
         )
         present(operation)
@@ -3446,7 +3608,7 @@ final class DashboardViewModel: ObservableObject {
         if #available(macOS 15.0, *), SSHAgentTransport.isDeadLink(error) {
             return UIL10n.string("The server stopped answering over SSH. Try again in a moment.")
         }
-        return (error as? LocalizedError)?.errorDescription ?? String(describing: error)
+        return LinkDropText.reason(error)
     }
 
     /// The agent has never heard of this service

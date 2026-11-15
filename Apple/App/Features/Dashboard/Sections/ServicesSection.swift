@@ -171,6 +171,7 @@ private struct ServiceRow: View {
     let requestVPNDevices: (ServiceID) -> Void
     let onUpdate: (Deployment) -> Void
     @AppStorage private var expanded: Bool
+    @State private var showingSettings = false
     /// Whether the VPN devices row belongs here — see `VPNPlacement`
     @AppStorage(VPNDisplaySettings.placementKey)
     private var vpnPlacementRaw = VPNPlacement.both.rawValue
@@ -212,14 +213,21 @@ private struct ServiceRow: View {
             } label: {
                 header.appTourTarget(.serverApps)
             }
+            .navigationDestination(isPresented: $showingSettings) { settingsScreen }
         }
     }
 
     private var header: some View {
         HStack {
-            Label(service.displayName, systemImage: service.systemImage)
+            Label(viewModel.title(of: service), systemImage: service.systemImage)
                 .font(.headline)
             Spacer()
+            if viewModel.isHomeOnly(service.id) {
+                Image(systemName: "house.fill")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel(Text("Home"))
+            }
             healthBadge
         }
     }
@@ -256,6 +264,26 @@ private struct ServiceRow: View {
         CompactActionGroup(buttons(actions: actions))
             .listRowSeparator(.hidden)
             .padding(.vertical, 2)
+
+        statusRows
+
+        if actions.backup != nil {
+            ServiceBackupsView(
+                service: service,
+                state: viewModel.serviceBackups[service.id] ?? .idle,
+                load: { await viewModel.loadBackups(service) },
+                download: { try await viewModel.downloadBackup(service, at: $0) },
+                pathFor: { viewModel.backupPath(service, entry: $0) },
+                delete: { await viewModel.deleteBackup(service, entry: $0) },
+                copies: viewModel.preRestoreCopies[service.id] ?? [],
+                deleteCopy: { await viewModel.deletePreRestoreCopy(service, copy: $0) }
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var settingsRows: some View {
+        ServiceNameRow(viewModel: viewModel, service: service)
 
         if service.id == .dockerMailserver {
             NavigationLink {
@@ -304,6 +332,49 @@ private struct ServiceRow: View {
             VaultwardenTwoFactorRow(deployment: viewModel.deployment)
         }
 
+        if service.id == .shairportSync, viewModel.deployment.usesAgent {
+            AirPlaySpeakerRow(viewModel: viewModel, onUpdate: onUpdate)
+        }
+
+        if service.id == .odio, viewModel.deployment.usesAgent {
+            AudioHubRow(viewModel: viewModel)
+        }
+
+        if service.id == .uxplay, viewModel.deployment.usesAgent {
+            AirPlayScreenRow(viewModel: viewModel, onUpdate: onUpdate)
+        }
+
+        if PackagedAudioService.named.contains(service.id), viewModel.deployment.usesAgent {
+            SpeakerNameRow(viewModel: viewModel, service: service, onUpdate: onUpdate)
+        }
+
+        accessLinks
+
+        SiteAddressRow(viewModel: viewModel, service: service, onUpdate: onUpdate)
+
+        HomeOnlyRow(viewModel: viewModel, service: service, onUpdate: onUpdate)
+
+        if service.webIngress(viewModel.deployment.serviceContext) != nil {
+            InternalCertificateRow(viewModel: viewModel)
+        }
+    }
+
+    private var settingsScreen: some View {
+        List { settingsRows }
+            .navigationTitle(viewModel.title(of: service))
+    }
+
+    @ViewBuilder
+    private var accessLinks: some View {
+        if viewModel.offersOpenAPI, !ServiceAPIGroups.groups(for: service.id).isEmpty {
+            NavigationLink {
+                ServiceOpenAPIView(viewModel: viewModel, model: viewModel.openAPI,
+                                   service: service.id, name: viewModel.title(of: service))
+            } label: {
+                Label("Access without the VPN", systemImage: "app.connected.to.app.below.fill")
+            }
+        }
+
         if service.id == .headscale, viewModel.managesMesh {
             NavigationLink {
                 MeshDevicesView(viewModel: viewModel)
@@ -312,19 +383,10 @@ private struct ServiceRow: View {
             }
         }
 
-        statusRows
-
-        if actions.backup != nil {
-            ServiceBackupsView(
-                service: service,
-                state: viewModel.serviceBackups[service.id] ?? .idle,
-                load: { await viewModel.loadBackups(service) },
-                download: { try await viewModel.downloadBackup(service, at: $0) },
-                pathFor: { viewModel.backupPath(service, entry: $0) },
-                delete: { await viewModel.deleteBackup(service, entry: $0) },
-                copies: viewModel.preRestoreCopies[service.id] ?? [],
-                deleteCopy: { await viewModel.deletePreRestoreCopy(service, copy: $0) }
-            )
+        if service.id == .tailscaleNode, viewModel.usesTailscaleAccount {
+            Link(destination: DashboardViewModel.tailscaleDevicesURL) {
+                Label("Devices", systemImage: "laptopcomputer.and.iphone")
+            }
         }
     }
 
@@ -360,21 +422,24 @@ private struct ServiceRow: View {
         if actions.stop != nil {
             buttons.append(CompactAction("Stop", systemImage: "stop.fill", role: .destructive) {
                 requestConfirm(.init(kind: .stop, serviceID: service.id,
-                                     displayName: service.displayName))
+                                     displayName: viewModel.title(of: service)))
             })
         }
         if actions.restart != nil {
             buttons.append(CompactAction("Restart", systemImage: "arrow.clockwise") {
                 requestConfirm(.init(kind: .restart, serviceID: service.id,
-                                     displayName: service.displayName))
+                                     displayName: viewModel.title(of: service)))
             })
         }
         if service.updateSpec(viewModel.deployment.serviceContext).flavour == .composePull {
             buttons.append(CompactAction("Update", systemImage: "arrow.down.circle") {
                 requestConfirm(.init(kind: .update, serviceID: service.id,
-                                     displayName: service.displayName))
+                                     displayName: viewModel.title(of: service)))
             })
         }
+        buttons.append(CompactAction("Settings", systemImage: "gearshape") {
+            showingSettings = true
+        })
         if canReadLogs {
             buttons.append(CompactAction("Logs", systemImage: "text.alignleft") {
                 requestLogs(service.id)

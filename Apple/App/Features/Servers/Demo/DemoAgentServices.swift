@@ -271,6 +271,11 @@ extension DemoAgentState {
             }
             write(stored, for: machine)
             return clients(of: asked.protocol, machine).demoPayload
+        case "/gryonixnexusd.v1.Vpn/GetVpnSpeedFacts":
+            return Self.demoSpeedFacts().demoPayload
+        case "/gryonixnexusd.v1.Vpn/SetAmneziaKernel":
+            let asked = try Gryonixnexusd_V1_SetAmneziaKernelRequest(serializedBytes: request)
+            return Self.demoSpeedFacts(kernel: asked.enabled).demoPayload
         case "/gryonixnexusd.v1.Vpn/GetVpnDns":
             return vpnDNS(machine).demoPayload
         case "/gryonixnexusd.v1.Vpn/SetVpnDns":
@@ -382,6 +387,10 @@ extension DemoAgentState {
             return Gryonixnexusd_V1_ContainerBackupSchedule().demoPayload
         case "/gryonixnexusd.v1.Containers/ListContainerGroupBackups":
             return Gryonixnexusd_V1_ContainerBackupList().demoPayload
+        case "/gryonixnexusd.v1.Containers/ListImages", "/gryonixnexusd.v1.Containers/ListVolumes",
+             "/gryonixnexusd.v1.Containers/RemoveImage", "/gryonixnexusd.v1.Containers/RemoveVolume",
+             "/gryonixnexusd.v1.Containers/PruneUnused":
+            return try dockerAssets(path, request, machine)
         default:
             return nil
         }
@@ -464,5 +473,27 @@ extension DemoAgentState {
         variable.value = value
         variable.sensitive = sensitive
         return variable
+    }
+
+    /// A demo server's tunnels, one of them slow
+    static func demoSpeedFacts(kernel: Bool = false) -> Gryonixnexusd_V1_VpnSpeedFacts {
+        var facts = Gryonixnexusd_V1_VpnSpeedFacts()
+        var wireguard = Gryonixnexusd_V1_VpnInterfaceFacts()
+        wireguard.protocol = "wireguard"
+        wireguard.interface = "wgpanel"
+        wireguard.mtu = 1280
+        wireguard.kernel = true
+        var amnezia = Gryonixnexusd_V1_VpnInterfaceFacts()
+        amnezia.protocol = "amneziawg"
+        amnezia.interface = "wg0"
+        amnezia.mtu = 1280
+        amnezia.kernel = kernel
+        facts.interfaces = [wireguard, amnezia]
+        facts.amneziaKernelStatus = kernel ? "on" : "off"
+        facts.amneziaKernelPossible = true
+        facts.cpuCores = 2
+        facts.load = 0.4
+        facts.clientMtu = 1280
+        return facts
     }
 }

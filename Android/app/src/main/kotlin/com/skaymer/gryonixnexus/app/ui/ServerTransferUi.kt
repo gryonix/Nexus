@@ -20,20 +20,26 @@ import com.skaymer.gryonixnexus.R
 import com.skaymer.gryonixnexus.app.servers.DeploymentTransfer
 import com.skaymer.gryonixnexus.app.servers.DeploymentTransferService
 import com.skaymer.gryonixnexus.app.ui.design.AlertAction
+import com.skaymer.gryonixnexus.app.ui.design.FormSheet
 import com.skaymer.gryonixnexus.app.ui.design.AlertFields
 import com.skaymer.gryonixnexus.app.ui.design.ConfirmAlert
 import com.skaymer.gryonixnexus.app.ui.design.FieldRow
 import com.skaymer.gryonixnexus.app.ui.design.IOSAlert
 import com.skaymer.gryonixnexus.servercontrol.Deployment
+import com.skaymer.gryonixnexus.servercontrol.ServerGroupBundle
 import com.skaymer.gryonixnexus.servercontrol.TransferSeal
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 
 /** What waits on a passphrase */
 sealed class TransferPrompt {
     class Export(val deployments: List<Deployment>, val many: Boolean) : TransferPrompt()
+
+    /** Several groups and their servers, in one file */
+    class ExportGroups(val groups: List<String>, val deployments: List<Deployment>) : TransferPrompt()
 
     class Unlock(val data: ByteArray) : TransferPrompt()
 }
@@ -45,12 +51,16 @@ class ServerTransferUi(
     private val onImported: () -> Unit,
     private val scope: CoroutineScope,
     private val context: Context,
+    /** The group order a group file brings */
+    private val onGroups: (List<String>) -> Unit,
 ) {
     var prompt by mutableStateOf<TransferPrompt?>(null)
     var promptError by mutableStateOf<String?>(null)
     var replacing by mutableStateOf<DeploymentTransfer?>(null)
+    private val queued = ArrayDeque<DeploymentTransfer>()
     var failure by mutableStateOf<String?>(null)
     internal var pending: List<Deployment> = emptyList()
+    internal var pendingGroups: List<String> = emptyList()
     internal var passphrase = ""
     internal lateinit var launchOne: (String) -> Unit
     internal lateinit var launchMany: () -> Unit
@@ -59,6 +69,9 @@ class ServerTransferUi(
     fun exportOne(deployment: Deployment) = ask(TransferPrompt.Export(listOf(deployment), many = false))
 
     fun exportMany(deployments: List<Deployment>) = ask(TransferPrompt.Export(deployments, many = true))
+
+    fun exportGroups(groups: List<String>, deployments: List<Deployment>) =
+        ask(TransferPrompt.ExportGroups(groups, deployments))
 
     fun import() = launchRead()
 
@@ -73,7 +86,15 @@ class ServerTransferUi(
                 prompt = null
                 passphrase = typed
                 pending = current.deployments
+                pendingGroups = emptyList()
                 if (current.many) launchMany() else launchOne(DeploymentTransferService.fileName(pending.first()))
+            }
+            is TransferPrompt.ExportGroups -> {
+                prompt = null
+                passphrase = typed
+                pending = current.deployments
+                pendingGroups = current.groups
+                launchOne(ServerGroupBundle.fileName(current.groups, context.getString(R.string.group_file_name)))
             }
             is TransferPrompt.Unlock -> scope.launch(Dispatchers.IO) { unlock(current.data, typed) }
         }
@@ -104,10 +125,30 @@ class ServerTransferUi(
     }
 
     private suspend fun offer(plain: ByteArray) {
-        val decoded = runCatching { transfer.decode(plain.decodeToString()) }
+        val text = plain.decodeToString()
+        if (ServerGroupBundle.isBundle(text)) return offerGroups(text)
+        val decoded = runCatching { transfer.decode(text) }
         withContext(Dispatchers.Main) {
             val incoming = decoded.getOrElse { failure = it.message; return@withContext }
             if (known().any { it.id == incoming.deployment.id }) replacing = incoming else apply(incoming)
+        }
+    }
+
+    /** A group file: its order first, then its servers */
+    private suspend fun offerGroups(text: String) {
+        val decoded = runCatching { ServerGroupBundle.decode(text) }
+        withContext(Dispatchers.Main) {
+            val bundle = decoded.getOrElse { error ->
+                failure = if (error is ServerGroupBundle.UnsupportedVersion) {
+                    context.getString(R.string.transfer_newer_version)
+                } else {
+                    error.message
+                }
+                return@withContext
+            }
+            onGroups(bundle.groups)
+            offerAll(bundle.servers.map { it.toString() })
+            askNextReplacement()
         }
     }
 
@@ -115,6 +156,24 @@ class ServerTransferUi(
         val incoming = replacing ?: return
         replacing = null
         apply(incoming)
+        askNextReplacement()
+    }
+
+    fun skipReplace() {
+        replacing = null
+        askNextReplacement()
+    }
+
+    /** Servers from a QR transfer; returns the names taken in */
+    fun offerAll(texts: List<String>): List<String> {
+        val incoming = texts.mapNotNull { runCatching { transfer.decode(it) }.getOrNull() }
+        incoming.forEach { if (known().any { known -> known.id == it.deployment.id }) queued.addLast(it) else apply(it) }
+        return incoming.map { it.deployment.name }
+    }
+
+    /** Asks about the next waiting replacement */
+    fun askNextReplacement() {
+        if (replacing == null) replacing = queued.removeFirstOrNull()
     }
 
     private fun apply(incoming: DeploymentTransfer) {
@@ -131,6 +190,13 @@ class ServerTransferUi(
     internal suspend fun sealed(deployment: Deployment): ByteArray =
         TransferSeal.seal(transfer.encode(transfer.exportFor(deployment)).toByteArray(), passphrase)
 
+    /** Groups and their servers, sealed as one file */
+    internal suspend fun sealedGroups(): ByteArray {
+        val servers = pending.map { Json.parseToJsonElement(transfer.encode(transfer.exportFor(it))) }
+        val plain = ServerGroupBundle.make(pendingGroups, servers).encoded()
+        return TransferSeal.seal(plain.toByteArray(), passphrase)
+    }
+
     internal fun write(block: suspend () -> Unit) {
         scope.launch(Dispatchers.IO) {
             val error = runCatching { block() }.exceptionOrNull()
@@ -145,13 +211,18 @@ fun rememberServerTransfer(
     transfer: DeploymentTransferService,
     known: () -> List<Deployment>,
     onImported: () -> Unit,
+    onGroups: (List<String>) -> Unit = {},
 ): ServerTransferUi {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val ui = remember(transfer) { ServerTransferUi(transfer, known, onImported, scope, context) }
+    val ui = remember(transfer) { ServerTransferUi(transfer, known, onImported, scope, context, onGroups) }
     val writeOne = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         val deployment = ui.pending.firstOrNull()
-        if (uri != null && deployment != null) ui.write { writeFile(context, uri, ui.sealed(deployment)) }
+        when {
+            uri == null -> Unit
+            ui.pendingGroups.isNotEmpty() -> ui.write { writeFile(context, uri, ui.sealedGroups()) }
+            deployment != null -> ui.write { writeFile(context, uri, ui.sealed(deployment)) }
+        }
     }
     val writeMany = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { tree ->
         val chosen = ui.pending
@@ -194,7 +265,7 @@ fun ServerTransferDialogs(ui: ServerTransferUi) {
             cancel = stringResource(R.string.group_cancel),
             destructive = true,
             onConfirm = { ui.confirmReplace() },
-            onCancel = { ui.replacing = null },
+            onCancel = { ui.skipReplace() },
         )
     }
     ui.failure?.let { message ->
@@ -209,11 +280,11 @@ fun ServerTransferDialogs(ui: ServerTransferUi) {
 
 @Composable
 private fun TransferPassphraseDialog(ui: ServerTransferUi, prompt: TransferPrompt) {
-    val exporting = prompt is TransferPrompt.Export
+    val exporting = prompt !is TransferPrompt.Unlock
     var typed by remember(prompt) { mutableStateOf("") }
     var repeated by remember(prompt) { mutableStateOf("") }
     val ready = if (exporting) typed.length >= MINIMUM_PASSPHRASE && typed == repeated else typed.isNotEmpty()
-    IOSAlert(
+    FormSheet(
         title = stringResource(if (exporting) R.string.transfer_protect_title else R.string.transfer_open_title),
         message = listOfNotNull(
             stringResource(if (exporting) R.string.transfer_protect_message else R.string.transfer_open_message),

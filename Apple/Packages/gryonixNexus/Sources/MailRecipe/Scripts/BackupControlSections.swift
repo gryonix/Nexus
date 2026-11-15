@@ -17,6 +17,8 @@ enum BackupControlSections {
     static let destinationPath = "\(configDirectory)/autobackup-dest.conf"
     static let destinationSecretPath = "\(configDirectory)/autobackup-dest.key"
     static let destinationPublicKeyPath = "\(configDirectory)/autobackup-dest.key.pub"
+    /// Which parts regular and pre-update backups copy
+    static let partsPath = "\(configDirectory)/backup-parts.conf"
     /// What the last shipment did
     static let destinationStatusPath = "\(configDirectory)/autobackup-dest.status"
 
@@ -99,7 +101,8 @@ enum BackupControlSections {
                         backupDir: spec.backupDir,
                         encryptsByDefault: false,
                         sizePaths: sizePaths,
-                        body: "  '\(path)'\n  gd_drive_copy_newest '\(spec.backupDir)' '\(spec.wrapperTarget)'"
+                        body: skipUnless(.files, id: spec.wrapperTarget)
+                            + "\n  '\(path)'\n  gd_drive_copy_newest '\(spec.backupDir)' '\(spec.wrapperTarget)'"
                     ))
                 case .archive(let plan):
                     result.append(AutoBackupTarget(
@@ -118,7 +121,7 @@ enum BackupControlSections {
                     backupDir: dir,
                     encryptsByDefault: true,
                     sizePaths: [dataPath],
-                    body: #"""
+                    body: skipUnless(.databases, id: service.id.rawValue) + "\n" + #"""
                       local stamp plain
                       stamp="$(date +%Y%m%d-%H%M%S)"
                       plain='\#(dir)/vaultwarden-backup.tar.gz'
@@ -159,47 +162,50 @@ enum BackupControlSections {
         return result
     }
 
+    /// Ends a body early when its parts are off
+    private static func skipUnless(_ parts: BackupPart..., id: String) -> String {
+        skipUnless(parts, id: id)
+    }
+
     /// The body of one generated `backup_<service>` function
     private static func archiveBody(id: String, backupDir: String,
                                     plan: ArchiveBackupPlan) -> String {
-        let project = plan.composeProject
         let quiesce = plan.quiesceServices.map { "'\($0)'" }.joined(separator: " ")
+        let skipParts = plan.databases.isEmpty ? [plan.dataPart] : [plan.dataPart, .databases]
         var lines: [String] = [
             "  local stamp work plain rc=0",
+            "  local -a pack=()",
+            skipUnless(skipParts, id: id),
             "  install -d -m 750 '\(backupDir)'",
             "  stamp=\"$(date +%Y%m%d-%H%M%S)\"",
             "  work=\"$(mktemp -d '\(backupDir)/.work-XXXXXX')\"",
             "  plain=\"$work/\(id)-$stamp.tar.gz\"",
             "  install -d -m 700 \"$work/\(ArchiveBackupPlan.dumpDirectoryName)\"",
-            "  if [ ! -d '\(plan.dataPath)' ]; then",
-            "    rm -rf \"$work\"",
-            "    echo \"\(id) has no data at \(plan.dataPath)\" >&2",
-            "    return 1",
+            "  if gd_part '\(plan.dataPart.rawValue)'; then",
+            "    if [ ! -d '\(plan.dataPath)' ]; then",
+            "      rm -rf \"$work\"",
+            "      echo \"\(id) has no data at \(plan.dataPath)\" >&2",
+            "      return 1",
+            "    fi",
+            "    pack+=(-C '\(plan.dataParent)' '\(plan.dataSlot)')",
             "  fi"
         ]
         if !plan.quiesceServices.isEmpty {
             lines += [
                 "  # Stopped for the archive only, and started again on EVERY path",
                 "  # below — a backup that leaves the service down is an outage.",
-                "  gd_compose_stop '\(project)' \(quiesce)"
+                "  gd_compose_stop '\(plan.composeProject)' \(quiesce)"
             ]
         }
-        for database in plan.databases {
-            let helper = database.engine == .postgres ? "gd_dump_postgres" : "gd_dump_mysql"
-            let named = database.databaseName.map { " '\($0)'" } ?? ""
-            lines.append("  \(helper) '\(project)' '\(database.service)' "
-                         + "\"$work/\(ArchiveBackupPlan.dumpDirectoryName)/\(database.fileName)\"\(named) || rc=1")
-        }
+        lines += databaseDumpLines(plan)
         let excludes = plan.excludes.map { " --exclude '\($0)'" }.joined()
         lines += [
             "  if [ \"$rc\" -eq 0 ]; then",
-            "    tar --numeric-owner -czf \"$plain\"\(excludes) \\",
-            "        -C '\(plan.dataParent)' '\(plan.dataSlot)' \\",
-            "        -C \"$work\" '\(ArchiveBackupPlan.dumpDirectoryName)' || rc=1",
+            "    tar --numeric-owner -czf \"$plain\"\(excludes) \"${pack[@]}\" || rc=1",
             "  fi"
         ]
         if !plan.quiesceServices.isEmpty {
-            lines.append("  gd_compose_start '\(project)' \(quiesce)")
+            lines.append("  gd_compose_start '\(plan.composeProject)' \(quiesce)")
         }
         lines += [
             "  if [ \"$rc\" -ne 0 ]; then",
@@ -210,6 +216,33 @@ enum BackupControlSections {
             "  gd_finish '\(id)' '\(backupDir)' \"$plain\" \"$work\""
         ]
         return lines.joined(separator: "\n")
+    }
+
+    private static func skipUnless(_ parts: [BackupPart], id: String) -> String {
+        let test = parts.map { "! gd_part '\($0.rawValue)'" }.joined(separator: " && ")
+        return [
+            "  if \(test); then",
+            "    echo \"nothing chosen to back up for \(id)\"",
+            "    return 0",
+            "  fi"
+        ].joined(separator: "\n")
+    }
+
+    /// Dumps each database when the databases part is on
+    private static func databaseDumpLines(_ plan: ArchiveBackupPlan) -> [String] {
+        guard !plan.databases.isEmpty else { return [] }
+        var lines = ["  if gd_part 'databases'; then"]
+        for database in plan.databases {
+            let helper = database.engine == .postgres ? "gd_dump_postgres" : "gd_dump_mysql"
+            let named = database.databaseName.map { " '\($0)'" } ?? ""
+            lines.append("    \(helper) '\(plan.composeProject)' '\(database.service)' "
+                         + "\"$work/\(ArchiveBackupPlan.dumpDirectoryName)/\(database.fileName)\"\(named) || rc=1")
+        }
+        lines += [
+            "    pack+=(-C \"$work\" '\(ArchiveBackupPlan.dumpDirectoryName)')",
+            "  fi"
+        ]
+        return lines
     }
 
     static let scheduleGrammar = ScheduleSections.grammar
@@ -245,7 +278,7 @@ enum BackupControlSections {
         #        gryonixnexus-backup-ctl.sh set-schedule \#(scheduleGrammar) <retention> [services...]
         #        gryonixnexus-backup-ctl.sh set-passphrase   (passphrase on stdin)
         #        gryonixnexus-backup-ctl.sh run
-        #        gryonixnexus-backup-ctl.sh backup <service> [--encrypt|--no-encrypt]
+        #        gryonixnexus-backup-ctl.sh backup <service> [--encrypt|--no-encrypt] [--before-update]
         #                                       (GPG passphrase on stdin when encrypting)
         #        gryonixnexus-backup-ctl.sh estimate <service>
         #        gryonixnexus-backup-ctl.sh set-destination <kind> <host> <port> <user> <path> <bucket> <keep>
@@ -254,6 +287,8 @@ enum BackupControlSections {
         #        gryonixnexus-backup-ctl.sh test-destination
         #        gryonixnexus-backup-ctl.sh set-drives <both|local|drive> <1|0> [uuids...]
         #        gryonixnexus-backup-ctl.sh show-drives
+        #        gryonixnexus-backup-ctl.sh set-parts <backup|update> [files] [settings] [databases]
+        #        gryonixnexus-backup-ctl.sh show-parts
         set -euo pipefail
 
         ACTION="${1:-}"
@@ -275,6 +310,28 @@ enum BackupControlSections {
         # world-readable through /proc.
         GD_ENCRYPT=0
         GD_PASS=""
+
+        # Which parts a run copies: regular runs and pre-update runs apart.
+        PARTSCONF='\#(partsPath)'
+        BACKUP_PARTS='files settings databases'
+        UPDATE_PARTS='settings databases'
+        GD_PARTS="$BACKUP_PARTS"
+        load_parts() {
+          # shellcheck disable=SC1090
+          if [ -f "$PARTSCONF" ]; then . "$PARTSCONF"; fi
+          local key=BACKUP_PARTS
+          if [ "${1:-}" = update ]; then key=UPDATE_PARTS; fi
+          GD_PARTS="${!key}"
+          # A service's own choice wins over the shared one.
+          if [ -n "${2:-}" ]; then
+            key="${key}_${2//-/_}"
+            if [ -n "${!key+x}" ]; then GD_PARTS="${!key}"; fi
+          fi
+        }
+        gd_part() {
+          case " $GD_PARTS " in *" $1 "*) return 0 ;; esac
+          return 1
+        }
 
         load_config() {
           # shellcheck disable=SC1090
@@ -833,7 +890,7 @@ enum BackupControlSections {
             if ! printf '%s' "$GD_PASS" | gpg --batch --quiet --yes --symmetric \
                  --cipher-algo AES256 --passphrase-fd 0 --pinentry-mode loopback \
                  --output "$out" "$plain"; then
-              rm -rf "$work"
+              rm -rf "$work" "$out"
               echo "could not encrypt the $name backup" >&2
               return 1
             fi
@@ -900,6 +957,7 @@ enum BackupControlSections {
 
         do_run() {
           load_config
+          load_parts
           local failed=""
           for svc in $SERVICES; do
             # Each service runs in its own subshell, and the `||` keeps errexit
@@ -918,6 +976,7 @@ enum BackupControlSections {
                 fi
                 GD_PASS="$(cat "$PASSFILE")"
               fi
+              load_parts backup "$svc"
               gd_run_service "$svc"
             ) || failed="$failed $svc"
           done
@@ -932,15 +991,18 @@ enum BackupControlSections {
         do_backup() {
           local svc="${1:-}"
           shift || true
+          local scope=backup
           load_config
           GD_ENCRYPT="$(gd_default_encrypt "$svc")"
           for arg in "$@"; do
             case "$arg" in
               --encrypt) GD_ENCRYPT=1 ;;
               --no-encrypt) GD_ENCRYPT=0 ;;
+              --before-update) scope=update ;;
               *) echo "unsupported option: ${arg}" >&2; exit 2 ;;
             esac
           done
+          load_parts "$scope" "$svc"
           if [ "$GD_ENCRYPT" -eq 1 ]; then
             # On stdin, never argv. A terminal means nobody piped anything in,
             # and reading would hang forever.
@@ -1008,6 +1070,46 @@ enum BackupControlSections {
                                             delimiter: "EOF_TIMER"))
         }
 
+        do_set_parts() {
+          local scope="${1:-}" svc="" part checked="" key
+          shift || true
+          case "$scope" in
+            backup|update) ;;
+            *) echo "unsupported parts scope: ${scope}" >&2; exit 2 ;;
+          esac
+          if [ "${1:-}" = --service ]; then
+            svc="${2:-}"
+            shift 2 || true
+            case "$svc" in
+              ''|*[!a-z0-9-]*) echo "unsupported service: ${svc}" >&2; exit 2 ;;
+            esac
+          fi
+          for part in "$@"; do
+            case "$part" in
+              files|settings|databases) checked="$checked $part" ;;
+              *) echo "unsupported part: ${part}" >&2; exit 2 ;;
+            esac
+          done
+          key=BACKUP_PARTS
+          if [ "$scope" = update ]; then key=UPDATE_PARTS; fi
+          if [ -n "$svc" ]; then key="${key}_${svc//-/_}"; fi
+          install -d -m 755 "$(dirname "$PARTSCONF")"
+          {
+            grep -v "^${key}=" "$PARTSCONF" 2>/dev/null || true
+            printf "%s='%s'\n" "$key" "${checked# }"
+          } > "$PARTSCONF.new"
+          mv -f "$PARTSCONF.new" "$PARTSCONF"
+          chmod 644 "$PARTSCONF"
+        }
+
+        do_show_parts() {
+          load_parts
+          printf "BACKUP_PARTS='%s'\nUPDATE_PARTS='%s'\n" "$BACKUP_PARTS" "$UPDATE_PARTS"
+          if [ -f "$PARTSCONF" ]; then
+            grep -E '^(BACKUP|UPDATE)_PARTS_[a-z0-9_]+=' "$PARTSCONF" || true
+          fi
+        }
+
         do_set_passphrase() {
           install -d -m 755 "$(dirname '\#(passphrasePath)')"
           # From stdin, never argv: argv is world-readable in /proc.
@@ -1030,6 +1132,8 @@ enum BackupControlSections {
           test-destination) do_test_destination ;;
           set-drives) shift; do_set_drives "$@" ;;
           show-drives) do_show_drives ;;
+          set-parts) shift; do_set_parts "$@" ;;
+          show-parts) do_show_parts ;;
           *) echo "unsupported action: ${ACTION}" >&2; exit 2 ;;
         esac
         echo '\#(doneMarker)'

@@ -81,7 +81,11 @@ struct ActivityBanner: View {
             BannerRow(title: UIL10n.string("Installing %@…", row.serviceName),
                       subtitle: UIL10n.string("Running on the server. Open to watch it."),
                       status: .running, surface: surface, more: more) {
-                navigator.openServerID = row.deploymentID
+                Task {
+                    if await !RunningJobsWatcher.shared.open(pending: row) {
+                        navigator.openServerID = row.deploymentID
+                    }
+                }
             }
         case .operation(let entry):
             OperationBannerRow(state: entry.state, surface: surface, more: more) {
@@ -197,6 +201,7 @@ private struct BannerRow: View {
         .buttonStyle(.plain)
         .offset(x: offset)
         .opacity(opacity)
+        #if !os(tvOS)
         .gesture(onDismiss.map { dismiss in
             DragGesture(minimumDistance: 20)
                 .onChanged { offset = $0.translation.width }
@@ -211,6 +216,7 @@ private struct BannerRow: View {
                     }
                 }
         })
+        #endif
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 

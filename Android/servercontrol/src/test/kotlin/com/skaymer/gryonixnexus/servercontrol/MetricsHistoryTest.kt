@@ -22,6 +22,17 @@ class MetricsHistoryTest {
     }
 
     @Test
+    fun `fourteen column rows carry swap and twelve column rows do not`() {
+        val tail = "1073741824,2147483648,32000000000,110000000000,1024,2048,100,200,0.42,55.0"
+        val points = MetricsHistoryParser.parse("1758000000,12.5,$tail,100,400\n1758000010,12.5,$tail\n")
+        assertEquals(2, points.size)
+        assertEquals(100L, points[0].swapUsedBytes)
+        assertEquals(0.25, points[0].swapUsedFraction)
+        assertNull(points[1].swapTotalBytes)
+        assertNull(points[1].swapUsedFraction)
+    }
+
+    @Test
     fun `the bucket names are the collector's file names`() {
         assertEquals(
             listOf("10s", "1m", "10m", "1h", "1d", "1w"),

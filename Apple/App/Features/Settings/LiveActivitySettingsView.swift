@@ -4,20 +4,17 @@ import SwiftUI
 /// What the Dynamic Island and Live Activities show
 struct LiveActivitySettingsView: View {
     @ObservedObject private var settings = LiveActivitySettings.shared
-    #if DEBUG
     @State private var checkDriver: IslandCheck.Driver?
-    #endif
 
     var body: some View {
         Form {
             operationsSection
             vpnSection
-            #if DEBUG
+            journalSection
             checkSection
-            #endif
         }
         .bottomBarClearance()
-        .navigationTitle("Live Activity & Dynamic Island")
+        .screenTitle(DynamicIsland.settingsTitle)
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -32,7 +29,7 @@ struct LiveActivitySettingsView: View {
         } header: {
             Text("Server operations")
         } footer: {
-            Text("The server starts these cards itself, also when the app is closed and when the operation was started on another device or by a schedule.")
+            Text("A run started in the app gets one card that the server moves, also when the app is closed. The server opens a card itself when the run was started on another device or by a schedule.")
         }
     }
 
@@ -46,7 +43,14 @@ struct LiveActivitySettingsView: View {
         }
     }
 
-    #if DEBUG
+    private var journalSection: some View {
+        Section {
+            NavigationLink("Island journal") { IslandJournalView() }
+        } footer: {
+            Text("What happened to each card: who opened it, whether the server moves it, and what it showed when you came back to the app.")
+        }
+    }
+
     private var checkSection: some View {
         Section {
             Button("Show a test card") {
@@ -70,7 +74,6 @@ struct LiveActivitySettingsView: View {
             Text("The card runs for 30 seconds. Leave the app or lock the phone to watch it on the island.")
         }
     }
-    #endif
 
     private func shown(_ kind: OperationKind) -> Binding<Bool> {
         Binding(

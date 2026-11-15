@@ -298,6 +298,21 @@ public actor SystemTunnelEngine: TunnelEngine {
         }
     }
 
+    func advancedTraffic() async -> AdvancedTraffic? {
+        guard let session = manager?.connection as? NETunnelProviderSession,
+              session.status == .connected else { return nil }
+        let reply: Data? = await withCheckedContinuation { continuation in
+            do {
+                try session.sendProviderMessage(AdvancedTraffic.request) { continuation.resume(returning: $0) }
+            } catch {
+                continuation.resume(returning: nil)
+            }
+        }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return reply.flatMap { try? decoder.decode(AdvancedTraffic.self, from: $0) }
+    }
+
     private func readCounters() async {
         guard let session = manager?.connection as? NETunnelProviderSession,
               session.status == .connected || session.status == .reasserting

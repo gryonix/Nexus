@@ -16,8 +16,10 @@ android {
         applicationId = "com.skaymer.gryonixnexus"
         minSdk = 26
         targetSdk = 37
-        versionCode = 261011
-        versionName = "26.10"
+        versionCode = 261116
+        versionName = "26.11"
+        manifestPlaceholders["appLabel"] = "@string/app_name"
+        resValue("string", "shortcut_package", "com.skaymer.gryonixnexus")
     }
 
     val keystoreProperties = rootProject.file("keystore.properties").takeIf { it.exists() }
@@ -40,6 +42,15 @@ android {
     }
 
     buildTypes {
+        // -PgryonixDevCopy: a side-by-side arm64 copy for phone checks
+        if (providers.gradleProperty("gryonixDevCopy").isPresent) {
+            getByName("debug") {
+                applicationIdSuffix = ".dev"
+                manifestPlaceholders["appLabel"] = "Nexus Dev"
+                resValue("string", "shortcut_package", "com.skaymer.gryonixnexus.dev")
+                ndk { abiFilters += "arm64-v8a" }
+            }
+        }
         release {
             signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = false
@@ -51,7 +62,10 @@ android {
     // GPL-2.0 wg tools, needed only by the unused root backend
     packaging { jniLibs { excludes += listOf("**/libwg.so", "**/libwg-quick.so") } }
 
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        resValues = true
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
@@ -67,6 +81,8 @@ dependencies {
     implementation(project(":recipe"))
     implementation(project(":transport"))
     implementation(project(":agentcontrol"))
+    implementation(project(":tvlink"))
+    implementation(project(":aiassistant"))
     implementation(libs.bouncycastle)
     implementation(libs.kotlin.serialization.json)
     implementation(files("${rootDir}/runtimes/awg-tunnel.aar"))
@@ -77,7 +93,12 @@ dependencies {
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
+    implementation(libs.glance.appwidget)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.camerax.camera2)
+    implementation(libs.camerax.lifecycle)
+    implementation(libs.camerax.view)
+    implementation(libs.zxing.core)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.compose.material.icons)
     implementation(libs.kotlin.coroutines.android)
@@ -129,12 +150,6 @@ abstract class PackAgentSources : DefaultTask() {
     @get:InputFile
     abstract val script: RegularFileProperty
 
-    @get:InputFiles
-    abstract val serverTree: ConfigurableFileCollection
-
-    @get:InputDirectory
-    abstract val protoTree: DirectoryProperty
-
     @get:OutputDirectory
     abstract val outputDirectory: DirectoryProperty
 
@@ -153,8 +168,8 @@ abstract class PackAgentSources : DefaultTask() {
 
 val packAgentSources = tasks.register<PackAgentSources>("packAgentSources") {
     script.set(rootProject.layout.projectDirectory.file("../Tools/pack-agent-sources.sh"))
-    serverTree.from(rootProject.fileTree("../Server") { exclude("**/target/**") })
-    protoTree.set(rootProject.layout.projectDirectory.dir("../Proto"))
+    // The released agent lives in another repository; always repack it.
+    outputs.upToDateWhen { false }
 }
 
 androidComponents {

@@ -74,8 +74,8 @@ fun InfoSectionHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            title.uppercase(),
-            style = MaterialTheme.typography.bodySmall,
+            title,
+            style = MaterialTheme.typography.titleMedium,
             color = Gryonix.colors.secondaryLabel,
             modifier = Modifier.weight(1f),
         )

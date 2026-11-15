@@ -23,9 +23,9 @@ struct SecurityBlocklistView: View {
             allowlistSection
             decisionsSection
         }
-        .navigationTitle("Blocked addresses")
+        .screenTitle("Blocked addresses")
         .pleaseWait(viewModel.securityListBusy)
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .task { await viewModel.loadSecurityLists() }
@@ -229,7 +229,7 @@ struct SecurityAddressSheet: View {
                 Section {
                     TextField("203.0.113.9 or 203.0.113.0/24", text: $value)
                         .monospacedDigit()
-                        #if os(iOS)
+                        #if os(iOS) || os(tvOS)
                         .textInputAutocapitalization(.never)
                         .keyboardType(.numbersAndPunctuation)
                         #endif
@@ -272,8 +272,8 @@ struct SecurityAddressSheet: View {
                     Text("How long")
                 }
             }
-            .navigationTitle(title)
-            #if os(iOS)
+            .screenTitle(title)
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {

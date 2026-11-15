@@ -49,7 +49,7 @@ struct FleetHealthWidget: Widget {
             let store = FleetSnapshotStore().read()
             completion(Timeline(entries: [FleetEntry(date: Date(), snapshot: store,
                                                      available: store != nil)],
-                                policy: .never))
+                                policy: .rereadSoon))
         }
     }
 }
@@ -85,7 +85,7 @@ struct SecurityWidget: Widget {
         func timeline(for configuration: ServerSelectionConfiguration,
                       in context: Context) async -> Timeline<ServerSectionEntry> {
             Timeline(entries: [FleetTimeline.chosen(configuration) { $0.security != nil }],
-                     policy: .never)
+                     policy: .rereadSoon)
         }
     }
 }
@@ -121,7 +121,7 @@ struct BackupsWidget: Widget {
         func timeline(for configuration: ServerSelectionConfiguration,
                       in context: Context) async -> Timeline<ServerSectionEntry> {
             Timeline(entries: [FleetTimeline.chosen(configuration) { $0.backups != nil }],
-                     policy: .never)
+                     policy: .rereadSoon)
         }
     }
 }
@@ -157,7 +157,7 @@ struct UpdatesWidget: Widget {
         func timeline(for configuration: ServerSelectionConfiguration,
                       in context: Context) async -> Timeline<ServerSectionEntry> {
             Timeline(entries: [FleetTimeline.chosen(configuration) { $0.updates != nil }],
-                     policy: .never)
+                     policy: .rereadSoon)
         }
     }
 }

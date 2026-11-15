@@ -6,7 +6,7 @@ import com.skaymer.gryonixnexus.app.secrets.DeploymentSecrets
 import com.skaymer.gryonixnexus.app.secrets.SecretStore
 import com.skaymer.gryonixnexus.transport.AppSSHKeyGenerator
 import com.skaymer.gryonixnexus.servercontrol.Deployment
-import com.skaymer.gryonixnexus.transport.SSHJCommandRunner
+import com.skaymer.gryonixnexus.servercontrol.SSHCommandRunner
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration.Companion.seconds
 
@@ -26,7 +26,7 @@ class TransferClaim(
 ) {
     private val claiming = ConcurrentHashMap.newKeySet<String>()
 
-    suspend fun claimIfPending(deployment: Deployment, runner: SSHJCommandRunner, client: AgentClient) {
+    suspend fun claimIfPending(deployment: Deployment, runner: SSHCommandRunner, client: AgentClient) {
         val kept = DeploymentSecrets(secrets, deployment.id)
         val transferID = kept.pendingTransferID() ?: return
         if (!claiming.add(deployment.id)) return
@@ -44,7 +44,7 @@ class TransferClaim(
         }
     }
 
-    private suspend fun pairingCode(deployment: Deployment, runner: SSHJCommandRunner): String? {
+    private suspend fun pairingCode(deployment: Deployment, runner: SSHCommandRunner): String? {
         val result = runCatching {
             runner.run(AdoptViewModel.PAIR_CODE_COMMAND, deployment.servicesHost, 30.seconds)
         }.getOrNull() ?: return null

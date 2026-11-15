@@ -27,8 +27,10 @@ class AgentUpdateOffer(
     private val published: suspend (Deployment, SSHHostID) -> String? = { _, _ -> null },
     /** Has the agent apply its published update, then returns */
     private val applyPublished: suspend (Deployment) -> Unit = {},
+    private val target: suspend () -> String = { AgentBootstrapSections.BUNDLED_VERSION },
     private val now: () -> Long = System::currentTimeMillis,
     private val retryDelayMillis: Long = RETRY_DELAY_MILLIS,
+    private val pending: PendingAgentUpdates = PendingAgentUpdates(null),
 ) {
     /** Where the newer version comes from */
     enum class Source { BUNDLED, PUBLISHED }
@@ -42,7 +44,7 @@ class AgentUpdateOffer(
 
     data class Offer(val version: String, val servers: List<Outdated>)
 
-    /** The server updating now and its place in the list */
+    /** The server that ended last and how many have ended */
     data class Progress(val server: String, val index: Int, val total: Int)
 
     private val _offer = MutableStateFlow<Offer?>(null)
@@ -54,15 +56,18 @@ class AgentUpdateOffer(
     private var checking = false
     private var lastCheckedMillis: Long? = null
     private var foundOutdated = false
+    /** Servers whose update runs right now */
+    private val updating = java.util.Collections.synchronizedSet(mutableSetOf<String>())
 
     /** Each time the app is opened */
     fun checkOnLaunch() {
-        val version = AgentBootstrapSections.BUNDLED_VERSION
+        resumePending()
         if (_offer.value != null || dismissedThisRun || checking) return
         if (!foundOutdated) lastCheckedMillis?.let { if (now() - it < RECHECK_AFTER_MILLIS) return }
         checking = true
         scope.launch {
             try {
+                val version = target()
                 var attempt = 0
                 while (true) {
                     val soFar = java.util.concurrent.ConcurrentLinkedQueue<Outdated>()
@@ -75,7 +80,9 @@ class AgentUpdateOffer(
                             }
                         }.awaitAll()
                     }
-                    val outdated = checks.mapNotNull { it.getOrNull() }.sortedBy { it.deployment.name }
+                    val outdated = checks.mapNotNull { it.getOrNull() }
+                        .filterNot { it.deployment.id in updating }
+                        .sortedBy { it.deployment.name }
                     foundOutdated = outdated.isNotEmpty()
                     if (outdated.isNotEmpty()) {
                         if (!dismissedThisRun) _offer.value = Offer(highest(outdated), outdated)
@@ -98,6 +105,7 @@ class AgentUpdateOffer(
     /** The window opens with the first outdated server */
     private fun offerSoFar(soFar: java.util.concurrent.ConcurrentLinkedQueue<Outdated>, found: Outdated) {
         synchronized(soFar) {
+            if (found.deployment.id in updating) return
             soFar.add(found)
             val servers = soFar.sortedBy { it.deployment.name }
             if (!dismissedThisRun) _offer.value = Offer(highest(servers), servers)
@@ -150,20 +158,60 @@ class AgentUpdateOffer(
         dismissedThisRun = false
     }
 
-    /** Updates each server in turn */
+    /** Updates every server at once */
     fun updateAll() {
         val offer = _offer.value ?: return
         dismissedThisRun = true
         foundOutdated = false
         lastCheckedMillis = now()
         _offer.value = null
+        pending.add(offer.servers.map(pending::entry))
+        run(offer.servers, resumed = false)
+    }
+
+    /** Resumes updates left running when the app closed */
+    private fun resumePending() {
+        val known = fleet()
+        val servers = pending.load().mapNotNull { entry ->
+            if (entry.deploymentID in updating) return@mapNotNull null
+            val deployment = known.firstOrNull { it.id == entry.deploymentID } ?: return@mapNotNull null
+            Outdated(deployment, entry.installed, entry.target, if (entry.published) Source.PUBLISHED else Source.BUNDLED)
+        }
+        pending.keep(known.map { it.id }.toSet())
+        if (servers.isNotEmpty()) run(servers, resumed = true)
+    }
+
+    /** Every server at once, each remembered until it ends */
+    private fun run(servers: List<Outdated>, resumed: Boolean) {
+        updating += servers.map { it.deployment.id }
+        val done = java.util.concurrent.atomic.AtomicInteger(0)
+        _progress.value = Progress(servers.first().deployment.name, 0, servers.size)
         scope.launch {
-            offer.servers.forEachIndexed { index, server ->
-                _progress.value = Progress(server.deployment.name, index + 1, offer.servers.size)
-                if (server.source == Source.PUBLISHED) applyPublished(server.deployment) else install(server.deployment)
+            coroutineScope {
+                servers.forEach { server ->
+                    launch {
+                        try {
+                            if (!resumed || !isCurrent(server)) update(server)
+                        } finally {
+                            updating -= server.deployment.id
+                            pending.remove(server.deployment.id)
+                            _progress.value = Progress(server.deployment.name, done.incrementAndGet(), servers.size)
+                        }
+                    }
+                }
             }
             _progress.value = null
         }
+    }
+
+    private suspend fun update(server: Outdated) {
+        if (server.source == Source.PUBLISHED) applyPublished(server.deployment) else install(server.deployment)
+    }
+
+    /** The agent already runs the target version */
+    private suspend fun isCurrent(server: Outdated): Boolean {
+        val check = checkWithin(server.deployment, server.target)
+        return check.isSuccess && check.getOrNull() == null
     }
 
     companion object {

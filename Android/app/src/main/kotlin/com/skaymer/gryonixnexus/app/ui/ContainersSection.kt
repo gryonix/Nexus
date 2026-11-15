@@ -12,7 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -36,6 +36,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.draw.rotate
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import com.skaymer.gryonixnexus.app.ui.design.SectionHeader
+import com.skaymer.gryonixnexus.agentcontrol.ContainerSummary
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -102,7 +110,9 @@ fun ContainersSection(
         verticalArrangement = GroupedSpacing,
     ) {
         deployments.forEach { server ->
-            item(key = "head-${server.id}") {
+            if (only != null) item(key = "head-${server.id}") {
+                SectionHeader(stringResource(R.string.tab_containers))
+            } else item(key = "head-${server.id}") {
                 Row(
                     Modifier.fillMaxWidth().padding(
                         start = Metrics.listInset + 4.dp,
@@ -113,9 +123,9 @@ fun ContainersSection(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        server.name.uppercase(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Gryonix.colors.secondaryLabel,
+                        server.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Gryonix.colors.accent,
                     )
                     Text(
                         containers.summary(server.id),
@@ -146,15 +156,15 @@ fun ContainersSection(
                             Note(stringResource(R.string.containers_empty_host))
                         }
                     } else {
-                        items(state.inventory.groups, key = { "${server.id}-${it.key}" }) { group ->
-                            GroupCard(
-                                group = group,
-                                isBusy = group.key in busy,
-                                onAction = { containers.control(server, group.key, it) },
-                                onInspect = { name ->
-                                    scope.launch { showing = containers.detail(server, name) }
-                                },
-                                onLongVerb = { kind ->
+                        item(key = "groups-${server.id}") {
+                            GroupBlocks(
+                                serverID = server.id,
+                                groups = state.inventory.groups,
+                                busy = busy,
+                                onAction = { key, action -> containers.control(server, key, action) },
+                                onRename = { key, name -> containers.rename(server, key, name) },
+                                onInspect = { name -> scope.launch { showing = containers.detail(server, name) } },
+                                onLongVerb = { group, kind ->
                                     when (kind) {
                                         GroupSheetKind.UPDATE ->
                                             containers.start(server, group.key, GroupOperationKind.UPDATE)
@@ -162,7 +172,7 @@ fun ContainersSection(
                                             containers.start(server, group.key, GroupOperationKind.BACKUP)
                                         else -> sheet = GroupSheet(server, group, kind)
                                     }
-                                }
+                                },
                             )
                         }
                     }
@@ -210,127 +220,155 @@ private data class GroupSheet(
     val kind: GroupSheetKind,
 )
 
+/** One card: what this app installed, then what else runs */
 @Composable
-private fun GroupCard(
-    group: ContainerGroup,
-    isBusy: Boolean,
-    onAction: (ContainerAction) -> Unit,
+private fun GroupBlocks(
+    serverID: String,
+    groups: List<ContainerGroup>,
+    busy: Set<String>,
+    onAction: (String, ContainerAction) -> Unit,
     onInspect: (String) -> Unit,
+    onLongVerb: (ContainerGroup, GroupSheetKind) -> Unit,
+    onRename: (String, String) -> Unit,
+) {
+    var open by remember { mutableStateOf(setOf<String>()) }
+    val titleOf = serviceTitles(serverID)
+    val installed = groups.filter { it.serviceID != null }
+    val found = groups.filter { it.serviceID == null }
+    GroupedSection {
+        listOf(R.string.containers_block_installed to installed, R.string.containers_block_found to found)
+            .filter { it.second.isNotEmpty() }
+            .forEach { (title, block) ->
+                BlockHeader(stringResource(title), block.size)
+                block.forEach { group ->
+                    val isOpen = group.key in open
+                    GroupRow(group, groupTitle(group, titleOf), isOpen, group.key in busy, { open = if (isOpen) open - group.key else open + group.key },
+                        { onAction(group.key, it) }, { onLongVerb(group, it) })
+                    if (isOpen) {
+                        PendingTextRow(
+                            label = stringResource(R.string.name_label),
+                            saved = group.displayName,
+                            placeholder = group.derivedName,
+                            valid = { true },
+                            onApply = { onRename(group.key, it.trim()) },
+                        )
+                        group.containers.forEach { ContainerRow(it) { onInspect(it.name) } }
+                    }
+                }
+            }
+    }
+}
+
+@Composable
+private fun BlockHeader(title: String, count: Int) {
+    GroupedRow {
+        Text(title, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold,
+            color = Gryonix.colors.secondaryLabel, modifier = Modifier.weight(1f))
+        Text("$count", style = MaterialTheme.typography.bodySmall, color = Gryonix.colors.tertiaryLabel)
+    }
+}
+
+/** A service's given name, unless the group has its own */
+internal fun groupTitle(group: ContainerGroup, titleOf: (com.skaymer.gryonixnexus.catalog.ManagedService) -> String): String {
+    val agentID = group.serviceID?.takeIf { !group.isRenamed } ?: return group.displayName
+    val service = com.skaymer.gryonixnexus.servercontrol.AgentServiceMapping.serviceIDs(listOf(agentID)).singleOrNull()
+        ?.let { com.skaymer.gryonixnexus.catalog.ServiceRegistry.service(it) } ?: return group.displayName
+    return titleOf(service).takeIf { it != service.displayName } ?: group.displayName
+}
+
+/** Chevron, status dot, name and kind, then the actions menu */
+@Composable
+private fun GroupRow(
+    group: ContainerGroup,
+    title: String,
+    isOpen: Boolean,
+    isBusy: Boolean,
+    onToggle: () -> Unit,
+    onAction: (ContainerAction) -> Unit,
     onLongVerb: (GroupSheetKind) -> Unit,
 ) {
+    GroupedRow(
+        onClick = onToggle,
+        leading = {
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight, null,
+                tint = Gryonix.colors.secondaryLabel,
+                modifier = Modifier.size(22.dp).rotate(if (isOpen) 90f else 0f),
+            )
+        },
+        trailing = {
+            if (isBusy) {
+                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Gryonix.colors.tertiaryLabel)
+            } else {
+                GroupMenu(onAction, onLongVerb)
+            }
+        },
+    ) {
+        Box(Modifier.size(9.dp).clip(CircleShape).background(group.status.tint()))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = Gryonix.colors.label)
+            Text(
+                stringResource(if (group.isComposeProject) R.string.containers_compose else R.string.containers_standalone),
+                style = MaterialTheme.typography.bodySmall,
+                color = Gryonix.colors.secondaryLabel,
+            )
+        }
+    }
+}
+
+/** The circled "⋯" with every group action */
+@Composable
+private fun GroupMenu(onAction: (ContainerAction) -> Unit, onLongVerb: (GroupSheetKind) -> Unit) {
     var menuOpen by remember { mutableStateOf(false) }
-    GroupedSection {
-        GroupedRow(
-            showDivider = group.containers.isNotEmpty(),
-            trailing = {
-                if (isBusy) {
-                    CircularProgressIndicator(
-                        Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
-                        color = Gryonix.colors.tertiaryLabel,
-                    )
-                } else {
-                    Box {
-                        IconButton(
-                            onClick = { menuOpen = true },
-                            modifier = Modifier.size(30.dp),
-                        ) {
-                            Icon(
-                                Icons.Filled.MoreVert,
-                                contentDescription = null,
-                                tint = Gryonix.colors.accent,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = menuOpen,
-                            onDismissRequest = { menuOpen = false },
-                        ) {
-                            listOf(
-                                R.string.containers_start to ContainerAction.START,
-                                R.string.containers_stop to ContainerAction.STOP,
-                                R.string.containers_restart to ContainerAction.RESTART,
-                            ).forEach { (label, action) ->
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(label)) },
-                                    onClick = { menuOpen = false; onAction(action) }
-                                )
-                            }
-                            HorizontalDivider()
-                            listOf(
-                                R.string.containers_logs to GroupSheetKind.LOG,
-                                R.string.containers_update to GroupSheetKind.UPDATE,
-                                R.string.containers_backup_now to GroupSheetKind.BACKUP_NOW,
-                                R.string.containers_backup_plan to GroupSheetKind.PLAN,
-                                R.string.containers_remove to GroupSheetKind.REMOVE,
-                            ).forEach { (label, kind) ->
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(label)) },
-                                    onClick = { menuOpen = false; onLongVerb(kind) }
-                                )
-                            }
-                        }
-                    }
-                }
-            },
-        ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        group.displayName,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Gryonix.colors.label,
-                    )
-                    if (group.serviceID != null) {
-                        Text(
-                            stringResource(R.string.containers_installed_here),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Gryonix.colors.accent,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(percent = 50))
-                                .background(Gryonix.colors.accent.copy(alpha = 0.12f))
-                                .padding(horizontal = 8.dp, vertical = 2.dp),
-                        )
-                    }
-                }
-                Text(
-                    stringResource(group.status.label),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = group.status.tint(),
-                )
+    Box {
+        IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(32.dp)) {
+            Box(
+                Modifier.size(24.dp).border(1.5.dp, Gryonix.colors.accent, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Filled.MoreHoriz, null, tint = Gryonix.colors.accent, modifier = Modifier.size(16.dp))
             }
         }
-        group.containers.forEach { container ->
-            GroupedRow(
-                onClick = { onInspect(container.name) },
-                showDivider = container != group.containers.last(),
-                trailing = { DisclosureChevron() },
-            ) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        container.name,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Gryonix.colors.label,
-                    )
-                    Text(
-                        buildString {
-                            append(container.state)
-                            if (container.health.isNotEmpty()) append(" (${container.health})")
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Gryonix.colors.secondaryLabel,
-                    )
-                    if (container.ports.isNotEmpty()) {
-                        Text(
-                            container.ports,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Gryonix.colors.tertiaryLabel,
-                        )
-                    }
-                }
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            listOf(
+                R.string.containers_start to ContainerAction.START,
+                R.string.containers_restart to ContainerAction.RESTART,
+                R.string.containers_stop to ContainerAction.STOP,
+            ).forEach { (label, action) ->
+                DropdownMenuItem(text = { Text(stringResource(label)) }, onClick = { menuOpen = false; onAction(action) })
+            }
+            HorizontalDivider()
+            listOf(
+                R.string.containers_logs to GroupSheetKind.LOG,
+                R.string.containers_backup_plan to GroupSheetKind.PLAN,
+                R.string.containers_backup_now to GroupSheetKind.BACKUP_NOW,
+                R.string.containers_update to GroupSheetKind.UPDATE,
+                R.string.containers_remove to GroupSheetKind.REMOVE,
+            ).forEach { (label, kind) ->
+                DropdownMenuItem(text = { Text(stringResource(label)) }, onClick = { menuOpen = false; onLongVerb(kind) })
+            }
+        }
+    }
+}
+
+/** One container under its open group */
+@Composable
+private fun ContainerRow(container: ContainerSummary, onOpen: () -> Unit) {
+    GroupedRow(onClick = onOpen, modifier = Modifier.padding(start = 34.dp), trailing = { DisclosureChevron() }) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            Text(container.name, style = MaterialTheme.typography.bodyMedium, color = Gryonix.colors.label)
+            Text(container.image, style = MaterialTheme.typography.labelSmall, color = Gryonix.colors.secondaryLabel,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (container.ports.isNotEmpty()) {
+                Text(container.ports, style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace,
+                    color = Gryonix.colors.secondaryLabel, maxLines = 1)
+            }
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Text(container.state, style = MaterialTheme.typography.bodySmall, color = Gryonix.colors.secondaryLabel)
+            if (container.health.isNotEmpty()) {
+                Text(container.health, style = MaterialTheme.typography.labelSmall,
+                    color = if (container.health == "healthy") Gryonix.colors.success else Gryonix.colors.warning)
             }
         }
     }
@@ -397,8 +435,8 @@ private fun DetailDialog(detail: ContainerDetail, onClose: () -> Unit) {
 @Composable
 private fun DetailHeading(text: String) {
     Text(
-        text.uppercase(),
-        style = MaterialTheme.typography.labelSmall,
+        text,
+        style = MaterialTheme.typography.labelLarge,
         color = Gryonix.colors.secondaryLabel,
         modifier = Modifier.padding(top = 4.dp),
     )

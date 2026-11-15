@@ -68,6 +68,10 @@ class SSHJFileBrowser(private val runner: SSHJCommandRunner) : RemoteFileBrowser
         }
     }
 
+    override suspend fun renameFile(oldPath: String, newPath: String, host: SSHHostID) {
+        withSFTP(host) { sftp -> sftp.rename(oldPath, newPath) }
+    }
+
     private suspend fun <T> withSFTP(host: SSHHostID, body: (SFTPClient) -> T): T =
         withContext(Dispatchers.IO) {
             val client = runner.sshClient(host)

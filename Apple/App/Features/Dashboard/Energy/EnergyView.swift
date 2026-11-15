@@ -19,8 +19,8 @@ struct EnergyView: View {
             EnergyPriceSection(settings: settings)
             EnergyEstimateSection(target: model.target, settings: settings, measured: model.isMeasured)
         }
-        .navigationTitle("Energy")
-        #if os(iOS)
+        .screenTitle("Energy")
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .task { await model.load() }

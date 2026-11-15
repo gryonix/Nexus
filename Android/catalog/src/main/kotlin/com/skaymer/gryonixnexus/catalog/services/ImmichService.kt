@@ -2,6 +2,7 @@ package com.skaymer.gryonixnexus.catalog.services
 
 import com.skaymer.gryonixnexus.catalog.ArchiveBackupPlan
 import com.skaymer.gryonixnexus.catalog.BackupDatabase
+import com.skaymer.gryonixnexus.catalog.BackupPart
 import com.skaymer.gryonixnexus.catalog.BackupPlan
 import com.skaymer.gryonixnexus.catalog.BackupSpec
 import com.skaymer.gryonixnexus.catalog.BackupWrapperSpec
@@ -136,6 +137,7 @@ class ImmichService : ManagedService {
                 plan = BackupPlan.Archive(ArchiveBackupPlan(
                     composeProject = COMPOSE_PROJECT,
                     dataPath = "$path/library",
+                    dataPart = BackupPart.FILES,
                     databases = listOf(BackupDatabase(
                         engine = BackupDatabase.Engine.POSTGRES,
                         service = "database",

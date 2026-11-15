@@ -51,7 +51,12 @@ enum class HistoryMetric(val key: String, val titleRes: Int) {
             for (metric in entries.filter { it in metrics }) {
                 when (metric) {
                     CPU -> out += HistorySeries("cpu", R.string.metric_cpu, samples { it.cpuPercent })
-                    MEMORY -> out += HistorySeries("mem", R.string.metric_memory, samples { it.memUsedFraction * 100 })
+                    MEMORY -> {
+                        out += HistorySeries("mem", R.string.metric_memory, samples { it.memUsedFraction * 100 })
+                        if (points.any { (it.swapTotalBytes ?: 0) > 0 }) {
+                            out += HistorySeries("swap", R.string.storage_swap, samples { it.swapUsedFraction?.times(100) })
+                        }
+                    }
                     DISK -> out += if (diskLines.isEmpty()) {
                         listOf(HistorySeries("disk", R.string.metric_disk, samples { it.diskUsedFraction * 100 }))
                     } else {
@@ -84,13 +89,13 @@ enum class HistoryMetric(val key: String, val titleRes: Int) {
 
         fun isPercentChart(metrics: Set<HistoryMetric>): Boolean = metrics.all { it.isPercent }
 
-        /** What the chart's top of scale SAYS */
-        fun axisLabel(metrics: Set<HistoryMetric>, ceiling: Double): String = when {
-            isPercentChart(metrics) -> "0 – 100 %"
-            metrics.all { it == NETWORK || it == DISK_IO } -> "0 – ${MetricsFormat.rate(ceiling)}"
-            metrics.all { it == TEMPERATURE } -> "0 – ${MetricsFormat.temperature(ceiling)}"
-            metrics.all { it == POWER } -> "0 – ${ceiling.toInt()} W"
-            else -> "0 – ${MetricsFormat.load(ceiling)}"
+        /** One value on the chart's scale */
+        fun tickLabel(metrics: Set<HistoryMetric>, value: Double): String = when {
+            isPercentChart(metrics) -> "${kotlin.math.round(value).toInt()}%"
+            metrics.all { it == NETWORK || it == DISK_IO } -> MetricsFormat.rate(value)
+            metrics.all { it == TEMPERATURE } -> MetricsFormat.temperature(value)
+            metrics.all { it == POWER } -> "${value.toInt()} W"
+            else -> MetricsFormat.load(value)
         }
     }
 }

@@ -1,3 +1,4 @@
+import AIAssistant
 import ServerControl
 import SwiftUI
 
@@ -64,7 +65,7 @@ struct CompactActionButton: View {
                     .revealsFullText(title)
                     .minimumScaleFactor(0.8)
             }
-            .foregroundStyle(tint)
+            .focusLegibleForeground(tint)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 6)
         }
@@ -431,6 +432,17 @@ struct LongOperationSheet: View {
 
                 shareRow
 
+                if operation.isFinished {
+                    RefusalAdviceView(errorText: operation.errorMessage)
+                }
+
+                if operation.isFinished, operation.errorMessage != nil {
+                    AIExplainButton(context: {
+                        AIExplain.operation(title: operation.title, error: operation.errorMessage,
+                                            log: operation.log)
+                    }, after: onDismiss)
+                }
+
                 if !operation.log.isEmpty {
                     OperationLogView(log: operation.log)
                 }
@@ -446,11 +458,11 @@ struct LongOperationSheet: View {
                 #endif
             }
             .padding()
-            .navigationTitle(operation.title)
-            #if os(iOS)
+            .screenTitle(operation.title)
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
-            #if os(iOS)
+            #if os(iOS) || os(tvOS)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(operation.isFinished ? "Close" : "Minimize", action: onDismiss)
@@ -563,8 +575,8 @@ struct PassphraseSheet: View {
             .formStyle(.grouped)
             .frame(minWidth: 420, minHeight: 260)
             #endif
-            .navigationTitle("Backup Password")
-            #if os(iOS)
+            .screenTitle("Backup Password")
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {

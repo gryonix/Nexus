@@ -29,15 +29,25 @@ final class OperationActivities {
 
     func start(id: UUID, title: String, serverName: String, progressText: String,
                progress: Double? = nil, jobID: String? = nil, deploymentID: UUID? = nil,
-               canStop: Bool = false) {
+               canStop: Bool = false, kind: OperationKind? = nil) {
         guard !offered.contains(id) else { return }
         offered.insert(id)
         #if DEBUG
         LiveActivityProbe.note("start requested: \(title) available=\(isAvailable)")
         #endif
         #if os(iOS)
-        guard isAvailable else { return }
-        if let jobID, reclaim(jobID, for: id) { return }
+        guard isAvailable else {
+            IslandJournal.shared.note("not shown: Live Activities are off in iOS settings", run: title)
+            return
+        }
+        guard LiveActivitySettings.shared.shows(kind) else {
+            IslandJournal.shared.note("not shown: switched off in the app's settings", run: title)
+            return
+        }
+        if let jobID, reclaim(jobID, for: id) {
+            IslandJournal.shared.note("took over the card kept for job \(IslandJournal.short(jobID))", run: title)
+            return
+        }
         let attributes = OperationActivityAttributes(title: title,
                                                      serverName: serverName,
                                                      startedAt: Date(),
@@ -51,11 +61,15 @@ final class OperationActivities {
         do {
             let activity = try Self.request(attributes, state: state, staleDate: staleDate)
             live[id] = activity
+            lastSentAt[id] = state.updatedAt
             followPushToken(of: activity, for: id)
+            followServerUpdates(of: activity, for: id)
+            IslandJournal.shared.note("card opened by the app", run: title)
             #if DEBUG
             LiveActivityProbe.note("accepted: \(live[id]?.id ?? "-")")
             #endif
         } catch {
+            IslandJournal.shared.note("iOS refused the card: \(error.localizedDescription)", run: title)
             #if DEBUG
             LiveActivityProbe.note("refused: \(error)")
             #endif
@@ -76,10 +90,24 @@ final class OperationActivities {
         }
     }
 
+    /// Notes when the server, not this app, moved the card
+    private func followServerUpdates(of activity: Activity<OperationActivityAttributes>, for id: UUID) {
+        Task {
+            for await content in activity.contentUpdates {
+                guard let at = content.state.updatedAt,
+                      at > (lastSentAt[id] ?? .distantPast).addingTimeInterval(1) else { continue }
+                LiveActivityJobs.shared.serverMoved(id, at: at)
+            }
+        }
+    }
+
     private func followPushToken(of activity: Activity<OperationActivityAttributes>, for id: UUID) {
         Task {
             for await data in activity.pushTokenUpdates {
                 let token = data.map { String(format: "%02x", $0) }.joined()
+                if tokens[id] == nil {
+                    IslandJournal.shared.note("the card got its push address", run: activity.attributes.title)
+                }
                 tokens[id] = token
                 LiveActivityJobs.shared.tokenArrived(token, for: id)
             }
@@ -89,6 +117,8 @@ final class OperationActivities {
 
     /// Push tokens of the cards started here
     private var tokens: [UUID: String] = [:]
+    /// When this app last moved each card
+    private var lastSentAt: [UUID: Date] = [:]
 
     /// The card's push token, once it has one
     func pushToken(of id: UUID, waiting seconds: Double = 10) async -> String? {
@@ -102,12 +132,13 @@ final class OperationActivities {
 
     func update(id: UUID, progressText: String, progress: Double? = nil) {
         #if os(iOS)
-        guard let activity = live[id] else { return }
+        guard let activity = live[id], !LiveActivityJobs.shared.serverIsMoving(id) else { return }
         let state = OperationActivityAttributes.ContentState(progressText: progressText,
                                                              isFinished: false,
                                                              errorMessage: nil,
                                                              progress: progress,
                                                              stopArmed: armed.contains(id) ? true : nil)
+        lastSentAt[id] = state.updatedAt
         Task { await activity.update(.init(state: state, staleDate: staleDate)) }
         #if DEBUG
         LiveActivityProbe.note("updated: \(progressText) progress=\(progress.map { "\($0)" } ?? "-")")
@@ -169,10 +200,11 @@ final class OperationActivities {
     }
 
     /// What the system card knows: its server, job and start
-    func stopTarget(of id: UUID) -> (deploymentID: UUID?, jobID: String?, startedAt: Date)? {
+    func stopTarget(of id: UUID) -> (deploymentID: UUID?, jobID: String?, startedAt: Date, title: String)? {
         #if os(iOS)
         guard let activity = card(for: id) else { return nil }
-        return (activity.attributes.deploymentID, Self.followedJobs()[activity.id], activity.attributes.startedAt)
+        return (activity.attributes.deploymentID, Self.followedJobs()[activity.id], activity.attributes.startedAt,
+                activity.attributes.title)
         #else
         return nil
         #endif
@@ -196,10 +228,19 @@ final class OperationActivities {
 
     private func take(_ activity: Activity<OperationActivityAttributes>, for operation: UUID, job: String) {
         guard let own = live[operation], own.id != activity.id else { return }
+        if LiveActivityJobs.shared.isServerLed(operation) {
+            IslandJournal.shared.note("closed the second card of job \(IslandJournal.short(job)): the server follows ours",
+                                      run: own.attributes.title)
+            Task { await activity.end(nil, dismissalPolicy: .immediate) }
+            return
+        }
+        IslandJournal.shared.note("switched to the server's card of job \(IslandJournal.short(job))",
+                                  run: own.attributes.title)
         live[operation] = activity
         var followed = Self.followedJobs()
         followed[activity.id] = job
         Self.saveFollowedJobs(followed)
+        LiveActivityJobs.shared.serverMoves(operation)
         Task { await own.end(own.content, dismissalPolicy: .immediate) }
     }
 
@@ -220,8 +261,23 @@ final class OperationActivities {
 
     func showStopping(job: String) {
         guard let activity = jobCard(job) else { return }
+        show(UIL10n.string("Stopping…"), on: activity)
+    }
+
+    /// Replaces "Stopping…" with why the stop did not happen
+    func showStopRefused(_ reason: String, id: UUID) {
+        guard let activity = card(for: id) else { return }
+        show(reason, on: activity)
+    }
+
+    func showStopRefused(_ reason: String, job: String) {
+        guard let activity = jobCard(job) else { return }
+        show(reason, on: activity)
+    }
+
+    private func show(_ progressText: String, on activity: Activity<OperationActivityAttributes>) {
         var state = activity.content.state
-        state.progressText = UIL10n.string("Stopping…")
+        state.progressText = progressText
         state.stopArmed = nil
         Task { await activity.update(.init(state: state, staleDate: staleDate)) }
     }
@@ -239,6 +295,8 @@ final class OperationActivities {
         armed.remove(id)
         #if os(iOS)
         guard let activity = live.removeValue(forKey: id) else { return }
+        IslandJournal.shared.note(errorMessage.map { "ended by the app: \($0)" } ?? "ended by the app",
+                                  run: activity.attributes.title)
         let state = OperationActivityAttributes.ContentState(progressText: progressText,
                                                              isFinished: true,
                                                              errorMessage: errorMessage,
@@ -268,28 +326,62 @@ final class OperationActivities {
     }
     #endif
 
+    /// Lets the server end a card the app cannot follow
+    func leaveToServer(_ id: UUID) {
+        offered.remove(id)
+        armed.remove(id)
+        #if os(iOS)
+        guard let activity = live.removeValue(forKey: id) else { return }
+        IslandJournal.shared.note("the app lost the connection; the server ends the card",
+                                  run: activity.attributes.title)
+        #endif
+    }
+
+    /// Whether the app opened a card for this run
+    func hasOwnCard(_ id: UUID) -> Bool {
+        #if os(iOS)
+        return live[id] != nil
+        #else
+        return false
+        #endif
+    }
+
     /// Ends cards no server job will ever close
     func endOrphans() {
         #if os(iOS)
         let followed = Self.followedJobs()
         Task {
             for activity in Activity<OperationActivityAttributes>.activities {
-                guard !live.values.contains(where: { $0.id == activity.id }),
-                      followed[activity.id] == nil else { continue }
+                guard Self.isOrphan(ownedHere: live.values.contains(where: { $0.id == activity.id }),
+                                    followedJob: followed[activity.id],
+                                    serverJob: activity.attributes.jobID) else { continue }
                 await activity.end(nil, dismissalPolicy: .immediate)
             }
         }
         #endif
     }
 
-    /// Ends followed cards the server stopped moving
+    /// A card nothing will close: not ours, no job
+    nonisolated static func isOrphan(ownedHere: Bool, followedJob: String?, serverJob: String?) -> Bool {
+        !ownedHere && followedJob == nil && serverJob == nil
+    }
+
+    /// A job's card whose server stopped moving it
+    nonisolated static func isAbandoned(followedJob: String?, serverJob: String?, isActive: Bool,
+                                        staleDate: Date?, now: Date = Date()) -> Bool {
+        guard followedJob != nil || serverJob != nil else { return false }
+        let stale = staleDate.map { $0 < now } ?? true
+        return stale || !isActive
+    }
+
+    /// Ends job cards the server stopped moving
     func endUnclaimed() {
         #if os(iOS)
         var followed = Self.followedJobs()
         for activity in Activity<OperationActivityAttributes>.activities where !isOurs(activity) {
-            guard followed[activity.id] != nil else { continue }
-            let stale = activity.content.staleDate.map { $0 < Date() } ?? true
-            guard stale || activity.activityState != .active else { continue }
+            guard Self.isAbandoned(followedJob: followed[activity.id], serverJob: activity.attributes.jobID,
+                                   isActive: activity.activityState == .active,
+                                   staleDate: activity.content.staleDate) else { continue }
             followed[activity.id] = nil
             Task { await activity.end(nil, dismissalPolicy: .default) }
         }
@@ -345,14 +437,20 @@ final class OperationActivities {
         live.values.contains { $0.id == activity.id }
     }
 
-    /// Takes over the card left for this job
+    /// Takes over this job's kept card, or the server's
     private func reclaim(_ jobID: String, for id: UUID) -> Bool {
-        let followed = Self.followedJobs()
+        var followed = Self.followedJobs()
         guard let activity = Activity<OperationActivityAttributes>.activities.first(where: {
-            followed[$0.id] == jobID && $0.activityState == .active && !isOurs($0)
+            (followed[$0.id] == jobID || $0.attributes.jobID == jobID) && $0.activityState == .active && !isOurs($0)
         }) else { return false }
         live[id] = activity
-        followPushToken(of: activity, for: id)
+        guard activity.attributes.jobID == jobID else {
+            followPushToken(of: activity, for: id)
+            return true
+        }
+        followed[activity.id] = jobID
+        Self.saveFollowedJobs(followed)
+        LiveActivityJobs.shared.serverMoves(id)
         return true
     }
     #endif

@@ -12,7 +12,7 @@ struct VPNStatusWidgetView: View {
 
     var body: some View {
         switch family {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         case .accessoryCircular: circular
         case .accessoryInline: inline
         case .accessoryRectangular: rectangular
@@ -81,7 +81,7 @@ struct VPNStatusWidgetView: View {
 
     // MARK: - Lock screen
 
-    #if os(iOS)
+    #if os(iOS) || os(tvOS)
     private var circular: some View {
         ZStack {
             AccessoryWidgetBackground()

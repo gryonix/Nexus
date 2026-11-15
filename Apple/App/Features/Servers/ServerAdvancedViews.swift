@@ -68,7 +68,7 @@ struct BastionPicker: View {
         .formRowButtons()
         #endif
         .bottomBarClearance()
-        .navigationTitle("Bastion server")
+        .screenTitle("Bastion server")
         .raisedNavigationTitle()
         .task {
             if let endpoint = selection?.manual {
@@ -122,7 +122,7 @@ struct BastionPicker: View {
                 .labelsHidden()
                 .textFieldStyle(.plain)
                 .multilineTextAlignment(.trailing)
-                #if os(iOS)
+                #if os(iOS) || os(tvOS)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 #endif
@@ -153,7 +153,7 @@ struct FallbackAddressView: View {
                         .labelsHidden()
                         .textFieldStyle(.plain)
                         .multilineTextAlignment(.trailing)
-                        #if os(iOS)
+                        #if os(iOS) || os(tvOS)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         #endif
@@ -200,7 +200,7 @@ struct FallbackAddressView: View {
         .formRowButtons()
         #endif
         .bottomBarClearance()
-        .navigationTitle("Fallback address")
+        .screenTitle("Fallback address")
         .raisedNavigationTitle()
         .task {
             host = fallback?.host ?? ""
@@ -303,7 +303,7 @@ struct ProxyPickerView: View {
         .formRowButtons()
         #endif
         .bottomBarClearance()
-        .navigationTitle("Proxy")
+        .screenTitle("Proxy")
         .raisedNavigationTitle()
         .task { proxies = ProxyStore.all() }
     }

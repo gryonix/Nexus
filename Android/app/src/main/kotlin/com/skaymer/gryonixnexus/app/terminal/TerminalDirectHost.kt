@@ -18,6 +18,8 @@ data class TerminalDirectHost(
     val port: Int = 22,
     /** The account this connection signs in as */
     val username: String,
+    /** A managed machine the connection goes through */
+    val via: TerminalVia? = null,
 ) {
     /** The name, or the address when there is no name */
     val title: String get() = name.trim().ifEmpty { host }
@@ -30,6 +32,14 @@ data class TerminalDirectHost(
             entry = HostEndpoint(host = host, port = port, user = username),
         )
 }
+
+/** A managed machine a connection goes through */
+@Serializable
+data class TerminalVia(
+    val server: String,
+    /** Null means the server's entry machine */
+    val node: String? = null,
+)
 
 /** The saved direct hosts, in a plain JSON file */
 class TerminalDirectHostStore(private val file: File) {

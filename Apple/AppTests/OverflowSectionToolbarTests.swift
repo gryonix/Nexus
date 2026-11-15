@@ -10,6 +10,7 @@ final class OverflowSectionToolbarTests: XCTestCase {
         (.metrics, "App/Features/Metrics/MetricsDashboardView.swift"),
         (.vpn, "App/Features/VPN/VPNSectionView.swift"),
         (.terminal, "App/Features/Terminal/TerminalSection.swift"),
+        (.ai, "App/Features/AI/AITabView.swift"),
         (.configurator, "App/Navigation/AppRootView.swift"),
         (.settings, "App/Features/Settings/AppSettingsView.swift")
     ]

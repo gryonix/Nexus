@@ -28,6 +28,9 @@ enum DemoVPNSession {
     @MainActor
     static func start() async {
         let tunnel = TunnelController.shared
+        for _ in 0..<50 where !LicenseStore.isUnlocked {
+            try? await Task.sleep(for: .milliseconds(100))
+        }
         guard let profile = try? tunnel.adopt(configurationText: configuration,
                                               protocolID: .wireguardVPN,
                                               serverID: serverID,

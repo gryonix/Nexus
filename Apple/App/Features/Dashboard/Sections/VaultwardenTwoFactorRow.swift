@@ -8,12 +8,16 @@ struct VaultwardenTwoFactorRow: View {
     @State private var status: VaultwardenTwoFactorStatus?
 
     var body: some View {
-        LabeledContent {
-            summary
-        } label: {
+        HStack(alignment: .center, spacing: 12) {
             Text("Two-factor login")
                 .infoNote("Two-factor login",
                           "Turn it on in the web vault under Settings, Security, Two-step login.")
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 8)
+            summary
+                .multilineTextAlignment(.trailing)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .task {
             if #available(macOS 15.0, *) {

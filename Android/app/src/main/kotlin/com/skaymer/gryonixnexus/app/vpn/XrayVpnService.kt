@@ -9,9 +9,16 @@ import com.skaymer.gryonixnexus.profile.ProxyLinkConfig
 import com.skaymer.gryonixnexus.profile.Tun2SocksConfiguration
 import com.skaymer.gryonixnexus.profile.XrayConfiguration
 import java.io.File
+import java.net.InetAddress
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import com.skaymer.gryonixnexus.profile.advanced.AdvancedDnsBridges
+import com.skaymer.gryonixnexus.profile.advanced.AdvancedProfile
+import com.skaymer.gryonixnexus.profile.advanced.AdvancedProtocols
+import com.skaymer.gryonixnexus.profile.advanced.AdvancedTraffic
+import com.skaymer.gryonixnexus.profile.advanced.AdvancedXrayConfiguration
+import kotlinx.serialization.json.Json
 import xraybridge.Xraybridge
 
 /** Shadowsocks and Xray Reality, on the device */
@@ -52,7 +59,12 @@ class XrayVpnService : VpnService() {
             val access = LocalProxyAccess.random()
             val yamlFile = File(filesDir, YAML_NAME)
             yamlFile.writeText(Tun2SocksConfiguration.yaml(access))
-            startCore(link, access, com.skaymer.gryonixnexus.profile.ProxyTunnelText.reachableDNS(dns))
+            val advanced = com.skaymer.gryonixnexus.profile.ProxyTunnelText.advancedJson(stored)
+            if (advanced != null) {
+                startAdvancedCore(advanced, access, com.skaymer.gryonixnexus.profile.ProxyTunnelText.reachableDNS(dns))
+            } else {
+                startCore(link, access, com.skaymer.gryonixnexus.profile.ProxyTunnelText.reachableDNS(dns))
+            }
 
             val builder = Builder()
                 .setSession("gryonixNexus")
@@ -73,6 +85,52 @@ class XrayVpnService : VpnService() {
             failure = refused.message ?: refused.toString()
             _isRunning.value = false
         }
+    }
+
+    /** Many servers, rules and DNS from the advanced profile */
+    private fun startAdvancedCore(json: String, access: LocalProxyAccess, dns: List<String>) {
+        val profile = Json { ignoreUnknownKeys = true }.decodeFromString(AdvancedProfile.serializer(), json)
+        val dotUpstreams = AdvancedDnsBridges.dotUpstreams(profile)
+        val dotHosts = dotUpstreams.mapNotNull { AdvancedDnsBridges.endpoint(it.address)?.first }
+        val resolved = resolveHosts(AdvancedXrayConfiguration.members(profile).map { it.host } + dotHosts)
+        val log = File(filesDir, AdvancedVpnStore.ACCESS_LOG).also { it.delete() }
+        val options = AdvancedXrayConfiguration.Options(
+            dns = dns,
+            resolved = resolved,
+            statsPort = AdvancedTraffic.STATS_PORT.takeIf { profile.collectsTraffic },
+            accessLogPath = log.absolutePath.takeIf { profile.collectsTraffic },
+            ss2022Ports = startShadowsocksClients(profile, resolved, access),
+            dotPorts = dotUpstreams.associate { it.id to LocalProxyAccess.freeLoopbackPort() },
+        )
+        val configFile = File(filesDir, "xray-config.json")
+        configFile.writeText(AdvancedXrayConfiguration.json(profile, access, options))
+        try {
+            Xraybridge.run(filesDir.absolutePath, configFile.absolutePath, 64L shl 20)
+        } finally {
+            configFile.delete()
+        }
+    }
+
+    /** One local client per blake3 Shadowsocks member */
+    private fun startShadowsocksClients(profile: AdvancedProfile, resolved: Map<String, String>, access: LocalProxyAccess): Map<String, Int> =
+        AdvancedProtocols.ss2022Members(profile).associate { server ->
+            val port = LocalProxyAccess.freeLoopbackPort()
+            val host = resolved[server.host] ?: server.host
+            val remote = if (':' in host) "[$host]:${server.port}" else "$host:${server.port}"
+            Xraybridge.ssStart(
+                "127.0.0.1:$port", remote, server.fields["method"].orEmpty(), server.fields["password"].orEmpty(),
+                access.username, access.password,
+            )
+            server.id to port
+        }
+
+    private fun resolveHosts(hosts: List<String>): Map<String, String> {
+        val found = java.util.concurrent.ConcurrentHashMap<String, String>()
+        val workers = hosts.distinct().map { host ->
+            Thread { runCatching { InetAddress.getByName(host).hostAddress?.let { found[host] = it } } }.also { it.start() }
+        }
+        workers.forEach { it.join(RESOLVE_WAIT_MILLIS) }
+        return found
     }
 
     /** Shadowsocks runs our own client; everything else runs Xray */
@@ -107,11 +165,13 @@ class XrayVpnService : VpnService() {
         runCatching { Xraybridge.stop() }
         runCatching { tunnel?.close() }
         File(filesDir, YAML_NAME).delete()
+        File(filesDir, AdvancedVpnStore.ACCESS_LOG).delete()
         tunnel = null
         _isRunning.value = false
     }
 
     companion object {
+        private const val RESOLVE_WAIT_MILLIS = 5_000L
         private const val YAML_NAME = "tun2socks.yml"
         private const val ACTION_STOP = "com.skaymer.gryonixnexus.STOP_XRAY"
 

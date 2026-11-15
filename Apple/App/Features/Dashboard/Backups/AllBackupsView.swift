@@ -41,13 +41,11 @@ struct AllBackupsView: View {
         .formStyle(.grouped)
         #endif
         .bottomBarClearance()
-        .navigationTitle("All backups")
+        .screenTitle("All backups")
         .raisedNavigationTitle()
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button(choosing ? "Done" : "Select") { toggleChoosing() }
-                    .disabled(model.rows.isEmpty && !choosing)
-            }
+        .screenActions {
+            Button(choosing ? "Done" : "Select") { toggleChoosing() }
+                .disabled(model.rows.isEmpty && !choosing)
         }
         .refreshable { await model.load() }
         .task { if !model.hasLoaded { await model.load() } }

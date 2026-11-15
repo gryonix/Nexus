@@ -35,8 +35,8 @@ struct StorageBuildView: View {
             StorageSignInSection(model: model)
             StorageRunSection(model: model, title: "Build an array", step: step, destructive: true) { dismiss() }
         }
-        .navigationTitle("Build an array")
-        #if os(iOS)
+        .screenTitle("Build an array")
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {

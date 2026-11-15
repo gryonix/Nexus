@@ -84,8 +84,8 @@ struct VPNProtocolInfoView: View {
                     Text("Comparison")
                 }
             }
-            .navigationTitle(displayName)
-            #if os(iOS)
+            .screenTitle(displayName)
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {

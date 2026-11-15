@@ -10,19 +10,35 @@ object VPNDNSPriorityEditing {
     val publicChoices: List<PublicDNS> =
         PublicDNS.all.filter { it.variant == null }.distinctBy { it.provider }
 
+    /** The order entry for the devices' chosen DNS */
+    fun chosenEntry(dns: List<String>, localAddress: String): String {
+        val first = dns.map { it.trim() }.firstOrNull { it.isNotEmpty() } ?: return "1.1.1.1"
+        val local = first == localAddress || first == LocalDNS.SERVER_ADDRESS || first == VPNDNSPriority.LOCAL
+        return if (local) VPNDNSPriority.LOCAL else first
+    }
+
+    /** The order with this entry first and nowhere else */
+    fun pin(order: List<String>, first: String): List<String> =
+        (listOf(first) + order.filter { it != first }).take(MAX_RESOLVERS)
+
+    /** The first entry is the chosen DNS and stays put */
+    fun canMoveUp(index: Int): Boolean = index > 1
+
+    fun canMoveDown(index: Int, order: List<String>): Boolean = index > 0 && index < order.lastIndex
+
     fun moveUp(index: Int, order: List<String>): List<String> {
-        if (index !in order.indices || index == 0) return order
+        if (index !in order.indices || !canMoveUp(index)) return order
         return order.toMutableList().apply { add(index - 1, removeAt(index)) }
     }
 
     fun moveDown(index: Int, order: List<String>): List<String> {
-        if (index !in order.indices || index == order.lastIndex) return order
+        if (index !in order.indices || !canMoveDown(index, order)) return order
         return order.toMutableList().apply { add(index + 1, removeAt(index)) }
     }
 
-    /** The order without this entry; the last one stays */
+    /** The order without this entry; the chosen one stays */
     fun remove(index: Int, order: List<String>): List<String> {
-        if (index !in order.indices || order.size <= 1) return order
+        if (index !in order.indices || index == 0) return order
         return order.filterIndexed { position, _ -> position != index }
     }
 

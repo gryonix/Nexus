@@ -48,8 +48,8 @@ struct RestoreBackupSheet: View {
                         .foregroundStyle(.red)
                 }
             }
-            .navigationTitle("Restore \(row.serviceName)")
-            #if os(iOS)
+            .screenTitle("Restore \(row.serviceName)")
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {

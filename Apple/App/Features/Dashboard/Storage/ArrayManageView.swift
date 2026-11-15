@@ -39,8 +39,8 @@ struct ArrayManageView: View {
                 }
             }
         }
-        .navigationTitle(Text(verbatim: array.name))
-        #if os(iOS)
+        .screenTitle(Text(verbatim: array.name))
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {
@@ -96,8 +96,8 @@ struct ArrayChangeView: View {
             StorageRunSection(model: model, title: action == .delete ? "Delete" : "Start", step: step,
                               destructive: action == .delete || !change.disks.isEmpty) { onDone() }
         }
-        .navigationTitle(Text(verbatim: StorageChangeText.title(action)))
-        #if os(iOS)
+        .screenTitle(Text(verbatim: StorageChangeText.title(action)))
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .task { await model.loadStoredSecret() }

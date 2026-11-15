@@ -71,7 +71,8 @@ class NotifyViewModel(
     fun save(deployment: Deployment, request: SetNotifySettingsRequest, followsApp: Boolean? = null) = call(deployment) {
         followsApp?.let { store?.setBoolean(NotifyChannelDefault.ownKey(deployment.id.toString()), !it) }
         val chosen = if (followsApp == true) channelDefault.applied(request) else request
-        val checks = if (chosen.custom_checks) chosen.checks else preferences.checks
+        val checks = ((if (chosen.custom_checks) chosen.checks else null) ?: preferences.checks)
+            .copy(widget_refresh_minutes = preferences.widgetMinutes)
         val key = runCatching { appKey(deployment) }.getOrDefault("")
         val saved = it.setNotifySettings(chosen.copy(checks = checks, app_public_key = key))
         mirror(deployment, saved)
@@ -110,7 +111,7 @@ class NotifyViewModel(
         val key = NotifyPreferences.syncedKey(deployment.id.toString())
         val own = store.boolean(NotifyChannelDefault.ownKey(deployment.id.toString()))
         val mark = wanted.fingerprint + locale + "k" + "h${deployment.agentHosts.size}" +
-            tokenMark(cachedToken()) + "p2" + channel.fingerprint + (own?.let { if (it) 1 else 0 } ?: 2)
+            tokenMark(cachedToken()) + "p3" + channel.fingerprint + (own?.let { if (it) 1 else 0 } ?: 2)
         if (store.string(key) == mark) return
         scope.launch {
             try {
@@ -127,6 +128,7 @@ class NotifyViewModel(
                 if (token != null) {
                     agent.registerNotifyDevice("fcm", token, appVersion, locale, wanted.muted, deviceProof(), deviceName)
                 }
+                if (sends.channel == NotifyChannel.NOTIFY_CHANNEL_RELAY && token == null) return@launch
                 if (!mirror(deployment, agent.getNotifySettings())) return@launch
                 store.setString(key, mark)
             } catch (cancelled: CancellationException) {
@@ -215,7 +217,8 @@ class NotifyViewModel(
             appKey: String,
             channel: NotifyChannelDefault? = null,
         ): SetNotifySettingsRequest? {
-            val checks = if (current.custom_checks) current.checks else wanted.checks
+            val checks = ((if (current.custom_checks) current.checks else null) ?: wanted.checks)
+                .copy(widget_refresh_minutes = wanted.widgetMinutes)
             val keyKnown = appKey.isEmpty() || current.quiet_keys.any { appKey.startsWith(it) }
             val inStep = channel?.matches(current) ?: true
             if (current.checks == checks && current.language == language && keyKnown && inStep) return null

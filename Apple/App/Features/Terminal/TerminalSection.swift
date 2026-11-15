@@ -20,6 +20,19 @@ struct TerminalFleetView: View {
     @State private var debugScreen: TerminalProfile?
     #endif
 
+    private func restoreSavedSessions() {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["GRYONIXNEXUS_DEMO_TERMINAL"] != nil { return }
+        #endif
+        guard let target = sessions.restoreSaved() else { return }
+        sessions.pendingOpen = target.profileID
+        if let host = target.directHost {
+            directPath = host
+        } else {
+            path = [target.deployment]
+        }
+    }
+
     /// Opens one directly-added machine
     private func open(_ deploymentID: UUID) {
         navigator.clearSectionServer(for: .terminal)
@@ -70,7 +83,7 @@ struct TerminalFleetView: View {
                 }
                 #endif
                 .bottomBarClearance()
-                .navigationTitle("Terminal")
+                .screenTitle("Terminal")
                 .sectionToolbar(.terminal)
                 .onReceive(navigator.$terminalDirectHostID.compactMap { $0 }) { openDirect($0) }
                 .onReceive(navigator.$sectionServer.compactMap {
@@ -96,6 +109,7 @@ struct TerminalFleetView: View {
                 .task {
                     servers.load()
                     direct.load()
+                    restoreSavedSessions()
                     #if DEBUG
                     if ProcessInfo.processInfo.environment["GRYONIXNEXUS_DEMO_OPEN_TERMINAL"] == "server",
                        let first = servers.deployments.first {
@@ -140,6 +154,11 @@ struct TerminalFleetView: View {
                 }
             }
             directSection
+            Section {
+                NavigationLink { TerminalDesignView() } label: {
+                    Label("Terminal design", systemImage: "paintpalette")
+                }
+            }
         }
     }
 

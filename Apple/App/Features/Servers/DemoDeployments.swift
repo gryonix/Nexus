@@ -79,4 +79,13 @@ enum DemoDeployments {
         ]
     }
 }
+extension AudioHubSources {
+    /// Players as a fresh hub reports them
+    static let demo = AudioHubSources(values: [
+        "spotify.name": "Living room", "spotify.bitrate": "320", "spotify.normalise": "", "spotify.volume": "90",
+        "spotify.pregain": "", "spotify.volume_controller": "", "spotify.device_type": "avr", "spotify.autoplay": "yes",
+        "airplay.name": "Living room", "airplay.interpolation": "soxr", "airplay.session_timeout": "60",
+        "mpd.name": "Living room", "mpd.replaygain": "album", "mpd.auto_update": "yes",
+    ])
+}
 #endif

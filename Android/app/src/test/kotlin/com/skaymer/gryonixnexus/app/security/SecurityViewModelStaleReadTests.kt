@@ -97,4 +97,28 @@ class SecurityViewModelStaleReadTests {
             "a card that was left behind answered anyway",
         )
     }
+
+    @Test
+    fun `coming back to the card does not read it again`() = runTest {
+        val first = server("S-1", "203.0.113.40")
+        var reads = 0
+        val model = SecurityViewModel(
+            scope = this,
+            operations = {
+                reads += 1
+                AgentSecurityOperations(AgentClient(CannedTransport("v1.8.0")))
+            },
+        )
+
+        model.loadIfStale(first, now = 1_000L)
+        advanceUntilIdle()
+        val afterFirst = reads
+        model.loadIfStale(first, now = 61_000L)
+        advanceUntilIdle()
+        assertEquals(afterFirst, reads, "the card read the server again on the way back")
+
+        model.loadIfStale(first, now = 1_000L + SecurityViewModel.FRESH_MS)
+        advanceUntilIdle()
+        assertTrue(reads > afterFirst, "an old answer was never read again")
+    }
 }

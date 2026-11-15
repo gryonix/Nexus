@@ -45,7 +45,7 @@ struct MeshDevicesView: View {
                 InfoSectionHeader("Names inside the mesh", note: "Makes this server's services reachable from your devices by their usual names, even where those names do not resolve publicly. The addresses stay private to the mesh.")
             }
         }
-        .navigationTitle("Mesh devices")
+        .screenTitle("Mesh devices")
         .raisedNavigationTitle()
         .refreshableWithShortcut { await viewModel.loadMeshNodes() }
         .task { await viewModel.loadMeshNodes() }
@@ -70,7 +70,7 @@ struct MeshDevicesView: View {
     private var devicesSection: some View {
         Section {
             Button {
-                guard LicensePrompt.shared.allow() else { return }
+                guard LicensePrompt.shared.allow(viewModel.deployment) else { return }
                 Task {
                     isMinting = true
                     defer { isMinting = false }
@@ -187,8 +187,8 @@ struct MeshJoinKeySheet: View {
                     InfoSectionHeader("On the device", note: "Install the official Tailscale client, then run this. On a phone, use the app's “Use custom coordination server” option with the same address.")
                 }
             }
-            .navigationTitle("Add device")
-            #if os(iOS)
+            .screenTitle("Add device")
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {

@@ -9,42 +9,36 @@ import androidx.compose.ui.res.stringResource
 import com.skaymer.gryonixnexus.R
 import com.skaymer.gryonixnexus.app.install.InstallTarget
 import com.skaymer.gryonixnexus.app.ui.design.ActionRow
-import com.skaymer.gryonixnexus.app.ui.design.AlertAction
 import com.skaymer.gryonixnexus.app.ui.design.Gryonix
-import com.skaymer.gryonixnexus.app.ui.design.IOSAlert
 import com.skaymer.gryonixnexus.app.ui.design.ValueRow
+import com.skaymer.gryonixnexus.app.ui.design.WheelRow
 import com.skaymer.gryonixnexus.catalog.storage.SwapPlan
 
 /** Adds a swap file right after the connection check */
 @Composable
 fun SwapRow(target: InstallTarget, onAdd: (Int) -> Unit) {
     if (target.connection !is InstallTarget.Connection.Ok || target.hardware == null) return
-    var asking by remember { mutableStateOf(false) }
-    var custom by remember { mutableStateOf(false) }
+    var size by remember { mutableStateOf(2) }
     val adding = target.swap is InstallTarget.Swap.Adding
-    val current = currentSwap(target.hardware.swapBytes)
-    ValueRow(stringResource(R.string.swap_now), current, null)
+    ValueRow(stringResource(R.string.swap_now), currentSwap(target.hardware.swapBytes), null)
+    val sizes = SwapPlan.WHEEL.drop(1)
+    if (!adding) {
+        WheelRow(
+            title = stringResource(R.string.swap_title),
+            choices = sizes.map { stringResource(R.string.swap_size, it.toString()) },
+            selected = sizes.indexOf(size),
+            onSelect = { size = sizes[it] },
+        )
+    }
     ActionRow(
         text = stringResource(if (adding) R.string.swap_adding else R.string.swap_add),
-        onClick = { asking = true },
+        onClick = { onAdd(size) },
         enabled = !adding,
         showDivider = target.swap is InstallTarget.Swap.Failed,
     )
     (target.swap as? InstallTarget.Swap.Failed)?.let { failed ->
         VerdictRow(failed.reason, Gryonix.colors.danger)
     }
-    if (asking) {
-        IOSAlert(
-            title = stringResource(R.string.swap_title),
-            message = stringResource(R.string.swap_now_note, current),
-            onDismiss = { asking = false },
-            actions = SwapPlan.SIZES.map { size ->
-                AlertAction(stringResource(R.string.swap_size, size.toString())) { asking = false; onAdd(size) }
-            } + AlertAction(stringResource(R.string.swap_other)) { asking = false; custom = true } +
-                AlertAction(stringResource(R.string.close)) { asking = false },
-        )
-    }
-    if (custom) CustomSwapSizeAlert(onSet = onAdd, onDismiss = { custom = false })
 }
 
 /** Swap size in words, or None */

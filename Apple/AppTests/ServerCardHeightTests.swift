@@ -100,13 +100,13 @@ final class ServerCardHeightTests: XCTestCase {
 
     private func assertBlockFits(_ row: CGFloat, gap: CGFloat, block: CGFloat,
                                  _ name: String) {
-        let needed = row * 3 + gap * 2
+        let needed = row * 4 + gap * 3
         XCTAssertGreaterThan(row, 0, name)
         XCTAssertLessThanOrEqual(needed, block + 0.5,
-                                 "\(name): three \(row)pt rows need \(needed)pt "
+                                 "\(name): four \(row)pt rows need \(needed)pt "
                                  + "of a \(block)pt block — they draw over the card's edge")
         XCTAssertGreaterThanOrEqual(needed, block - row,
-                                    "\(name): three \(row)pt rows fill \(needed)pt of a "
+                                    "\(name): four \(row)pt rows fill \(needed)pt of a "
                                     + "\(block)pt block — the rest of the card is a hole")
     }
 
@@ -117,7 +117,7 @@ final class ServerCardHeightTests: XCTestCase {
             let diameter = ringDiameter(cardWidth: width)
             let drawn = idealHeight(of: RingGauge(label: "Mem", fraction: 0.42,
                                                   diameter: diameter),
-                                    width: leftoverForRings(in: width) / 3)
+                                    width: leftoverForRings(in: width) / 4)
             XCTAssertLessThanOrEqual(
                 drawn, MetricBlock.wide + 0.5,
                 "a \(diameter)pt ring draws \(drawn)pt of a \(MetricBlock.wide)pt block "
@@ -125,49 +125,49 @@ final class ServerCardHeightTests: XCTestCase {
         }
     }
 
-    func testTheRingFillsTheBlockOnEveryPhone() {
+    func testTheRingIsAsLargeAsTheWidthAndTheBlockAllow() {
         let block = MetricBlock.wide - RingLayout.labelHeight
         for width in Self.wideWidths {
-            XCTAssertEqual(ringDiameter(cardWidth: width), block, accuracy: 0.5,
-                           "at \(width)pt of card the ring is \(ringDiameter(cardWidth: width))pt "
-                           + "of a \(block)pt block")
+            let diameter = ringDiameter(cardWidth: width)
+            XCTAssertLessThanOrEqual(diameter, block + 0.5, "at \(width)pt of card the ring is taller than its block")
+            let byWidth = (width - RingLayout.wideGutter * 3) / 4
+            XCTAssertEqual(diameter, min(byWidth, block, RingLayout.wideMaxDiameter), accuracy: 0.5,
+                           "at \(width)pt of card the ring is \(diameter)pt, not what four across allow")
         }
-        let narrow: CGFloat = 3 * block - 30
-        XCTAssertLessThan(ringDiameter(cardWidth: narrow), block - 1,
-                          "at \(narrow)pt of card the width has to be what limits the ring")
     }
 
     func testAStretchedCardDoesNotDrawRingsOverEachOther() {
         let width: CGFloat = (1024 - 32 - 10) / 2 - 24
         let block = CGSize(width: width, height: 390)
-        let cell = width / 3
+        let cell = width / 4
 
-        let sideBySide = RingLayout.diameter(in: block, count: 3,
+        let sideBySide = RingLayout.diameter(in: block, count: 4,
                                              gutter: RingLayout.compactGutter,
                                              labelHeight: RingLayout.labelHeight, floor: 20,
                                              cap: RingLayout.compactMaxDiameter)
         XCTAssertLessThanOrEqual(
-            sideBySide, cell,
-            "three \(sideBySide)pt rings in cells of \(cell)pt draw over each other")
+            sideBySide, width / 4,
+            "four \(sideBySide)pt rings in cells of \(cell)pt draw over each other")
 
         let drawn = idealWidth(of: RingGauge(label: "Mem", fraction: 0.42,
                                              diameter: sideBySide))
         XCTAssertLessThanOrEqual(drawn, cell,
                                  "a \(sideBySide)pt ring draws \(drawn)pt wide")
 
-        XCTAssertTrue(RingLayout.stacks(in: block, count: 3,
+        let tall = CGSize(width: 200, height: 390)
+        XCTAssertTrue(RingLayout.stacks(in: tall, count: 4,
                                         gutter: RingLayout.compactGutter,
                                         stackedGutter: RingLayout.stackedGutter,
                                         labelHeight: RingLayout.labelHeight,
                                         labelWidth: RingLayout.trailingLabelWidth,
                                         floor: 20, cap: RingLayout.compactMaxDiameter),
-                      "a card stretched to \(block.height)pt still draws its rings in a row")
+                      "a card 200pt wide and \(tall.height)pt tall still draws its rings in a row")
     }
 
     func testTheWideCardsRingsAreCappedToo() {
         let width: CGFloat = 1024 - 32 - 28
         let diameter = RingLayout.diameter(in: CGSize(width: width, height: 390),
-                                           count: 3, gutter: RingLayout.wideGutter,
+                                           count: 4, gutter: RingLayout.wideGutter,
                                            labelHeight: RingLayout.labelHeight, floor: 24,
                                            cap: RingLayout.wideMaxDiameter, outerAir: false)
         XCTAssertEqual(diameter, RingLayout.wideMaxDiameter, accuracy: 0.5,
@@ -177,7 +177,7 @@ final class ServerCardHeightTests: XCTestCase {
     private func ringDiameter(cardWidth: CGFloat) -> CGFloat {
         RingLayout.diameter(in: CGSize(width: leftoverForRings(in: cardWidth),
                                        height: MetricBlock.wide),
-                            count: 3, gutter: RingLayout.wideGutter,
+                            count: 4, gutter: RingLayout.wideGutter,
                             labelHeight: RingLayout.labelHeight, floor: 24,
                             cap: RingLayout.wideMaxDiameter,
                             outerAir: false)

@@ -50,7 +50,7 @@ struct DNSAPISettingsView: View {
                 }
             }
         }
-        .navigationTitle("DNS API")
+        .screenTitle("DNS API")
         .raisedNavigationTitle()
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -181,7 +181,7 @@ private struct DNSCredentialEditor: View {
                     SecureField(hasToken ? "Replace the token" : kind.tokenFieldLabel,
                                 text: $draft)
                         .textContentType(.password)
-                        #if os(iOS)
+                        #if os(iOS) || os(tvOS)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         #endif
@@ -217,7 +217,7 @@ private struct DNSCredentialEditor: View {
                     }
                 }
             }
-            .navigationTitle(name.isEmpty ? kind.displayName : name)
+            .screenTitle(name.isEmpty ? kind.displayName : name)
             .raisedNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

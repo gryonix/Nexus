@@ -61,6 +61,10 @@ data class HostMetricsSnapshot(
     val memUsedFraction: Double
         get() = if (memTotalBytes > 0) memUsedBytes.toDouble() / memTotalBytes.toDouble() else 0.0
 
+    /** Null when the machine has no swap */
+    val swapUsedFraction: Double?
+        get() = if (swapTotalBytes > 0) swapUsedBytes.toDouble() / swapTotalBytes.toDouble() else null
+
     val diskUsedFraction: Double
         get() = if (diskTotalBytes > 0) diskUsedBytes.toDouble() / diskTotalBytes.toDouble() else 0.0
 

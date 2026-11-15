@@ -1,5 +1,7 @@
 package com.skaymer.gryonixnexus.app.servers
 
+import com.skaymer.gryonixnexus.app.widgets.WidgetFeed
+
 import com.skaymer.gryonixnexus.catalog.ServiceID
 import com.skaymer.gryonixnexus.catalog.ServiceRegistry
 import com.skaymer.gryonixnexus.servercontrol.ContainerStatus
@@ -69,6 +71,11 @@ class ServiceControlViewModel(
                         it.copy(isBusy = false, errorMessage = reason(failure), hasAnswered = true)
                     }
                 }
+            }
+            val asked = deployment.services.filter { ServiceRegistry.service(it) != null }
+            val answered = asked.mapNotNull { _states.value[it] }.filter { it.errorMessage == null && it.hasAnswered }
+            if (answered.size == asked.size) {
+                WidgetFeed.services(deployment, answered.size, answered.count { it.containersNeedingAttention > 0 })
             }
         }
     }

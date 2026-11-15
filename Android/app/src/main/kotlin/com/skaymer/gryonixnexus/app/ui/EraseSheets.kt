@@ -1,5 +1,8 @@
 package com.skaymer.gryonixnexus.app.ui
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.Icon
 import com.skaymer.gryonixnexus.app.ui.design.RunLog
 import com.skaymer.gryonixnexus.app.ui.design.RunProgressRow
 import androidx.compose.foundation.layout.Arrangement
@@ -45,12 +48,16 @@ import com.skaymer.gryonixnexus.servercontrol.SSHHostID
 
 @Composable
 fun EraseCard(onOpen: () -> Unit) {
-    GroupedSection(footer = stringResource(R.string.erase_explains)) {
+    GroupedSection(footer = stringResource(R.string.erase_card_footer)) {
         ActionRow(
             text = stringResource(R.string.erase_server),
             onClick = onOpen,
             danger = true,
             showDivider = false,
+            leading = {
+                Icon(Icons.Outlined.Delete, contentDescription = null, tint = Gryonix.colors.danger,
+                    modifier = Modifier.size(22.dp))
+            },
         )
     }
 }
@@ -194,6 +201,7 @@ fun EraseRunDialog(erase: EraseViewModel, name: (String) -> String, onErased: (S
                     textAlign = TextAlign.Center,
                 )
             }
+            AiExplainFailure(stringResource(R.string.erase_failed, current.errorMessage.orEmpty()), current.errorMessage, current.log)
             RunLog(current.log)
         }
     }

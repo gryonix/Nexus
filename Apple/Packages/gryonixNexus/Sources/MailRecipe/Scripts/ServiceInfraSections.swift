@@ -35,11 +35,24 @@ enum ServiceInfraSections {
         """#
     }
 
+    /// A notice at the root, the rest goes upstream
+    static func withRootNotice(_ site: String, notice: String) -> String {
+        guard let at = site.range(of: "\n    reverse_proxy ", options: .backwards) else { return site }
+        let tail = site[at.lowerBound...].dropFirst()
+        guard tail.hasSuffix("\n}") else { return site }
+        let proxy = tail.dropLast(2)
+        guard !proxy.contains("{"), !proxy.contains("\n") else { return site }
+        let text = notice.replacingOccurrences(of: "\"", with: "'").replacingOccurrences(of: "\\", with: "'")
+        return String(site[..<at.lowerBound])
+            + "\n    handle / {\n        respond \"\(text)\" 200\n    }\n    handle {\n    \(proxy)\n    }\n}"
+    }
+
     static func caddySite(owner: String, hostname: String, upstreamPort: Int,
                           adminGuard: Bool = false,
                           upstreamHTTPS: Bool = false, tlsInternal: Bool = false,
                           sso: Bool = false, publicPaths: [String] = [],
-                          overwriteForwardedFor: Bool = false) -> String {
+                          overwriteForwardedFor: Bool = false,
+                          basicAuthSnippet: String? = nil) -> String {
         let proxy = upstreamHTTPS
             ? #"""
             reverse_proxy https://127.0.0.1:\#(upstreamPort) {
@@ -95,17 +108,18 @@ enum ServiceInfraSections {
             }
             """#
         }
+        let authLine = basicAuthSnippet.map { "import \($0)\n    " } ?? ""
         guard adminGuard else {
             return #"""
             \#(hostname) {
-                \#(ownerLine)\#(tlsLine)\#(ssoLine)\#(proxy)
+                \#(ownerLine)\#(tlsLine)\#(authLine)\#(ssoLine)\#(proxy)
             }
             """#
         }
         return #"""
         \#(hostname) {
             \#(ownerLine)\#(tlsLine)import \#(VPNPanelService.adminGuardPath)
-            \#(ssoLine)\#(proxy)
+            \#(authLine)\#(ssoLine)\#(proxy)
         }
         """#
     }
@@ -236,12 +250,15 @@ enum ServiceInfraSections {
             let site = caddySite(owner: service.id.rawValue,
                                  hostname: names, upstreamPort: ingress.upstreamPort,
                                  adminGuard: ingress.adminGuard, upstreamHTTPS: ingress.upstreamHTTPS,
-                                 tlsInternal: context.usesInternalTLS, sso: sso,
+                                 tlsInternal: context.usesInternalTLS || ingress.homeOnly, sso: sso,
                                  publicPaths: ingress.publicPaths,
-                                 overwriteForwardedFor: ingress.overwriteForwardedFor)
+                                 overwriteForwardedFor: ingress.overwriteForwardedFor,
+                                 basicAuthSnippet: ingress.basicAuthSnippet)
             let installed = context.serviceContext.installedServices
+            let guarded = CaddySetupGuard.guarding(site, owner: service.id.rawValue, installed: installed)
+            guard service.id == .headscale else { return (service.id.rawValue, guarded) }
             return (service.id.rawValue,
-                    CaddySetupGuard.guarding(site, owner: service.id.rawValue, installed: installed))
+                    withRootNotice(guarded, notice: L10nServices.headscaleRootPage(context.language)))
         }
         let sites = rendered.map(\.block)
         let ownedIDs = rendered.map(\.id).joined(separator: ",")

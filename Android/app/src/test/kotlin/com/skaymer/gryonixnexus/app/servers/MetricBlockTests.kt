@@ -49,7 +49,7 @@ class MetricBlockTests {
 
     @Test
     fun `a stacked ring is not drawn smaller than a dot either`() {
-        val cramped = RingLayout.stackedDiameter(width = 150f, height = MetricBlock.COMPACT, count = 3)
+        val cramped = RingLayout.stackedDiameter(width = 150f, height = MetricBlock.COMPACT, count = 4)
         assertEquals(MetricBlock.RING_FLOOR, cramped)
     }
 

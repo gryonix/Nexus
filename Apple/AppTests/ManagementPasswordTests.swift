@@ -1,3 +1,4 @@
+import os
 import ServerControl
 import XCTest
 
@@ -53,9 +54,9 @@ final class ManagementPasswordTests: XCTestCase {
     // MARK: - Moving a server to another device
 
     private final class MemoryStore: DeploymentStore {
-        var saved: [Deployment] = []
-        func load() throws -> [Deployment] { saved }
-        func save(_ deployments: [Deployment]) throws { saved = deployments }
+        private let saved = OSAllocatedUnfairLock<[Deployment]>(initialState: [])
+        func load() throws -> [Deployment] { saved.withLock { $0 } }
+        func save(_ deployments: [Deployment]) throws { saved.withLock { $0 = deployments } }
     }
 
     private let source = KeychainStore(service: "com.skaymer.gryonixnexus.managementpasswordtests.source")

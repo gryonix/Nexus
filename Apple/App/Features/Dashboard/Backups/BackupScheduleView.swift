@@ -9,6 +9,7 @@ struct BackupScheduleView: View {
     @State private var draft = AutoBackupSettings()
     @State private var passphrase = ""
     @State private var isSaving = false
+    @StateObject private var edits = PendingRowEdits()
 
     private var needsPassphrase: Bool {
         draft.isOn && viewModel.services.contains {
@@ -35,13 +36,33 @@ struct BackupScheduleView: View {
         .formRowButtons()
         #endif
         .bottomBarClearance()
-        .navigationTitle("Scheduled backups")
+        .screenTitle("Scheduled backups")
         .raisedNavigationTitle()
         .task {
             await viewModel.loadAutoBackup()
             draft = viewModel.autoBackup
             applyToControls(draft.schedule)
         }
+        .onChange(of: draft) { offerEdit() }
+        .onChange(of: passphrase) { offerEdit() }
+        .pendingRowEdits(edits)
+    }
+
+    /// Tells the bar whether the schedule waits
+    private func offerEdit() {
+        let edit = PendingRowEdits.Edit(
+            id: "backup-schedule", text: .schedule,
+            apply: {
+                await save()
+                return viewModel.autoBackupError == nil
+            },
+            revert: {
+                passphrase = ""
+                draft = viewModel.autoBackup
+                applyToControls(draft.schedule)
+            })
+        let changed = draft != viewModel.autoBackup
+        edits.offer(edit, changed: PendingRules.backupSchedule(canSave: canSave, changed: changed, passphrase: passphrase))
     }
 
     @State private var unit: Unit = .days
@@ -66,18 +87,6 @@ struct BackupScheduleView: View {
         ))
 
         scheduleFields
-
-        Button {
-            save()
-        } label: {
-            if isSaving {
-                HStack(spacing: 8) { ProgressView().controlSize(.small); Text("Saving…") }
-            } else {
-                Text("Save schedule")
-            }
-        }
-        .rowActionButtonStyle()
-        .disabled(!canSave)
 
         if let error = viewModel.autoBackupError {
             Label(error, systemImage: HealthLevel.critical.systemImageName)
@@ -141,7 +150,7 @@ struct BackupScheduleView: View {
             }
 
             ForEach(backupCapableServices, id: \.id) { service in
-                Toggle(service.displayName, isOn: binding(for: service.id))
+                Toggle(viewModel.title(of: service), isOn: binding(for: service.id))
             }
 
             if needsPassphrase {
@@ -175,16 +184,13 @@ struct BackupScheduleView: View {
         )
     }
 
-    private func save() {
+    private func save() async {
         isSaving = true
-        Task { @MainActor in
-            defer { isSaving = false }
-            await viewModel.saveAutoBackup(draft, passphrase: passphrase.isEmpty ? nil : passphrase)
-            // Never keep the secret around after it has been sent.
-            passphrase = ""
-            draft = viewModel.autoBackup
-            applyToControls(draft.schedule)
-        }
+        defer { isSaving = false }
+        await viewModel.saveAutoBackup(draft, passphrase: passphrase.isEmpty ? nil : passphrase)
+        passphrase = ""
+        draft = viewModel.autoBackup
+        applyToControls(draft.schedule)
     }
 
     /// Fills the pickers from a stored schedule

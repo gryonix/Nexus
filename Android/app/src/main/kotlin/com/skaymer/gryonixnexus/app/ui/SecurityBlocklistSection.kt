@@ -1,5 +1,10 @@
 package com.skaymer.gryonixnexus.app.ui
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.PanTool
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.dp
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
@@ -16,6 +21,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.style.TextOverflow
 import com.skaymer.gryonixnexus.R
+import com.skaymer.gryonixnexus.app.ui.design.FormSheet
 import com.skaymer.gryonixnexus.app.security.SecurityScreenState
 import com.skaymer.gryonixnexus.app.security.SecurityViewModel
 import com.skaymer.gryonixnexus.app.ui.design.ActionRow
@@ -48,8 +54,10 @@ fun SecurityBlocklistSection(
             expanded = !expanded
             if (expanded && state.decisions == null) security.loadLists(deployment)
         },
+        leading = {
+            Icon(Icons.Outlined.PanTool, contentDescription = null, modifier = Modifier.size(22.dp))
+        },
         trailing = { DisclosureChevron() },
-        showDivider = false,
     ) { RowLabel(stringResource(R.string.security_blocked_addresses)) }
 
     AnimatedVisibility(expanded) {
@@ -249,7 +257,7 @@ private fun SecurityAddressAlert(
     var comment by remember { mutableStateOf("") }
     var forever by remember { mutableStateOf(true) }
 
-    IOSAlert(
+    FormSheet(
         title = stringResource(
             if (isBan) R.string.security_block_an_address else R.string.security_protect_an_address,
         ),

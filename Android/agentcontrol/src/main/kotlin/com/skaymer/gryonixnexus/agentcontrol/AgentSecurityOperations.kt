@@ -6,6 +6,8 @@ import com.skaymer.gryonixnexus.servercontrol.HostSecurityAutoRules
 import com.skaymer.gryonixnexus.servercontrol.HostSecurityDecisions
 import com.skaymer.gryonixnexus.servercontrol.HostSecurityStatus
 import com.skaymer.gryonixnexus.servercontrol.SshPasswordAccess
+import com.skaymer.gryonixnexus.servercontrol.SshUserAccess
+import com.skaymer.gryonixnexus.servercontrol.SshUsers
 import gryonixnexusd.v1.SecurityAction
 import gryonixnexusd.v1.SecurityAllowlist
 import gryonixnexusd.v1.SecurityDecisions
@@ -35,6 +37,25 @@ class AgentSecurityOperations(
     ): SshPasswordAccess =
         agentFailure("security") {
             accessFrom(gate.gated { client.setSSHPasswordLogin(open, loginUser, appPublicKey) })
+        }
+
+    /** Every account on the host and what its SSH accepts */
+    suspend fun sshUsers(loginUser: String, appPublicKey: String): SshUsers =
+        agentFailure("security") { usersFrom(gate.gated { client.listSSHUsers(loginUser, appPublicKey) }) }
+
+    /** Puts the app's key on one account */
+    suspend fun authorizeAppKey(user: String, loginUser: String, appPublicKey: String): SshUsers =
+        agentFailure("security") { usersFrom(gate.gated { client.authorizeAppKey(user, loginUser, appPublicKey) }) }
+
+    /** Key login only: everyone, some accounts, or none */
+    suspend fun setKeyOnlyUsers(
+        everyone: Boolean,
+        users: List<String>,
+        loginUser: String,
+        appPublicKey: String,
+    ): SshUsers =
+        agentFailure("security") {
+            usersFrom(gate.gated { client.setSSHKeyOnlyUsers(everyone, users, loginUser, appPublicKey) })
         }
 
     enum class Action {
@@ -183,6 +204,22 @@ class AgentSecurityOperations(
                 )
             },
             sshClientIps = proto.ssh_client_ips,
+        )
+
+        fun usersFrom(proto: gryonixnexusd.v1.SshUsers): SshUsers = SshUsers(
+            users = proto.users.map {
+                SshUserAccess(
+                    name = it.name,
+                    passwordLoginOpen = it.password_login_open,
+                    isKnown = it.known,
+                    hasKeys = it.carries_keys,
+                    appKeyPresent = it.app_key_present,
+                    isLoginUser = it.is_login_user,
+                )
+            },
+            host = proto.host?.let(::accessFrom) ?: SshPasswordAccess.UNKNOWN,
+            detail = proto.detail,
+            isKnown = proto.known,
         )
 
         fun accessFrom(proto: SshPasswordState): SshPasswordAccess = SshPasswordAccess(

@@ -3,7 +3,8 @@ import SwiftUI
 
 struct DynamicDNSSheet: View {
     @ObservedObject var viewModel: DashboardViewModel
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dismiss) private var dismissSheet
+    @Environment(\.sidePaneClose) private var paneClose
 
     @State private var zone = ""
     @State private var names = ""
@@ -11,13 +12,13 @@ struct DynamicDNSSheet: View {
     @State private var isWorking = false
 
     var body: some View {
-        NavigationStack {
+        SheetStack {
             Form {
                 Section {
                     TextField("Zone", text: $zone, prompt: Text("example.com"))
                         .textContentType(.URL)
                         .autocorrectionDisabled()
-                        #if os(iOS)
+                        #if os(iOS) || os(tvOS)
                         .textInputAutocapitalization(.never)
                         #endif
                 } header: {
@@ -28,7 +29,7 @@ struct DynamicDNSSheet: View {
                     TextEditor(text: $names)
                         .frame(minHeight: 88)
                         .autocorrectionDisabled()
-                        #if os(iOS)
+                        #if os(iOS) || os(tvOS)
                         .textInputAutocapitalization(.never)
                         #endif
                 } header: {
@@ -53,12 +54,12 @@ struct DynamicDNSSheet: View {
 
                 statusSection
             }
-            .navigationTitle(Text("Dynamic DNS"))
+            .screenTitle(Text("Dynamic DNS"))
             .raisedNavigationTitle()
             .disabled(isWorking)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel") { closePage() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { save(names: enteredNames) }
@@ -125,7 +126,14 @@ struct DynamicDNSSheet: View {
                                           names: names,
                                           token: token)
             isWorking = false
-            dismiss()
+            closePage()
         }
+    }
+}
+
+private extension DynamicDNSSheet {
+    /// Closes the column page, or the sheet
+    func closePage() {
+        if let paneClose { paneClose() } else { dismissSheet() }
     }
 }

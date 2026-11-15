@@ -1,10 +1,10 @@
 import SwiftUI
-#if os(iOS)
+#if os(iOS) || os(tvOS)
 import UIKit
 #endif
 
 struct BrandPill: View {
-    #if os(iOS)
+    #if os(iOS) || os(tvOS)
     @AppStorage(AppAccentSettings.choiceKey)
     private var accentRaw = AppAccentSettings.storedChoice().rawValue
     @AppStorage(AppIconSettings.choiceKey)
@@ -48,14 +48,14 @@ struct BrandPill: View {
         return (chosen.topY, chosen.size, chosen.padding, chosen.plate, chosen.height, chosen.bottom)
     }
 
-    #if os(iOS)
+    #if os(iOS) || os(tvOS)
     @State private var topInset: CGFloat = 0
     #endif
 
     var body: some View {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         Group {
-            if topInset > Self.minimumInset {
+            if topInset > Self.minimumInset, DynamicIsland.isOnThisDevice {
                 mark
                     .offset(y: Self.metrics(topInset: topInset).topY - topInset)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -73,7 +73,7 @@ struct BrandPill: View {
     }
 
     private var mark: some View {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         let metrics = Self.metrics(topInset: topInset)
         return Text(verbatim: "gryonix")
             .font(.system(size: metrics.size, weight: .semibold, design: .rounded))
@@ -91,7 +91,7 @@ struct BrandPill: View {
         #endif
     }
 
-    #if os(iOS)
+    #if os(iOS) || os(tvOS)
     private var accent: AppAccentChoice { AppAccentChoice(rawValue: accentRaw) ?? .app }
     private var icon: AppIconChoice { AppIconChoice(rawValue: iconRaw) ?? .default }
 
@@ -108,7 +108,7 @@ struct BrandPill: View {
     }
     #endif
 
-    #if os(iOS)
+    #if os(iOS) || os(tvOS)
     private static func windowTopInset() -> CGFloat {
         UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }

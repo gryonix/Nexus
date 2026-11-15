@@ -32,8 +32,8 @@ struct DashboardTabOrderView: View {
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle("Arrange sections")
-            #if os(iOS)
+            .screenTitle("Arrange sections")
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             .environment(\.editMode, .constant(.active))
             #endif
@@ -78,7 +78,7 @@ struct DashboardTabOrderView: View {
                     Image(systemName: tab.systemImage)
                 }
             }
-            .frame(width: 22)
+            .rowIconFrame(22)
             .foregroundStyle(.secondary)
             Text(tab.title)
         }

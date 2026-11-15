@@ -101,6 +101,7 @@ public struct QdrantService: ManagedService {
                 plan: .archive(ArchiveBackupPlan(
                     composeProject: Self.composeProject,
                     dataPath: "\(path)/storage",
+                    dataPart: .files,
                     databases: [],
                     quiesceServices: [Self.container],
                     encryptsByDefault: true,

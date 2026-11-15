@@ -1,5 +1,6 @@
 package com.skaymer.gryonixnexus.app.ui
 
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
@@ -55,12 +56,16 @@ import com.skaymer.gryonixnexus.app.agent.AgentPresence
 import com.skaymer.gryonixnexus.app.agent.AgentRemoval
 import com.skaymer.gryonixnexus.servercontrol.Deployment
 
+private val NO_HEALTH = kotlinx.coroutines.flow.MutableStateFlow<Map<String, gryonixnexusd.v1.AgentHealth>>(emptyMap())
+
 @Composable
 fun AgentCard(
     deployment: Deployment,
     install: AgentInstallViewModel,
     onInstalled: () -> Unit,
     removal: AgentRemoval? = null,
+    /** Rows between the check result and reinstalling */
+    extraRows: (@Composable () -> Unit)? = null,
 ) {
     val state by install.state.collectAsState()
     val check by install.check.collectAsState()
@@ -68,74 +73,36 @@ fun AgentCard(
     var confirmingRemoval by remember(deployment.id) { mutableStateOf(false) }
     var confirmingReinstall by remember(deployment.id) { mutableStateOf(false) }
 
-    Column(verticalArrangement = GroupedSpacing) {
-        GroupedSection(header = stringResource(R.string.agent)) {
-            ValueRow(
-                title = stringResource(
-                    if (deployment.usesAgent) R.string.agent_installed
-                    else R.string.agent_not_installed
-                ),
-                value = null,
-                onClick = null,
-                leading = {
-                    StatusDot(
-                        if (deployment.usesAgent) Gryonix.colors.success
-                        else Gryonix.colors.tertiaryLabel
-                    )
-                },
-            )
-        }
-        TileActionGroup(
-            listOf(
-                TileAction(
-                    title = stringResource(
-                        if (check.isChecking) R.string.agent_checking else R.string.agent_check
-                    ),
-                    icon = Icons.Filled.Search,
-                    onClick = { install.check(deployment) },
-                ),
-                TileAction(
-                    title = stringResource(
-                        if (deployment.usesAgent) R.string.agent_update
-                        else R.string.agent_install
-                    ),
-                    icon = Icons.Filled.Download,
-                    onClick = {
-                        running = true
-                        install.install(deployment)
-                    },
-                )
-            ) + listOfNotNull(
-                TileAction(
-                    title = stringResource(R.string.agent_reinstall),
-                    icon = Icons.Filled.Refresh,
-                    onClick = { confirmingReinstall = true },
-                ).takeIf { deployment.usesAgent },
-                removal?.takeIf { deployment.usesAgent }?.let {
-                    TileAction(
-                        title = stringResource(R.string.agent_remove),
-                        icon = Icons.Filled.Delete,
-                        onClick = { confirmingRemoval = true },
-                        danger = true,
-                    )
-                },
-            ),
-            Modifier.padding(horizontal = Metrics.listInset),
+    val homeDoors = (LocalContext.current.applicationContext as? GryonixApplication)?.homeDoors
+    val healths by (homeDoors?.health ?: NO_HEALTH).collectAsState()
+    val health = healths[deployment.id.toString()]
+    LaunchedEffect(deployment.id) { homeDoors?.load(deployment) }
+    LaunchedEffect(deployment.id) { if (deployment.usesAgent && check.answer == null) install.check(deployment) }
+    GroupedSection(
+        header = stringResource(R.string.agent),
+        note = stringResource(if (deployment.usesAgent) R.string.agent_note_installed else R.string.agent_note_missing),
+    ) {
+        AgentVersionRow(deployment, check.answer)
+        if (deployment.usesAgent && health != null) AgentHealthRows(health)
+        AgentSourceRow()
+        AgentTiles(
+            deployment = deployment,
+            checking = check.isChecking,
+            onCheck = { install.check(deployment) },
+            onInstall = {
+                running = true
+                install.install(deployment)
+            },
         )
-        check.answer?.let { answer ->
-            Text(
-                when (answer) {
-                    is AgentPresence.Answer.Installed ->
-                        stringResource(R.string.agent_answers, answer.version)
-                    AgentPresence.Answer.InstalledUnknownVersion ->
-                        stringResource(R.string.agent_answers_no_version)
-                    is AgentPresence.Answer.Unreachable -> answer.reason
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = if (answer is AgentPresence.Answer.Unreachable) Gryonix.colors.danger
-                else Gryonix.colors.secondaryLabel,
-                modifier = Modifier.padding(horizontal = Metrics.listInset + 4.dp),
-            )
+        check.answer?.let { AgentCheckRow(it) }
+        extraRows?.invoke()
+        if (deployment.usesAgent) {
+            IconActionRow(Icons.Filled.Refresh, stringResource(R.string.agent_reinstall),
+                showDivider = removal != null) { confirmingReinstall = true }
+        }
+        if (deployment.usesAgent && removal != null) {
+            IconActionRow(Icons.Outlined.Delete, stringResource(R.string.agent_remove), danger = true,
+                showDivider = false) { confirmingRemoval = true }
         }
     }
 

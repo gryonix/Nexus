@@ -48,8 +48,8 @@ struct DeploymentKeyView: View {
             .formStyle(.grouped)
             .frame(minWidth: 520, minHeight: 480)
             #endif
-            .navigationTitle("Access")
-            #if os(iOS)
+            .screenTitle("Access")
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {

@@ -62,7 +62,13 @@ final class RestartLoopFilesTests: XCTestCase {
     func testTheMeshControlServerIsNotBehindTheVPNGuard() throws {
         let script = try script([.headscale])
         let site = try XCTUnwrap(script.range(of: "mesh.example.com {"), "missing the mesh site")
-        let block = script[site.upperBound...].prefix(while: { $0 != "}" })
+        // The whole site block, nested blocks included
+        var depth = 1
+        let block = script[site.upperBound...].prefix(while: { char in
+            if char == "{" { depth += 1 }
+            if char == "}" { depth -= 1 }
+            return depth > 0
+        })
         XCTAssertFalse(block.contains("gryonixnexus-admin-guard"),
                        "behind the guard, a device away from home could never join the mesh")
         XCTAssertTrue(block.contains("reverse_proxy"), "the site must still proxy to headscale")

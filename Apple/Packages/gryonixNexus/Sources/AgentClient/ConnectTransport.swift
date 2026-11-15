@@ -103,6 +103,7 @@ final class ExpiryFlag: @unchecked Sendable {
 public func parseConnectError(from body: Data, status: Int) -> AgentError {
     if let obj = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
        let code = obj["code"] as? String {
+        AgentRefusals.note(obj)
         return .rpc(code: code, message: obj["message"] as? String ?? "")
     }
     return .rpc(code: "http_\(status)", message: String(decoding: body, as: UTF8.self))
@@ -113,6 +114,7 @@ public func parseConnectTrailer(_ payload: Data) -> AgentError? {
     guard !payload.isEmpty,
           let obj = try? JSONSerialization.jsonObject(with: payload) as? [String: Any],
           let err = obj["error"] as? [String: Any] else { return nil }
+    AgentRefusals.note(err)
     return .rpc(code: err["code"] as? String ?? "unknown", message: err["message"] as? String ?? "")
 }
 

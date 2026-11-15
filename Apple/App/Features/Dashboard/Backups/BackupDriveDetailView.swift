@@ -28,8 +28,8 @@ struct BackupDriveDetailView: View {
         .formStyle(.grouped)
         .formRowButtons()
         #endif
-        .navigationTitle(Text(verbatim: drive?.name ?? ""))
-        #if os(iOS)
+        .screenTitle(Text(verbatim: drive?.name ?? ""))
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
     }

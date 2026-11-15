@@ -12,10 +12,12 @@ object TerminalPalette {
         0x666666, 0xF14C4C, 0x23D18B, 0xF5F543, 0x3B8EEA, 0xD670D6, 0x29B8DB, 0xFFFFFF,
     )
 
-    fun colour(index: Int?, fallback: Color): Color {
+    val defaultAnsi: List<Color> = basic.map { Color(0xFF000000L.toInt() or it) }
+
+    fun colour(index: Int?, fallback: Color, ansi: List<Color> = defaultAnsi): Color {
         val value = index ?: return fallback
         return when {
-            value < 16 -> Color(0xFF000000L.toInt() or basic[value])
+            value < 16 -> ansi[value]
             value < 232 -> {
                 val offset = value - 16
                 Color(

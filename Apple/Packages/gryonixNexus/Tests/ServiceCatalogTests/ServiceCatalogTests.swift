@@ -29,7 +29,8 @@ final class ServiceRegistryTests: XCTestCase {
                         .wireguardVPN, .amneziaWG, .shadowsocks, .xrayReality, .openVPN, .vpnPanel,
                         .minecraftJava, .minecraftBedrock, .craftyController,
                         .openWebUI, .ollama, .liteLLM, .anythingLLM, .qdrant, .searxng, .openclaw,
-                        .n8n, .homeAssistant, .mosquitto, .zigbee2MQTT])
+                        .n8n, .homeAssistant, .mosquitto, .zigbee2MQTT, .shairportSync, .uxplay, .odio,
+                        .snapserver, .snapclient, .upmpdcli, .bluealsa, .raspotify, .mympd])
     }
 
     func testExactlyTheMembersOfExclusiveShelvesConflict() {
@@ -451,6 +452,8 @@ final class ServiceDescriptionTests: XCTestCase {
                       "tunnel visitors arrive from loopback and must stay outside")
         XCTAssertTrue(steps.contains("printf '    header Cf-Connecting-IP *\\n'"))
         XCTAssertTrue(steps.contains("only)"))
+        XCTAssertTrue(steps.contains("printf '@gryonixnexus_novpn {\\n'"))
+        XCTAssertTrue(steps.contains("remote_ip 10.8.0.0/24 10.9.0.0/24 10.10.0.0/24 10.11.0.0/24 %s"))
         XCTAssertTrue(steps.contains("printf '    host %s\\n' \"$hosts\""))
         XCTAssertTrue(steps.contains(#"*[!A-Za-z0-9.-]*|"") echo "invalid host: $h""#))
         let relayIndex = steps.range(of: "@gryonixnexus_relay")?.lowerBound
@@ -1004,6 +1007,10 @@ final class ServiceDescriptionTests: XCTestCase {
                 XCTFail("\(service.id.rawValue) has no log command")
                 continue
             }
+            if case .systemdUnits(_, let journal) = actions.statusProbe {
+                XCTAssertEqual(logs.privileged, journal, service.id.rawValue)
+                continue
+            }
             XCTAssertEqual(logs.privileged.binaryPath, "/usr/bin/docker", service.id.rawValue)
             switch actions.statusProbe {
             case .container(let name, _):
@@ -1013,6 +1020,8 @@ final class ServiceDescriptionTests: XCTestCase {
                 XCTAssertEqual(logs.privileged.arguments,
                                "compose -p \(project) logs --tail 500 --timestamps",
                                service.id.rawValue)
+            case .systemdUnits:
+                XCTFail("handled above")
             }
         }
     }

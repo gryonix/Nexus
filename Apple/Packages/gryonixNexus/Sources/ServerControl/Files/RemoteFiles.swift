@@ -70,4 +70,20 @@ public protocol RemoteFileBrowser: Sendable {
     func downloadFile(_ path: String, on host: SSHHostID, maxBytes: UInt64) async throws -> Data
     func uploadFile(_ data: Data, to path: String, on host: SSHHostID) async throws
     func deleteFile(_ entry: RemoteFileEntry, on host: SSHHostID) async throws
+    func renameFile(from oldPath: String, to newPath: String, on host: SSHHostID) async throws
+    func searchFiles(under directory: String, matching pattern: String, limit: Int,
+                     on host: SSHHostID) async throws -> [RemoteFileEntry]
+}
+
+extension RemoteFileBrowser {
+    public func renameFile(from oldPath: String, to newPath: String, on host: SSHHostID) async throws {
+        throw ServerControlError.notConfigured("rename")
+    }
+
+    public func searchFiles(under directory: String, matching pattern: String, limit: Int,
+                            on host: SSHHostID) async throws -> [RemoteFileEntry] {
+        try await FileSearch.walk(directory, matching: pattern, limit: limit) {
+            try await listDirectory($0, on: host)
+        }
+    }
 }

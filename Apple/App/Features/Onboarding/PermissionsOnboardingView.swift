@@ -27,7 +27,7 @@ struct PermissionsOnboardingView: View {
     }
 
     private var pageBackground: Color {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         Color(.systemGroupedBackground)
         #else
         Color(nsColor: .windowBackgroundColor)
@@ -159,7 +159,7 @@ private struct OpenSettingsButton: View {
 
     var body: some View {
         Button("Open Settings") {
-            #if os(iOS)
+            #if os(iOS) || os(tvOS)
             if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
             #else
             let pane = "x-apple.systempreferences:com.apple.preference.security?Privacy_LocalNetwork"
@@ -197,7 +197,7 @@ struct PermissionsOnboardingModifier: ViewModifier {
     @State private var dismissed = false
 
     func body(content: Content) -> some View {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         content.fullScreenCover(isPresented: presented) {
             PermissionsOnboardingView(onFinish: finish)
         }

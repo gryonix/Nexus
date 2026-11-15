@@ -18,7 +18,7 @@ struct StopJobIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Stop"
     static var description = IntentDescription("Stops a running server operation.")
 
-    @Parameter(title: "Job")
+    @Parameter(title: "Operation")
     var jobID: String
 
     @Parameter(title: "Server")

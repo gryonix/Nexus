@@ -25,6 +25,15 @@ public struct BackupWrapperSpec: Sendable {
     public var sizePaths: [String] { plan.sizePaths }
 }
 
+/// What a backup copies, chosen per host
+public enum BackupPart: String, Sendable, Hashable, CaseIterable {
+    /// Photos, documents, mail and other user files
+    case files
+    /// Service configuration and small state
+    case settings
+    case databases
+}
+
 /// The two shapes a wrapper-driven backup takes
 public enum BackupPlan: Sendable, Hashable {
     case externalScript(path: String, sizePaths: [String])
@@ -58,6 +67,8 @@ public struct ArchiveBackupPlan: Sendable, Hashable {
     /// Compose project the stop/start and `exec` commands address
     public let composeProject: String
     public let dataPath: String
+    /// Which part the data directory counts as
+    public let dataPart: BackupPart
     /// Databases dumped through their own client instead of archived
     public let databases: [BackupDatabase]
     public let quiesceServices: [String]
@@ -66,11 +77,12 @@ public struct ArchiveBackupPlan: Sendable, Hashable {
     public let sizePaths: [String]
     public let excludes: [String]
 
-    public init(composeProject: String, dataPath: String,
+    public init(composeProject: String, dataPath: String, dataPart: BackupPart = .settings,
                 databases: [BackupDatabase] = [], quiesceServices: [String] = [],
                 encryptsByDefault: Bool, sizePaths: [String], excludes: [String] = []) {
         self.composeProject = composeProject
         self.dataPath = dataPath
+        self.dataPart = dataPart
         self.databases = databases
         self.quiesceServices = quiesceServices
         self.encryptsByDefault = encryptsByDefault

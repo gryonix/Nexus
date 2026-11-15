@@ -1,5 +1,8 @@
 package com.skaymer.gryonixnexus.app.ui
 
+import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.ArrowUpward
 import android.widget.Toast
 import android.content.Context
 import android.net.Uri
@@ -51,6 +54,13 @@ import com.skaymer.gryonixnexus.app.ui.design.Separator
 import com.skaymer.gryonixnexus.R
 import com.skaymer.gryonixnexus.app.files.FileBrowserViewModel
 import com.skaymer.gryonixnexus.app.files.PosixMode
+import com.skaymer.gryonixnexus.app.files.cancelSearch
+import com.skaymer.gryonixnexus.app.files.clearSelection
+import com.skaymer.gryonixnexus.app.files.jump
+import com.skaymer.gryonixnexus.app.files.loadShortcuts
+import com.skaymer.gryonixnexus.app.files.preview
+import com.skaymer.gryonixnexus.app.files.search
+import com.skaymer.gryonixnexus.app.files.toggleSelected
 import com.skaymer.gryonixnexus.servercontrol.Deployment
 import com.skaymer.gryonixnexus.servercontrol.RemoteFileEntry
 import kotlinx.coroutines.Dispatchers
@@ -68,8 +78,17 @@ fun FileBrowserSection(
     var deleting by remember(deployment.id) { mutableStateOf<RemoteFileEntry?>(null) }
     var saving by remember(deployment.id) { mutableStateOf<RemoteFileEntry?>(null) }
     var pickerError by remember(deployment.id) { mutableStateOf<String?>(null) }
+    var acting by remember(deployment.id) { mutableStateOf<RemoteFileEntry?>(null) }
+    var renaming by remember(deployment.id) { mutableStateOf<RemoteFileEntry?>(null) }
+    var query by remember(deployment.id) { mutableStateOf("") }
+    var selecting by remember(deployment.id) { mutableStateOf(false) }
+    var batchRenaming by remember(deployment.id) { mutableStateOf(false) }
+    var showShortcuts by remember(deployment.id) { mutableStateOf(false) }
 
-    LaunchedEffect(deployment.id) { files.start(deployment) }
+    LaunchedEffect(deployment.id) {
+        files.loadShortcuts(deployment)
+        files.start(deployment)
+    }
     DisposableEffect(deployment.id) { onDispose { files.reset() } }
 
     val saveTo = rememberLauncherForActivityResult(
@@ -135,6 +154,28 @@ fun FileBrowserSection(
             onRefresh = { files.refresh(deployment) },
             onUpload = { readFrom.launch(arrayOf("*/*")) },
         )
+        BreadcrumbBar(state.path) { files.jump(deployment, it) }
+        FileToolsBar(
+            query = query,
+            onQuery = {
+                query = it
+                if (it.isEmpty()) files.cancelSearch()
+            },
+            onSearch = { files.search(deployment, query) },
+            isSearching = state.isSearching,
+            onStop = {
+                query = ""
+                files.cancelSearch()
+            },
+            selecting = selecting,
+            selectedCount = state.selection.size,
+            onToggleSelecting = {
+                selecting = !selecting
+                files.clearSelection()
+            },
+            onBatchRename = { batchRenaming = true },
+            onShortcuts = { showShortcuts = true },
+        )
 
         state.transfer?.let { transfer ->
             Text(
@@ -156,7 +197,16 @@ fun FileBrowserSection(
             )
         }
 
-        if (state.saysItIsEmpty) {
+        if (state.searchResults != null && state.searchResults!!.isEmpty()) {
+            Text(
+                stringResource(R.string.files_nothing_found),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(16.dp),
+            )
+        }
+
+        if (state.saysItIsEmpty && state.searchResults == null) {
             Text(
                 stringResource(R.string.files_empty),
                 style = MaterialTheme.typography.bodyMedium,
@@ -190,22 +240,48 @@ fun FileBrowserSection(
         ) {
             item {
                 GroupedSection(dividerInset = 46.dp) {
-                    state.entries.forEach { entry ->
+                    val shown = state.shownEntries
+                    shown.forEach { entry ->
                         EntryRow(
+                            deployment = deployment,
+                            files = files,
                             entry = entry,
-                            onOpen = { files.open(deployment, entry) },
-                            onDownload = {
-                                saving = entry
-                                saveTo.launch(entry.name)
+                            selecting = selecting,
+                            selected = entry.path in state.selection,
+                            bookmarked = state.shortcuts.isBookmarked(entry.path),
+                            onOpen = {
+                                when {
+                                    selecting -> files.toggleSelected(entry.path)
+                                    entry.kind == RemoteFileEntry.Kind.DIRECTORY -> files.open(deployment, entry)
+                                    else -> files.preview(deployment, entry)
+                                }
                             },
-                            onDelete = { deleting = entry },
-                            showDivider = entry != state.entries.last(),
+                            onActions = { acting = entry },
+                            showDivider = entry != shown.last(),
                         )
                     }
                 }
             }
         }
     }
+
+    FileBrowserDialogs(
+        deployment = deployment,
+        files = files,
+        acting = acting,
+        renaming = renaming,
+        batchRenaming = batchRenaming,
+        showShortcuts = showShortcuts,
+        onActing = { acting = it },
+        onRenaming = { renaming = it },
+        onBatchRenaming = { batchRenaming = it },
+        onShortcuts = { showShortcuts = it },
+        onDownload = {
+            saving = it
+            saveTo.launch(it.name)
+        },
+        onDelete = { deleting = it },
+    )
 
     deleting?.let { entry ->
         ConfirmAlert(
@@ -239,12 +315,12 @@ private fun PathBar(
     onUpload: () -> Unit,
 ) {
     val colors = Gryonix.colors
-    Column(
+    Row(
         Modifier
             .fillMaxWidth()
             .background(colors.barBackground)
-            .padding(horizontal = Metrics.listInset, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+            .padding(start = Metrics.listInset, end = 4.dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             path.ifEmpty { "…" },
@@ -252,62 +328,46 @@ private fun PathBar(
             color = colors.label,
             maxLines = 1,
             overflow = TextOverflow.StartEllipsis,
+            modifier = Modifier.weight(1f),
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            PlainButton(
-                text = stringResource(R.string.files_up),
-                onClick = onUp,
-                enabled = canGoUp && !isBusy,
-            )
-            PlainButton(
-                text = stringResource(R.string.files_refresh),
-                onClick = onRefresh,
-                enabled = !isBusy,
-            )
-            PlainButton(
-                text = stringResource(R.string.files_upload),
-                onClick = onUpload,
-                enabled = path.isNotEmpty() && !isBusy,
-            )
-        }
+        PathBarButton(Icons.Filled.ArrowUpward, stringResource(R.string.files_up), canGoUp && !isBusy, onUp)
+        PathBarButton(Icons.Filled.Refresh, stringResource(R.string.files_refresh), !isBusy, onRefresh)
+        PathBarButton(Icons.Filled.Upload, stringResource(R.string.files_upload), path.isNotEmpty() && !isBusy, onUpload)
     }
     Separator()
 }
 
 @Composable
+private fun PathBarButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, enabled: Boolean, onClick: () -> Unit) {
+    IconButton(onClick = onClick, enabled = enabled) {
+        Icon(icon, contentDescription = label, tint = if (enabled) Gryonix.colors.accent else Gryonix.colors.tertiaryLabel)
+    }
+}
+
+@Composable
 private fun EntryRow(
+    deployment: Deployment,
+    files: FileBrowserViewModel,
     entry: RemoteFileEntry,
+    selecting: Boolean,
+    selected: Boolean,
+    bookmarked: Boolean,
     onOpen: () -> Unit,
-    onDownload: () -> Unit,
-    onDelete: () -> Unit,
+    onActions: () -> Unit,
     showDivider: Boolean = true,
 ) {
     val isDirectory = entry.kind == RemoteFileEntry.Kind.DIRECTORY
     val colors = Gryonix.colors
     GroupedRow(
-        onClick = if (isDirectory) onOpen else null,
+        onClick = onOpen,
+        onLongClick = onActions,
         showDivider = showDivider,
-        leading = {
-            Icon(
-                if (isDirectory) Icons.Filled.Folder else Icons.Filled.InsertDriveFile,
-                contentDescription = null,
-                tint = colors.accent,
-                modifier = Modifier.size(22.dp),
-            )
-        },
+        leading = { FileIcon(deployment, files, entry) },
         trailing = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (!isDirectory) {
-                    PlainButton(text = stringResource(R.string.files_download), onClick = onDownload)
-                }
-                IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
-                    Icon(
-                        Icons.Filled.Delete,
-                        contentDescription = stringResource(R.string.files_delete),
-                        tint = colors.danger,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
+            if (selecting) {
+                Text(if (selected) "●" else "○", color = colors.accent)
+            } else {
+                if (bookmarked) Text("★", color = colors.accent)
                 if (isDirectory) DisclosureChevron()
             }
         },

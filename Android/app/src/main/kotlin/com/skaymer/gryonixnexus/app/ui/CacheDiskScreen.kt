@@ -1,5 +1,11 @@
 package com.skaymer.gryonixnexus.app.ui
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.dp
 import com.skaymer.gryonixnexus.app.storage.StorageAgentTasks
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -260,6 +266,10 @@ fun StorageCard(deployment: Deployment, onOpenStorage: (SSHHostID) -> Unit, onOp
                 value = null,
                 onClick = { if (raid) onOpenStorage(node.sshHost) else onOpenCache(node.sshHost) },
                 showDivider = index != rows.lastIndex,
+                leading = {
+                    Icon(if (raid) Icons.Outlined.Storage else Icons.Outlined.Bolt, contentDescription = null,
+                        modifier = Modifier.size(22.dp))
+                },
             )
         }
     }

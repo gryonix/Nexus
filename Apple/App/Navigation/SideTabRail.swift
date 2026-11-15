@@ -18,6 +18,14 @@ struct SideTabRail: UIViewRepresentable {
         min(76, max(56, column - gap * 2))
     }
 
+    /// The window's own size, which the keyboard does not shrink
+    static var windowSize: CGSize? {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first { $0.activationState == .foregroundActive }?
+            .keyWindow?.bounds.size
+    }
+
     /// Squarish phone screens put the bar at the side
     static func applies(to size: CGSize) -> Bool {
         guard UIDevice.current.userInterfaceIdiom == .phone, size.width > 0 else { return false }

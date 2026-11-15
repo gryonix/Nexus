@@ -6,7 +6,7 @@ import ServiceCatalog
 import SwiftUI
 import VPNProfile
 import VPNTunnel
-#if os(iOS)
+#if os(iOS) || os(tvOS)
 import UIKit
 #else
 import AppKit
@@ -41,7 +41,7 @@ struct VPNClientNameSheet: View {
             Form {
                 Section {
                     TextField("Device name", text: $name)
-                        #if os(iOS)
+                        #if os(iOS) || os(tvOS)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         #endif
@@ -65,8 +65,8 @@ struct VPNClientNameSheet: View {
             .formStyle(.grouped)
             .frame(minWidth: 420, minHeight: 260)
             #endif
-            .navigationTitle("New device")
-            #if os(iOS)
+            .screenTitle("New device")
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
@@ -128,6 +128,7 @@ struct VPNClientConfigSheet: View {
                     }
                 }
 
+                #if !os(tvOS)
                 Section {
                     Button {
                         copy(configuration.text)
@@ -145,6 +146,7 @@ struct VPNClientConfigSheet: View {
                 } footer: {
                     Text(verbatim: configuration.fileName)
                 }
+                #endif
 
                 Section {
                     Text(verbatim: configuration.text)
@@ -159,8 +161,8 @@ struct VPNClientConfigSheet: View {
             #if os(macOS)
             .frame(minWidth: 480, minHeight: 560)
             #endif
-            .navigationTitle(Text(verbatim: device.name))
-            #if os(iOS)
+            .screenTitle(Text(verbatim: device.name))
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
@@ -218,6 +220,9 @@ struct VPNClientConfigSheet: View {
 
     @ViewBuilder
     private func handoffButton(_ handoff: ConfigurationHandoff) -> some View {
+        #if os(tvOS)
+        EmptyView()
+        #else
         switch handoff {
         case .configurationProfile:
             Button {
@@ -236,6 +241,7 @@ struct VPNClientConfigSheet: View {
         case .fileOnly:
             EmptyView()
         }
+        #endif
     }
 
     @ViewBuilder
@@ -302,7 +308,7 @@ struct VPNClientConfigSheet: View {
     }
 
     private func open(_ url: URL) {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         UIApplication.shared.open(url)
         #else
         NSWorkspace.shared.open(url)
@@ -336,7 +342,7 @@ enum VPNConfigQR {
         guard let output = filter.outputImage else { return nil }
         let scaled = output.transformed(by: CGAffineTransform(scaleX: 8, y: 8))
         guard let cgImage = CIContext().createCGImage(scaled, from: scaled.extent) else { return nil }
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         return Image(uiImage: UIImage(cgImage: cgImage))
         #else
         return Image(nsImage: NSImage(cgImage: cgImage,

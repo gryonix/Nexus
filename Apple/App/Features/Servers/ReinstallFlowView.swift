@@ -82,9 +82,9 @@ private struct ReinstallReviewView: View {
         #if os(macOS)
         .formStyle(.grouped)
         #endif
-        .navigationTitle("Reinstall")
+        .screenTitle("Reinstall")
         .task { await viewModel.prefillStoredPassword() }
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .safeAreaInset(edge: .bottom) { continueButton }

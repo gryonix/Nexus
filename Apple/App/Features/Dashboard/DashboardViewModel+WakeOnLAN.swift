@@ -95,7 +95,9 @@ extension DashboardViewModel {
         }
         let broadcast = await targetBroadcast()
         let targets = WakeOnLAN.deviceTargets(broadcast: broadcast, host: wakeTarget?.endpoint.host)
-        let fromDevice = MagicPacketSender.sendBurst(packet, to: targets, ports: WakeOnLAN.ports)
+        let fromDevice = await Task.detached {
+            MagicPacketSender.sendBurst(packet, to: targets, ports: WakeOnLAN.ports)
+        }.value
         if let helper = await sendFromNeighbour(normalised, broadcast: broadcast) {
             return WakeOutcome(sent: true, message: UIL10n.string("Wake-up sent from %@.", helper))
         }

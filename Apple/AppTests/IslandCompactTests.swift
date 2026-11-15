@@ -31,6 +31,14 @@ final class IslandCompactTests: XCTestCase {
                        "an accessibility text size pushes the clock past the island")
     }
 
+    func testTheClockGetsRoomForHoursOnlyWhenItShowsThem() {
+        XCTAssertEqual(IslandCompact.trailingWidth(scaled: 32, elapsed: 600), IslandCompact.timerWidth,
+                       "a ten-minute clock is given room for hours")
+        XCTAssertEqual(IslandCompact.trailingWidth(scaled: 32, elapsed: 2 * 3600), IslandCompact.hoursTimerWidth,
+                       "a two-hour clock has no room for its hours")
+        XCTAssertLessThan(IslandCompact.timerWidth, IslandCompact.hoursTimerWidth)
+    }
+
     func testTheGlyphLeavesMarginsInsideTheIsland() {
         XCTAssertLessThanOrEqual(IslandCompact.widestGlyph + 8, islandHeight,
                                  "a \(IslandCompact.widestGlyph)pt glyph in a \(islandHeight)pt island")
@@ -46,14 +54,14 @@ final class IslandCompactTests: XCTestCase {
     }
 
     @MainActor
-    func testThePercentTakesOnlyItsDigits() {
+    func testTheLabelTakesOnlyItsDigits() {
         for text in ["7%", "96%", "100%"] {
-            let size = measured(CompactIslandPercent(text: text, tint: .blue))
+            let size = measured(CompactIslandLabel(text: text, tint: .blue))
             XCTAssertLessThanOrEqual(size.width, compactSide, "\(text) is \(size.width)pt wide")
             XCTAssertLessThanOrEqual(size.height, 36.67, "\(text) is \(size.height)pt tall")
         }
-        XCTAssertLessThan(measured(CompactIslandPercent(text: "7%", tint: .blue)).width,
-                          measured(CompactIslandPercent(text: "100%", tint: .blue)).width,
+        XCTAssertLessThan(measured(CompactIslandLabel(text: "7%", tint: .blue)).width,
+                          measured(CompactIslandLabel(text: "100%", tint: .blue)).width,
                           "short text is padded to a fixed width")
     }
 

@@ -116,7 +116,7 @@ private fun NotifyDevicesList(
     onRemove: (String) -> Unit,
 ) {
     if (devices.isEmpty()) return
-    GroupedSection(header = stringResource(R.string.license_devices), footer = stringResource(R.string.notify_devices_footer)) {
+    GroupedSection(header = stringResource(R.string.license_devices), note = stringResource(R.string.notify_devices_footer)) {
         devices.forEachIndexed { index, device ->
             val detail = if (device.token == thisToken) stringResource(R.string.devices_this_device) else device.app_version
             ValueRow(

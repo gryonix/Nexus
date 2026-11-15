@@ -1,5 +1,18 @@
 package com.skaymer.gryonixnexus.app.ui
 
+import com.skaymer.gryonixnexus.app.ui.design.DisclosureChevron
+import com.skaymer.gryonixnexus.app.ui.design.GroupedRow
+import androidx.compose.ui.unit.dp
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.Icons
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
 import com.skaymer.gryonixnexus.app.storage.StorageAgentTasks
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
@@ -134,7 +147,7 @@ private fun ArraysSection(state: StorageState, onManage: (StorageArray) -> Unit,
         }
         state.arrays.forEach { array ->
             val managed = ArrayChange.manages(array)
-            ValueRow(arrayTitle(array), null, onClick = if (managed) ({ onManage(array) }) else null, subtitle = arrayState(array))
+            ArrayRow(array, onClick = if (managed) ({ onManage(array) }) else null)
             if (array.needsAttention && !array.repairsHere) {
                 ValueRow(stringResource(R.string.storage_repair_elsewhere), null, null)
             } else if (array.needsAttention) {
@@ -145,6 +158,30 @@ private fun ArraysSection(state: StorageState, onManage: (StorageArray) -> Unit,
                     ),
                     onClick = { onRepair(array) },
                 )
+            }
+        }
+    }
+}
+
+/** One array, flagged red when it needs attention */
+@Composable
+private fun ArrayRow(array: StorageArray, onClick: (() -> Unit)?) {
+    val lines = arrayState(array).split("\n")
+    GroupedRow(
+        onClick = onClick,
+        trailing = if (onClick != null) ({ DisclosureChevron() }) else null,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (array.needsAttention) {
+                    Icon(Icons.Filled.Warning, contentDescription = null, tint = Gryonix.colors.danger, modifier = Modifier.size(18.dp))
+                }
+                Text(arrayTitle(array), style = MaterialTheme.typography.bodyLarge, color = Gryonix.colors.label)
+            }
+            Text(lines.first(), style = MaterialTheme.typography.bodySmall, color = Gryonix.colors.secondaryLabel)
+            lines.drop(1).forEach {
+                Text(it, style = MaterialTheme.typography.bodySmall,
+                    color = if (array.needsAttention) Gryonix.colors.danger else Gryonix.colors.secondaryLabel)
             }
         }
     }

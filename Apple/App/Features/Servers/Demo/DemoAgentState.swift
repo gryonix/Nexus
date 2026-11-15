@@ -11,6 +11,7 @@ actor DemoAgentState {
     private init() {}
 
     struct Memory {
+        var notify: Gryonixnexusd_V1_NotifySettings?
         var passwordLoginOpen = false
         var keyOnlyUsers: Set<String> = []
         var lockedOutUsers: Set<String> = ["backup"]
@@ -37,6 +38,16 @@ actor DemoAgentState {
         var groupNames: [String: String] = [:]
         var removedGroups: Set<String> = []
         var stoppedGroups: Set<String> = []
+        var removedImages: Set<String> = []
+        var removedVolumes: Set<String> = []
+        var removedNetworks: Set<String> = []
+        var appModules = ["dockerAdvanced", "portForwarding"]
+        var serviceNames: [String: String] = [:]
+        var mcpOn = false
+        var localAliases: [String] = []
+        var homeOnlyPorts: [Gryonixnexusd_V1_HomeOnlyPort] = []
+        var agentAutoUpdate = true
+        var preRestoreCopies: [String] = []
     }
 
     /// One address the defence is holding
@@ -202,8 +213,10 @@ actor DemoAgentState {
     func unary(path: String, request: Data, machine: DemoAgentMachine) async throws -> Data? {
         if let answer = try await control(path, request, machine) { return answer }
         if let answer = try await security(path, request, machine) { return answer }
+        if let answer = try notify(path, request, machine) { return answer }
         if let answer = try await maintenance(path, request, machine) { return answer }
         if let answer = try await services(path, request, machine) { return answer }
+        if let answer = try gaps(path, request, machine) { return answer }
         return nil
     }
 

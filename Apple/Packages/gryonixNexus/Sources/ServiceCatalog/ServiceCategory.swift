@@ -143,6 +143,12 @@ extension ServiceCategory {
         systemImage: "house",
         selection: .multiple, order: 16)
 
+    public static let audio = ServiceCategory(
+        id: "audio", title: "Audio and AirPlay",
+        summary: "Turns a machine at home into an AirPlay speaker or screen and a hub for your music. Only on a machine at home.",
+        systemImage: "hifispeaker.2",
+        selection: .multiple, order: 17)
+
     public static let implicit = ServiceCategory(
         id: "implicit", title: "", summary: "", systemImage: "gearshape",
         selection: .multiple, order: 99)
@@ -150,6 +156,6 @@ extension ServiceCategory {
     /// Every category, in the order the forms show them
     public static let selectable: [ServiceCategory] = [
         .mail, .passwords, .secrets, .files, .photos, .media, .code, .network, .vpn, .mesh,
-        .remoteAccess, .dashboard, .singleSignOn, .games, .ai, .automation, .smartHome
+        .remoteAccess, .dashboard, .singleSignOn, .games, .ai, .automation, .smartHome, .audio
     ]
 }

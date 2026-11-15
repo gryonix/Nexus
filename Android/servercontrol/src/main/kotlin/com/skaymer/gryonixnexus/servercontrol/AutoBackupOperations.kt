@@ -1,5 +1,6 @@
 package com.skaymer.gryonixnexus.servercontrol
 
+import com.skaymer.gryonixnexus.catalog.BackupPart
 import com.skaymer.gryonixnexus.catalog.ServiceCommand
 
 /** The unattended backup schedule as it exists on the server */
@@ -31,6 +32,11 @@ interface AutoBackupManaging {
     suspend fun loadDrives(): BackupDrivesState
 
     suspend fun saveDrives(settings: BackupDriveSettings)
+
+    /** Which parts backups copy */
+    suspend fun loadParts(): BackupPartsState
+
+    suspend fun saveParts(change: BackupPartsChange)
 }
 
 /** Which implementation a deployment's BACKUP SCHEDULE goes through */
@@ -190,6 +196,43 @@ class AutoBackupOperations(
             )
         }
         throw ServerControlError.commandFailure("set backup drives", result.exitCode, result.stderr)
+    }
+
+    override suspend fun loadParts(): BackupPartsState {
+        val host = hosts.firstOrNull() ?: return BackupPartsState(supported = false)
+        val result = runner.run(
+            CommandCatalog.Backups.SHOW_PARTS,
+            host,
+            deployment.timeouts.duration(ServiceCommand.TimeoutClass.QUICK),
+        )
+        if (!result.succeeded) {
+            if (result.stderr.contains(UNSUPPORTED_ACTION)) return BackupPartsState(supported = false)
+            throw ServerControlError.commandFailure("show backup parts", result.exitCode, result.stderr)
+        }
+        return BackupPartsParsing.state(result.stdout)
+    }
+
+    override suspend fun saveParts(change: BackupPartsChange) {
+        val targets = listOfNotNull(change.shared?.let { null as String? to it }) +
+            change.services.toSortedMap().map { (service, choice) -> service to choice }
+        for (host in hosts) {
+            for ((service, choice) in targets) {
+                saveParts("backup", service, choice.regular, host)
+                saveParts("update", service, choice.beforeUpdate, host)
+            }
+        }
+    }
+
+    private suspend fun saveParts(scope: String, service: String?, parts: Set<BackupPart>, host: SSHHostID) {
+        val command = CommandCatalog.Backups.setParts(scope, BackupPartsParsing.words(parts), service)
+        val result = runner.run(command, host, deployment.timeouts.duration(ServiceCommand.TimeoutClass.QUICK))
+        if (result.succeeded) return
+        if (result.stderr.contains(UNSUPPORTED_ACTION)) {
+            throw ServerControlError.NotConfigured(
+                "this server's backup wrapper is older than backup parts — run Repair server on it first",
+            )
+        }
+        throw ServerControlError.commandFailure("set backup parts", result.exitCode, result.stderr)
     }
 
     companion object {

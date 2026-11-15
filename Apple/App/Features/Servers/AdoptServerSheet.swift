@@ -31,11 +31,11 @@ struct AdoptServerSheet: View {
                 #endif
             }
             .padding()
-            .navigationTitle("Add via agent")
-            #if os(iOS)
+            .screenTitle("Add via agent")
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
-            #if os(iOS)
+            #if os(iOS) || os(tvOS)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     if !model.isSuccess {

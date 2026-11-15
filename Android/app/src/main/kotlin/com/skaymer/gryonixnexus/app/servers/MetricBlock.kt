@@ -1,11 +1,11 @@
 package com.skaymer.gryonixnexus.app.servers
 
 object MetricBlock {
-    /** The wide card */
-    const val WIDE = 93f
+    /** The wide card: four rows */
+    const val WIDE = 124f
 
     /** The half-width card, whose rows are a type size smaller */
-    const val COMPACT = 75f
+    const val COMPACT = 100f
 
     /** The least air between two rows */
     const val WIDE_GAP = 4f

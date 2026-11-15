@@ -154,4 +154,18 @@ class AgentAdminLockdownTest {
         assertTrue(error is ServerControlError.CommandFailed, "got $error")
         assertEquals("this server has no lockdown wrapper", error.stderr)
     }
+
+    @Test
+    fun `a deny list rides the request only when given`() = runTest {
+        val transport = FakeAgentTransport()
+        repeat(3) { transport.reply("Lockdown/SetLockdown", state(LockdownMode.LOCKDOWN_MODE_ONLY, listOf("a.example.net"))) }
+        ops(transport).set(listOf("a.example.net"))
+        assertEquals(false, transport.sentSet().set_deny_vpn_hosts)
+        ops(transport).set(listOf("a.example.net", "b.example.net"), listOf("b.example.net"))
+        assertEquals(true, transport.sentSet().set_deny_vpn_hosts)
+        assertEquals(listOf("b.example.net"), transport.sentSet().deny_vpn_hosts)
+        ops(transport).set(listOf("a.example.net"), emptyList())
+        assertEquals(true, transport.sentSet().set_deny_vpn_hosts)
+        assertEquals(emptyList(), transport.sentSet().deny_vpn_hosts)
+    }
 }

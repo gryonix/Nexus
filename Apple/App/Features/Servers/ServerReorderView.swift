@@ -17,8 +17,8 @@ struct ServerReorderView: View {
                     InfoSectionHeader("Servers", note: "Drag to reorder. This is the order servers appear in on the Servers tab.")
                 }
             }
-            .navigationTitle("Reorder Servers")
-            #if os(iOS)
+            .screenTitle("Reorder Servers")
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             .environment(\.editMode, .constant(.active))
             #endif
@@ -37,7 +37,7 @@ struct ServerReorderView: View {
         HStack(spacing: 12) {
             Image(systemName: deployment.iconSymbol ?? "server.rack")
                 .foregroundStyle(deployment.displayTint ?? .accentColor)
-                .frame(width: 22)
+                .rowIconFrame(22)
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: deployment.name)
                 Text(verbatim: deployment.entry.host)

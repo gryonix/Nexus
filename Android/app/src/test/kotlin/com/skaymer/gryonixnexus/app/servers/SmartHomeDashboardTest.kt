@@ -40,12 +40,8 @@ class SmartHomeDashboardTest {
     }
 
     @Test
-    fun `the demo scenario B server carries the whole shelf`() {
-        val home = DemoDeployments.fleet(requested = 4)
-            .firstOrNull { ServiceID.HOME_ASSISTANT in it.services }
-        assertNotNull(home, "no demo server carries the hub")
-        assertTrue(ServiceID.MOSQUITTO in home.services)
-        assertTrue(ServiceID.ZIGBEE2MQTT in home.services)
-        assertTrue(home.serviceSettings.homeAssistantUSBDevice.isNotEmpty())
+    fun `the demo fleet is the iPhone's`() {
+        val names = DemoDeployments.fleet(requested = 4).map { it.name }
+        assertEquals(listOf("gryonix.com", "b.gryonix.com", "home.local", "lab.gryonix.com"), names)
     }
 }

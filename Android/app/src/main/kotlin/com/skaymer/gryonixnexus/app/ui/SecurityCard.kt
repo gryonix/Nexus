@@ -1,5 +1,28 @@
 package com.skaymer.gryonixnexus.app.ui
 
+import androidx.compose.material.icons.filled.Security
+import com.skaymer.gryonixnexus.app.ui.design.IOSSwitch
+import com.skaymer.gryonixnexus.servercontrol.SshUserAccess
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.material.icons.filled.GppGood
+import androidx.compose.material.icons.filled.GppMaybe
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.outlined.PauseCircle
+import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import com.skaymer.gryonixnexus.app.ui.design.TileAction
+import com.skaymer.gryonixnexus.app.ui.design.TileActionGroup
+import com.skaymer.gryonixnexus.app.ui.design.GroupedContentPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
@@ -28,6 +51,7 @@ import com.skaymer.gryonixnexus.R
 import com.skaymer.gryonixnexus.agentcontrol.AgentSecurityOperations
 import com.skaymer.gryonixnexus.app.security.SecurityScreenState
 import com.skaymer.gryonixnexus.app.security.SecurityViewModel
+import com.skaymer.gryonixnexus.servercontrol.SshUsers
 import com.skaymer.gryonixnexus.app.shell.SettingsStore
 import com.skaymer.gryonixnexus.app.ui.design.DisclosureChevron
 import com.skaymer.gryonixnexus.app.ui.design.GroupedRow
@@ -38,6 +62,7 @@ import com.skaymer.gryonixnexus.app.ui.design.RowLabel
 import com.skaymer.gryonixnexus.app.ui.design.ValueRow
 import com.skaymer.gryonixnexus.app.ui.design.ActionRow
 import com.skaymer.gryonixnexus.app.ui.design.ConfirmAlert
+import com.skaymer.gryonixnexus.app.ui.design.GroupedSpacing
 import com.skaymer.gryonixnexus.servercontrol.Deployment
 import com.skaymer.gryonixnexus.servercontrol.HostSecurityStatus
 import com.skaymer.gryonixnexus.servercontrol.SshPasswordAccess
@@ -54,14 +79,24 @@ fun SecurityCard(
         state.busy || state.runningAction != null || state.listBusy,
         detail = state.actionProgress,
     )
-    LaunchedEffect(deployment.id) {
-        security.reset()
-        security.load(deployment)
-        security.loadSshAccess(deployment)
-    }
+    LaunchedEffect(deployment.id) { security.loadIfStale(deployment) }
 
+    Column(verticalArrangement = GroupedSpacing) {
+        SecurityStatusSection(deployment, security, state, settings)
+        SshAccessCard(deployment, security, state)
+    }
+}
+
+@Composable
+internal fun SecurityStatusSection(
+    deployment: Deployment,
+    security: SecurityViewModel,
+    state: SecurityScreenState,
+    settings: SettingsStore,
+    onPage: Boolean = false,
+) {
     GroupedSection(
-        header = stringResource(R.string.security_title),
+        header = if (onPage) null else stringResource(R.string.security_title),
         note = stringResource(R.string.security_hint),
         footer = stringResource(R.string.security_absent_hint)
             .takeIf { state.hasAnswered && !state.statusUnread && state.status?.isPresent != true },
@@ -113,12 +148,16 @@ fun SecurityCard(
             else -> Present(status, deployment, security, state, settings)
         }
     }
-
-    SshAccessCard(deployment, security, state)
+    val present = state.status?.takeIf { it.isPresent && !state.statusUnread }
+    if (present != null) {
+        GroupedSection(header = stringResource(R.string.security_actions_title)) {
+            SecurityActions(deployment, security, state, engineRunning = present.engineRunning, present = true)
+        }
+    }
 }
 
 @Composable
-private fun SshAccessCard(
+internal fun SshAccessCard(
     deployment: Deployment,
     security: SecurityViewModel,
     state: SecurityScreenState,
@@ -271,6 +310,14 @@ private fun Present(
 ) {
     val healthy = status.isHealthy
     GroupedRow(
+        leading = {
+            Icon(
+                if (healthy) Icons.Filled.GppGood else Icons.Filled.GppMaybe,
+                contentDescription = null,
+                tint = if (healthy) Gryonix.colors.success else Gryonix.colors.warning,
+                modifier = Modifier.size(22.dp),
+            )
+        },
         trailing = {
             if (status.engineVersion.isNotEmpty()) {
                 Text(
@@ -286,29 +333,28 @@ private fun Present(
                 if (healthy) R.string.security_protecting else R.string.security_degraded,
             ),
             style = MaterialTheme.typography.bodyLarge,
-            color = if (healthy) Gryonix.colors.accent else Gryonix.colors.warning,
+            color = Gryonix.colors.label,
+            modifier = Modifier.weight(1f),
         )
     }
 
-    StatRow(stringResource(R.string.security_attacks_24h), status.alertsLast24h.toString())
-    if (status.communityBlocklistIps > 0) {
-        StatRow(
-            stringResource(R.string.security_community_blocklist),
-            stringResource(
-                R.string.security_addresses,
-                SecurityViewModel.compact(status.communityBlocklistIps.toLong()),
-            ),
-        )
-    }
-    if (status.localBans > 0) {
-        StatRow(stringResource(R.string.security_blocked_now), status.localBans.toString())
-    }
-    if (status.packetsDropped > 0) {
-        StatRow(
-            stringResource(R.string.security_packets_dropped),
-            SecurityViewModel.compact(status.packetsDropped),
-        )
-    }
+    StatGrid(
+        buildList {
+            add(status.alertsLast24h.toString() to stringResource(R.string.security_attacks_24h))
+            if (status.communityBlocklistIps > 0) {
+                add(
+                    SecurityViewModel.compact(status.communityBlocklistIps.toLong()) to
+                        stringResource(R.string.security_community_blocklist)
+                )
+            }
+            if (status.localBans > 0) {
+                add(status.localBans.toString() to stringResource(R.string.security_blocked_now))
+            }
+            if (status.packetsDropped > 0) {
+                add(SecurityViewModel.compact(status.packetsDropped) to stringResource(R.string.security_packets_dropped))
+            }
+        }
+    )
 
     SecurityBlocklistSection(deployment, security, state)
 
@@ -321,6 +367,9 @@ private fun Present(
             else R.string.security_auto_state_off,
         ),
         onClick = { showingAutoRules = true },
+        leading = {
+            Icon(Icons.Filled.Shield, contentDescription = null, modifier = Modifier.size(22.dp))
+        },
     )
     if (showingAutoRules) {
         SecurityAutoRulesSheet(
@@ -392,8 +441,6 @@ private fun Present(
             }
         }
     }
-
-    SecurityActions(deployment, security, state, engineRunning = status.engineRunning, present = true)
 }
 
 @Composable
@@ -451,38 +498,28 @@ private fun SecurityActions(
         return
     }
 
-    ActionRow(
-        text = stringResource(R.string.security_action_reload),
-        onClick = {
-            security.load(deployment)
-            security.loadSshAccess(deployment)
-        },
-    )
-    ActionRow(
-        text = stringResource(R.string.security_action_update),
-        onClick = { run(AgentSecurityOperations.Action.UPDATE) },
-    )
-    ActionRow(
-        text = stringResource(R.string.security_action_restart),
-        onClick = { run(AgentSecurityOperations.Action.RESTART) },
-    )
-    if (engineRunning) {
-        ActionRow(
-            text = stringResource(R.string.security_action_stop),
-            onClick = { run(AgentSecurityOperations.Action.STOP) },
-            danger = true,
-        )
-    } else {
-        ActionRow(
-            text = stringResource(R.string.security_action_start),
-            onClick = { run(AgentSecurityOperations.Action.START) },
-        )
-    }
-    ActionRow(
-        text = stringResource(R.string.security_action_remove),
-        onClick = { run(AgentSecurityOperations.Action.REMOVE) },
-        danger = true,
-        showDivider = false,
+    TileActionGroup(
+        listOf(
+            TileAction(stringResource(R.string.security_tile_update), Icons.Filled.Sync, {
+                run(AgentSecurityOperations.Action.UPDATE)
+            }),
+            TileAction(stringResource(R.string.security_tile_restart), Icons.Filled.Refresh, {
+                run(AgentSecurityOperations.Action.RESTART)
+            }),
+            if (engineRunning) {
+                TileAction(stringResource(R.string.security_tile_stop), Icons.Outlined.PauseCircle, {
+                    run(AgentSecurityOperations.Action.STOP)
+                }, danger = true)
+            } else {
+                TileAction(stringResource(R.string.security_tile_start), Icons.Outlined.PlayCircle, {
+                    run(AgentSecurityOperations.Action.START)
+                })
+            },
+            TileAction(stringResource(R.string.security_tile_remove), Icons.Outlined.Delete, {
+                run(AgentSecurityOperations.Action.REMOVE)
+            }, danger = true),
+        ),
+        Modifier.padding(16.dp),
     )
 
     confirming?.let { action ->
@@ -517,6 +554,26 @@ private fun runningTitle(action: AgentSecurityOperations.Action): Int = when (ac
     AgentSecurityOperations.Action.UPDATE -> R.string.security_running_update
     AgentSecurityOperations.Action.INSTALL -> R.string.security_running_install
     AgentSecurityOperations.Action.REMOVE -> R.string.security_running_remove
+}
+
+/** The numbers as tiles, two to a line */
+@Composable
+private fun StatGrid(stats: List<Pair<String, String>>) {
+    GroupedRow {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            stats.chunked(2).forEach { line ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    line.forEach { (value, title) ->
+                        Column(Modifier.weight(1f)) {
+                            Text(value, style = MaterialTheme.typography.titleLarge, color = Gryonix.colors.label)
+                            Text(title, style = MaterialTheme.typography.labelSmall, color = Gryonix.colors.secondaryLabel)
+                        }
+                    }
+                    if (line.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -642,4 +699,169 @@ internal fun subnetOf(address: String): String? {
         return null
     }
     return "${octets[0]}.${octets[1]}.${octets[2]}.0/24"
+}
+
+/** The intrusion defence on a page of its own */
+@Composable
+fun CrowdSecPage(deployment: Deployment, security: SecurityViewModel, settings: SettingsStore) {
+    val state by security.state.collectAsState()
+    PleaseWaitDialog(state.busy || state.runningAction != null || state.listBusy, detail = state.actionProgress)
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(GroupedContentPadding),
+        verticalArrangement = GroupedSpacing,
+    ) { SecurityStatusSection(deployment, security, state, settings, onPage = true) }
+}
+
+/** SSH password login on a page of its own */
+@Composable
+fun SshAccessPage(deployment: Deployment, security: SecurityViewModel) {
+    val state by security.state.collectAsState()
+    var confirming by remember(deployment.id) { mutableStateOf<KeyOnlyChange?>(null) }
+    LaunchedEffect(deployment.id) { if (state.sshUsers == null) security.loadSshUsers(deployment) }
+    PleaseWaitDialog(state.busy || state.workingOnSshUsers, detail = state.actionProgress)
+    val answer = state.sshUsers
+    val working = state.workingOnSshUsers
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(GroupedContentPadding),
+        verticalArrangement = GroupedSpacing,
+    ) {
+        SshEveryoneSection(answer, working) { confirming = it }
+        SshAccountsSection(answer, working, state.busy, onAddKey = { security.grantAppKey(deployment) }) {
+            confirming = it
+        }
+    }
+    confirming?.let { change ->
+        ConfirmAlert(
+            title = stringResource(if (change.opening) R.string.ssh_users_open_title else R.string.ssh_users_close_title),
+            message = when {
+                change.opening -> stringResource(R.string.ssh_users_open_message)
+                change.everyone -> stringResource(R.string.ssh_users_close_everyone_message, deployment.entry.user)
+                else -> stringResource(R.string.ssh_users_close_one_message, change.account)
+            },
+            confirm = stringResource(if (change.opening) R.string.ssh_users_open_confirm else R.string.ssh_users_close_confirm),
+            destructive = true,
+            onConfirm = {
+                confirming = null
+                security.setKeyOnlyUsers(deployment, change.everyone, change.users)
+            },
+            onCancel = { confirming = null },
+        )
+    }
+}
+
+/** Password login for every account at once */
+@Composable
+private fun SshEveryoneSection(answer: SshUsers?, working: Boolean, onChange: (KeyOnlyChange) -> Unit) {
+    GroupedSection(
+        header = stringResource(R.string.ssh_users_everyone_header),
+        note = stringResource(R.string.ssh_users_everyone_note),
+        footer = answer?.detail?.takeIf { it.isNotEmpty() },
+    ) {
+        GroupedRow(
+            showDivider = false,
+            leading = {
+                Icon(Icons.Filled.Security, contentDescription = null, modifier = Modifier.size(22.dp))
+            },
+            trailing = {
+                IOSSwitch(
+                    checked = answer?.isClosedForEveryone ?: false,
+                    onCheckedChange = { wanted ->
+                        onChange(KeyOnlyChange(everyone = wanted, users = emptyList(), opening = !wanted, account = ""))
+                    },
+                    enabled = !working && answer?.isKnown == true,
+                    onColor = Gryonix.colors.success,
+                )
+            },
+        ) { RowLabel(stringResource(R.string.ssh_users_everyone)) }
+    }
+}
+
+/** One switch per account that may log in */
+@Composable
+private fun SshAccountsSection(
+    answer: SshUsers?,
+    working: Boolean,
+    busy: Boolean,
+    onAddKey: () -> Unit,
+    onChange: (KeyOnlyChange) -> Unit,
+) {
+    GroupedSection(
+        header = stringResource(R.string.ssh_users_accounts_header),
+        note = stringResource(R.string.ssh_users_accounts_note),
+        footer = stringResource(R.string.ssh_users_all_closed).takeIf { answer?.isClosedForEveryone == true },
+    ) {
+        when {
+            answer == null -> GroupedRow(
+                showDivider = false,
+                trailing = {
+                    CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = Gryonix.colors.secondaryLabel)
+                },
+            ) { RowLabel(stringResource(R.string.ssh_users_accounts_header)) }
+            !answer.isKnown -> GroupedRow(showDivider = false) {
+                RowLabel(stringResource(R.string.ssh_users_unknown))
+            }
+            answer.users.isEmpty() -> GroupedRow(showDivider = false) {
+                RowLabel(stringResource(R.string.ssh_users_none))
+            }
+            else -> {
+                val addKey = answer.host.isKnown && !answer.host.appKeyPresent
+                answer.users.forEach { user ->
+                    SshUserRow(
+                        user = user,
+                        enabled = !working && user.isKnown && !(user.wouldLockOut && !user.isClosed) &&
+                            !answer.isClosedForEveryone,
+                        showDivider = user != answer.users.last() || addKey,
+                    ) { wanted ->
+                        val names = answer.closedNames.toMutableSet()
+                        if (wanted) names.add(user.name) else names.remove(user.name)
+                        onChange(KeyOnlyChange(false, names.sorted(), opening = !wanted, account = user.name))
+                    }
+                }
+                if (addKey) {
+                    ActionRow(
+                        text = stringResource(R.string.ssh_users_add_key),
+                        onClick = onAddKey,
+                        enabled = !busy,
+                        showDivider = false,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** What the tapped switch would do */
+private data class KeyOnlyChange(
+    val everyone: Boolean,
+    val users: List<String>,
+    val opening: Boolean,
+    val account: String,
+)
+
+@Composable
+private fun SshUserRow(user: SshUserAccess, enabled: Boolean, showDivider: Boolean, onToggle: (Boolean) -> Unit) {
+    val caption = stringResource(
+        when {
+            !user.isKnown -> R.string.ssh_user_unknown
+            user.isLoginUser -> R.string.ssh_user_login
+            user.wouldLockOut -> R.string.ssh_user_no_key
+            user.isClosed -> R.string.ssh_user_closed
+            else -> R.string.ssh_user_open
+        }
+    )
+    GroupedRow(
+        showDivider = showDivider,
+        trailing = {
+            IOSSwitch(checked = user.isClosed, onCheckedChange = onToggle, enabled = enabled, onColor = Gryonix.colors.success)
+        },
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(user.name, style = MaterialTheme.typography.bodyLarge, fontFamily = FontFamily.Monospace, color = Gryonix.colors.label)
+            Text(
+                caption,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (user.wouldLockOut) Gryonix.colors.warning else Gryonix.colors.secondaryLabel,
+            )
+        }
+    }
 }

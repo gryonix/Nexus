@@ -41,8 +41,8 @@ struct BackupNowSheet: View {
             .formStyle(.grouped)
             .frame(minWidth: 440, minHeight: 480)
             #endif
-            .navigationTitle("Back up now")
-            #if os(iOS)
+            .screenTitle("Back up now")
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar { toolbar }

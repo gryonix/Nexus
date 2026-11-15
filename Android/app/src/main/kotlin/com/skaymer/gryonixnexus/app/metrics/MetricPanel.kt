@@ -1,5 +1,6 @@
 package com.skaymer.gryonixnexus.app.metrics
 
+import com.skaymer.gryonixnexus.app.servers.DemoDeployments
 import com.skaymer.gryonixnexus.app.shell.SettingsStore
 import com.skaymer.gryonixnexus.servercontrol.Deployment
 import com.skaymer.gryonixnexus.servercontrol.DeploymentNode
@@ -132,6 +133,28 @@ class MetricPanelStore(private val settings: SettingsStore) {
         if (kept.size != _panels.value.size) write(kept)
     }
 
+    /** Fills an empty board for the demo fleet, once */
+    fun seedDemoBoardIfEmpty(deployments: List<Deployment>) {
+        if (_panels.value.isNotEmpty() || settings.boolean(DEMO_SEEDED_KEY) == true) return
+        if (deployments.isEmpty() || !deployments.all { DemoDeployments.isDemoID(it.id) }) return
+        settings.setBoolean(DEMO_SEEDED_KEY, true)
+        val known = deployments.map { it.id }.toSet()
+        write(demoRecipes().filter { it.deploymentID in known })
+    }
+
+    private fun demoRecipes(): List<MetricPanel> = listOf(
+        Triple(1, MetricPanel.VPS_RAW, listOf(HistoryMetric.CPU, HistoryMetric.MEMORY)) to HistoryRange.HOUR,
+        Triple(2, MetricPanel.VPS_RAW, listOf(HistoryMetric.NETWORK)) to HistoryRange.DAY,
+        Triple(2, MetricPanel.HOME_RAW, listOf(HistoryMetric.CPU, HistoryMetric.MEMORY, HistoryMetric.DISK)) to HistoryRange.THREE_HOURS,
+        Triple(3, MetricPanel.VPS_RAW, listOf(HistoryMetric.DISK)) to HistoryRange.WEEK,
+        Triple(1, MetricPanel.VPS_RAW, listOf(HistoryMetric.NETWORK)) to HistoryRange.TEN_HOURS,
+        Triple(4, MetricPanel.VPS_RAW, listOf(HistoryMetric.LOAD)) to HistoryRange.HOUR,
+        Triple(3, MetricPanel.VPS_RAW, listOf(HistoryMetric.TEMPERATURE)) to HistoryRange.DAY,
+        Triple(1, MetricPanel.VPS_RAW, listOf(HistoryMetric.DISK_IO)) to HistoryRange.THREE_HOURS,
+    ).mapIndexed { index, (what, range) ->
+        MetricPanel("demo-$index", DemoDeployments.slotID(what.first), what.second, what.third.map { it.key }, range.rawValue)
+    }
+
     private fun write(panels: List<MetricPanel>) {
         _panels.value = panels
         settings.setStringList(KEY, panels.map { it.encoded() })
@@ -142,5 +165,6 @@ class MetricPanelStore(private val settings: SettingsStore) {
 
     private companion object {
         const val KEY = "metrics.dashboardPanels"
+        const val DEMO_SEEDED_KEY = "metrics.demoBoardSeeded"
     }
 }

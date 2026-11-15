@@ -1,5 +1,18 @@
 package com.skaymer.gryonixnexus.app.ui
 
+import com.skaymer.gryonixnexus.app.ui.design.RowLabel
+import com.skaymer.gryonixnexus.servercontrol.DKIMExport
+import com.skaymer.gryonixnexus.app.dns.DKIMViewModel
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.outlined.TableChart
+import androidx.compose.material.icons.outlined.IosShare
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.Icons
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
@@ -120,39 +133,20 @@ fun ConfigurationDialog(
             )
         }
 
-        bundle.dns.forEach { zone ->
-            GroupedSection(header = zone.domain) {
-                GroupedRow {
-                    SelectionContainer {
-                        Text(
-                            zone.copyText,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontFamily = FontFamily.Monospace,
-                            color = Gryonix.colors.label,
-                        )
-                    }
-                }
-                ActionRow(
-                    text = stringResource(R.string.service_logs_copy),
-                    onClick = { clipboard.setText(AnnotatedString(zone.copyText)) },
-                    showDivider = zone.zoneFile != null || zone.csvFile != null,
+        bundle.dns.forEachIndexed { index, zone ->
+            GroupedSection(
+                header = if (index == 0) stringResource(R.string.config_dns_records) else zone.domain,
+                footer = stringResource(R.string.config_dns_footer).takeIf { index == bundle.dns.lastIndex },
+            ) {
+                RecordShareRows(
+                    onCopy = { clipboard.setText(AnnotatedString(zone.copyText)) },
+                    zoneFile = zone.zoneFile?.let { file -> { save(file) } },
+                    csvFile = zone.csvFile?.let { file -> { save(file) } },
                 )
-                zone.zoneFile?.let { file ->
-                    ActionRow(
-                        text = stringResource(R.string.dkim_export_zone),
-                        onClick = { save(file) },
-                        showDivider = zone.csvFile != null,
-                    )
-                }
-                zone.csvFile?.let { file ->
-                    ActionRow(
-                        text = stringResource(R.string.dkim_export_csv),
-                        onClick = { save(file) },
-                        showDivider = false,
-                    )
-                }
             }
         }
+
+        if (DKIMViewModel.hasMailEngine(deployment)) ConfigurationDKIMSection(deployment, ::save)
 
         ConfigurationPublishCard(deployment, bundle.dns)
 
@@ -175,30 +169,80 @@ fun ConfigurationDialog(
                         onSelect = { sortPortsByProtocol = it },
                     )
                 }
-                GroupedRow {
-                    SelectionContainer {
+                ports.requirements.forEach { requirement ->
+                    GroupedRow {
                         Text(
-                            ports.copyText,
-                            style = MaterialTheme.typography.bodySmall,
+                            "${requirement.port}/${requirement.proto.label}",
+                            style = MaterialTheme.typography.bodyMedium,
                             fontFamily = FontFamily.Monospace,
                             color = Gryonix.colors.label,
                         )
+                        Text(
+                            requirement.purpose,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Gryonix.colors.secondaryLabel,
+                            textAlign = TextAlign.End,
+                            modifier = Modifier.weight(1f),
+                        )
                     }
                 }
-                ActionRow(
-                    text = stringResource(R.string.service_logs_copy),
-                    onClick = { clipboard.setText(AnnotatedString(ports.copyText)) },
-                )
-                ActionRow(
-                    text = stringResource(R.string.configuration_save_txt),
-                    onClick = { save(ports.txtFile) },
-                )
-                ActionRow(
-                    text = stringResource(R.string.dkim_export_csv),
-                    onClick = { save(ports.csvFile) },
-                    showDivider = false,
-                )
+                IconActionRow(Icons.Outlined.ContentCopy, stringResource(R.string.config_copy_ports)) {
+                    clipboard.setText(AnnotatedString(ports.copyText))
+                }
+                IconActionRow(Icons.Outlined.IosShare, stringResource(R.string.config_export_txt)) { save(ports.txtFile) }
+                IconActionRow(Icons.Outlined.TableChart, stringResource(R.string.config_export_csv), showDivider = false) {
+                    save(ports.csvFile)
+                }
             }
+        }
+    }
+}
+
+/** Copy, and the two files a DNS panel imports */
+@Composable
+private fun RecordShareRows(onCopy: () -> Unit, zoneFile: (() -> Unit)?, csvFile: (() -> Unit)?) {
+    IconActionRow(Icons.Outlined.ContentCopy, stringResource(R.string.records_copy),
+        showDivider = zoneFile != null || csvFile != null, onClick = onCopy)
+    zoneFile?.let {
+        IconActionRow(Icons.Outlined.IosShare, stringResource(R.string.records_zone_file), showDivider = csvFile != null, onClick = it)
+    }
+    csvFile?.let {
+        IconActionRow(Icons.Outlined.TableChart, stringResource(R.string.records_csv_file), showDivider = false, onClick = it)
+    }
+}
+
+/** The mail server's DKIM, read live */
+@Composable
+private fun ConfigurationDKIMSection(deployment: Deployment, save: (Artifact) -> Unit) {
+    val dkim = (LocalContext.current.applicationContext as GryonixApplication).dkim
+    val state by dkim.state.collectAsState()
+    val clipboard = LocalClipboardManager.current
+    LaunchedEffect(deployment.id) { dkim.load(deployment) }
+    val bundle = DKIMExport.bundle(
+        records = state.records,
+        zoneSummary = stringResource(R.string.dkim_zone_summary),
+        csvSummary = stringResource(R.string.dkim_csv_summary),
+    )
+    GroupedSection(header = stringResource(R.string.config_dkim_records), note = stringResource(R.string.config_dkim_note)) {
+        when {
+            state.errorMessage != null -> {
+                GroupedRow { RowLabel(state.errorMessage!!) }
+                IconActionRow(Icons.Filled.Refresh, stringResource(R.string.config_try_again), showDivider = false) {
+                    dkim.load(deployment)
+                }
+            }
+            bundle != null -> RecordShareRows(
+                onCopy = { clipboard.setText(AnnotatedString(state.copyText())) },
+                zoneFile = { save(bundle.zoneFile) },
+                csvFile = { save(bundle.csvFile) },
+            )
+            state.saysTheKeyIsNotReady -> GroupedRow(showDivider = false) {
+                RowLabel(stringResource(R.string.config_dkim_not_ready))
+            }
+            else -> GroupedRow(
+                showDivider = false,
+                leading = { CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp) },
+            ) { RowLabel(stringResource(R.string.config_dkim_reading)) }
         }
     }
 }

@@ -48,8 +48,11 @@ final class ServerMetricsWidgetTests: XCTestCase {
 
     func testTheDemoFleetIsNotPublishedToWidgets() throws {
         let code = try codeWithoutComments("App/Features/Dashboard/DashboardViewModel.swift")
-        XCTAssertTrue(code.contains("!DemoHostMetrics.covers(deployment)"),
-                      "invented readings can reach the home screen")
+        let demo = try XCTUnwrap(code.range(of: "if DemoHostMetrics.covers(deployment) {"),
+                                 "invented readings can reach the home screen")
+        let publish = try XCTUnwrap(code.range(of: "publishMetricsToWidgets(snapshot, from: host)"))
+        XCTAssertLessThan(demo.lowerBound, publish.lowerBound,
+                          "the demo fleet must leave before anything is published")
     }
 
     func testOnlyTheServicesMachineIsPublished() throws {

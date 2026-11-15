@@ -11,23 +11,43 @@ enum VPNDNSPriorityEditing {
         return PublicDNS.all.filter { $0.variant == nil && seen.insert($0.provider).inserted }
     }()
 
+    /// The order entry for the devices' chosen DNS
+    static func chosenEntry(for dns: [String], localAddress: String) -> String {
+        guard let first = dns.lazy.map({ $0.trimmingCharacters(in: .whitespaces) }).first(where: { !$0.isEmpty })
+        else { return "1.1.1.1" }
+        if first == localAddress || first == LocalDNS.serverAddress || first == VPNDNSPriority.local {
+            return VPNDNSPriority.local
+        }
+        return first
+    }
+
+    /// The order with this entry first and nowhere else
+    static func pin(_ order: [String], first: String) -> [String] {
+        Array(([first] + order.filter { $0 != first }).prefix(maxResolvers))
+    }
+
+    /// The first entry is the chosen DNS and stays put
+    static func canMoveUp(_ index: Int) -> Bool { index > 1 }
+
+    static func canMoveDown(_ index: Int, in order: [String]) -> Bool { index > 0 && index < order.count - 1 }
+
     static func moveUp(_ index: Int, in order: [String]) -> [String] {
-        guard order.indices.contains(index), index > 0 else { return order }
+        guard order.indices.contains(index), canMoveUp(index) else { return order }
         var moved = order
         moved.swapAt(index, index - 1)
         return moved
     }
 
     static func moveDown(_ index: Int, in order: [String]) -> [String] {
-        guard order.indices.contains(index), index < order.count - 1 else { return order }
+        guard order.indices.contains(index), canMoveDown(index, in: order) else { return order }
         var moved = order
         moved.swapAt(index, index + 1)
         return moved
     }
 
-    /// The order without this entry; the last one stays
+    /// The order without this entry; the chosen one stays
     static func remove(_ index: Int, from order: [String]) -> [String] {
-        guard order.indices.contains(index), order.count > 1 else { return order }
+        guard order.indices.contains(index), index > 0 else { return order }
         var trimmed = order
         trimmed.remove(at: index)
         return trimmed

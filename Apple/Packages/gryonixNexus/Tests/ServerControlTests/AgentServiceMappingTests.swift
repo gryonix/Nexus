@@ -77,4 +77,12 @@ final class AgentServiceMappingTests: XCTestCase {
             forAgentServices: [(id: "vaultwarden", containerNames: ["openvpn"])])
         XCTAssertEqual(ids, [.vaultwarden])
     }
+
+    func testInstalledByAppKeepsOnlyTheAppsOwnServices() {
+        let ids = AgentServiceMapping.installedByApp([(id: "headscale", outside: false),
+                                                      (id: "vaultwarden", outside: true),
+                                                      (id: "vpn", outside: false),
+                                                      (id: "portainer", outside: false)])
+        XCTAssertEqual(ids, [.headscale])
+    }
 }

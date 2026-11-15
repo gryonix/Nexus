@@ -57,6 +57,11 @@ struct DashboardPasswordStore {
         try keychain.set(password, for: account(host))
     }
 
+    /// One machine's password, when it leaves the deployment
+    func delete(host: SSHHostID) {
+        try? keychain.delete(account(host))
+    }
+
     func delete(nodeIDs: [UUID] = []) {
         try? keychain.delete(legacyAccount)
         try? keychain.delete(account(.vps))
@@ -135,6 +140,15 @@ struct HostKeyPinStore {
 
     func store(_ key: String, forBastion endpoint: String) {
         try? keychain.set(key, for: bastionAccount(endpoint))
+    }
+
+    func bastionEndpoints() -> [String] {
+        let prefix = bastionAccount("")
+        return keychain.accounts(withPrefix: prefix).map { String($0.dropFirst(prefix.count)) }.sorted()
+    }
+
+    func resetBastion(_ endpoint: String) {
+        try? keychain.delete(bastionAccount(endpoint))
     }
 
     func resetBastions() {

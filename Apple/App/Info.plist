@@ -39,10 +39,17 @@
 	<false/>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>gryonixNexus uses Bluetooth to move servers between your devices when they are not on the same Wi-Fi.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_gryonixnexus._tcp</string>
+		<string>_gryonixnexus-tv._tcp</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>gryonixNexus uses the camera to read the QR code another device shows when it sends you servers.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>gryonixNexus uses Face ID to protect your saved passwords and server exports.</string>
 	<key>NSLocalNetworkUsageDescription</key>
@@ -57,6 +64,10 @@
 	<string>https://gryonix.com/nexus/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>/eM73ySYYZP0GU8cljAjvB6DPVcyezNjwgMUBex6q1w=</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>AppLaunch</string>
 	<key>UISupportedInterfaceOrientations</key>

@@ -37,7 +37,7 @@ struct MailboxesView: View {
                 }
             }
         }
-        .navigationTitle("Mail")
+        .screenTitle("Mail")
         .raisedNavigationTitle()
         .refreshableWithShortcut { await viewModel.loadMailboxes() }
         .task {
@@ -242,8 +242,8 @@ struct MailboxEditorSheet: View {
             .formStyle(.grouped)
             .frame(minWidth: 460, minHeight: 380)
             #endif
-            .navigationTitle(isCreating ? "New Mailbox" : "New Password")
-            #if os(iOS)
+            .screenTitle(isCreating ? "New Mailbox" : "New Password")
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
@@ -271,7 +271,7 @@ struct MailboxEditorSheet: View {
     @ViewBuilder
     private var addressFields: some View {
         TextField("Mailbox name", text: $localPart)
-            #if os(iOS)
+            #if os(iOS) || os(tvOS)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
             .keyboardType(.emailAddress)
@@ -301,7 +301,7 @@ struct MailboxEditorSheet: View {
         HStack {
             if isRevealed {
                 TextField("Password", text: $password)
-                    #if os(iOS)
+                    #if os(iOS) || os(tvOS)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     #endif

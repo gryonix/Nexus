@@ -1,3 +1,4 @@
+import Combine
 import gryonixNexusCore
 import ServerControl
 import ServiceCatalog
@@ -49,6 +50,9 @@ struct DashboardView: View {
         return false
         #endif
     }()
+    #if DEBUG
+    @State private var showSpeakerSettings = DemoSpeakerScreen.asked != nil
+    #endif
     @State private var serviceConfirm: ServicesSection.PendingAction?
     @State private var uninstallService: ServiceID?
     /// Presents the catalog picker for adding one more service
@@ -56,6 +60,7 @@ struct DashboardView: View {
     @State private var pendingUninstall: PendingUninstall?
     /// Which service's live log stream is open
     @State private var logsService: ServiceID?
+    @State private var alertCard: AlertCard?
     /// Which VPN protocol the VPN segment shows
     @State private var vpnProtocol: ServiceID?
     /// Which segment of the dashboard is shown
@@ -65,6 +70,10 @@ struct DashboardView: View {
     @State private var panelHistory: MetricsHistoryTarget?
     /// The Security screen a tapped row opens
     @State private var securityRoute: SecurityRoute?
+    /// The column pages open in on a wide phone
+    @Environment(\.sidePane) private var pane
+    private var wide: Bool { pane != nil }
+    @Environment(\.sidePaneShown) private var paneShown
     @State private var arrangingPanels = false
 
     @AppStorage(MetricsDisplaySettings.placementKey)
@@ -88,12 +97,13 @@ struct DashboardView: View {
         DashboardTab.visible(showingMetrics: showsMetricsTab,
                              showingContainers: showsContainersInside,
                              showingVPN: showsVPNTab,
-                             showingTerminal: true)
+                             showingTerminal: !StorageView.viewOnly)
     }
 
     @ObservedObject private var segments = DashboardTabSettings.shared
     @ObservedObject private var barSettings = TabBarSettings.shared
-    @ObservedObject private var tunnel = TunnelController.shared
+    /// Only whether the tunnel is up, not its traffic ticks
+    @State private var tunnelActive = TunnelController.shared.status.isActive
     @State private var arrangingSegments = false
 
     @AppStorage(ContainersDisplaySettings.placementKey)
@@ -114,6 +124,10 @@ struct DashboardView: View {
     @ObservedObject private var navigator = AppNavigator.shared
     @ObservedObject private var tour = AppTour.shared
 
+    #if os(tvOS)
+    /// Focus lands on the section strip first
+    @FocusState private var stripFocused: Bool
+    #endif
     @State private var tab: DashboardTab = {
         #if DEBUG
         if let raw = ProcessInfo.processInfo.environment["GRYONIXNEXUS_DEMO_DASHBOARD_TAB"],
@@ -134,15 +148,108 @@ struct DashboardView: View {
     }
 
     var body: some View {
-        panelSheets(maintenanceSheets(serviceSheets(backupSheets(connectionSheets(chrome)))))
+        panelSheets(maintenanceSheets(serviceSheets(backupSheets(connectionSheets(routedChrome)))))
             .dismissHandle(dismiss)
+            .onReceive(TunnelController.shared.$state.map(\.status.isActive).removeDuplicates()) {
+                tunnelActive = $0
+            }
+    }
+
+    /// Sends requested pages to the column
+    private var routedChrome: some View {
+        chrome
+            .ignoresSafeArea(.container, edges: paneShown ? .trailing : [])
+            .onChange(of: wide, initial: true) { routeRequestedPage() }
+            .onChange(of: showAgent) { routeRequestedPage() }
+            .onChange(of: showSystem) { routeRequestedPage() }
+            .onChange(of: showConfigExport) { routeRequestedPage() }
+            .onChange(of: showAccessAndPasswords) { routeRequestedPage() }
+            .onChange(of: showingDynamicDNS) { routeRequestedPage() }
+            .onChange(of: showingNotifications) { routeRequestedPage() }
+            .onChange(of: securityRoute) { routeRequestedPage() }
+            .onChange(of: logsService) { routeRequestedPage() }
+            .onChange(of: panelHistory) { routeRequestedPage() }
+    }
+
+    private var requestedPage: DashboardSidePage? {
+        if let securityRoute { return .security(securityRoute) }
+        if let logsService { return .logs(logsService) }
+        if let panelHistory { return .history(panelHistory) }
+        let flags: [(Bool, DashboardSidePage)] = [
+            (showAgent, .agent), (showSystem, .system), (showConfigExport, .configuration),
+            (showAccessAndPasswords, .logins), (showingDynamicDNS, .dynamicDNS),
+            (showingNotifications, .notifications),
+        ]
+        return flags.first { $0.0 }?.1
+    }
+
+    /// Moves the requested page into the column
+    private func routeRequestedPage() {
+        guard let pane, let page = requestedPage else { return }
+        clearRequest(page)
+        pane.open(page) { LivePage(model: viewModel) { columnPage(page) } }
+    }
+
+    private func clearRequest(_ page: DashboardSidePage) {
+        switch page {
+        case .agent: showAgent = false
+        case .system: showSystem = false
+        case .configuration: showConfigExport = false
+        case .logins: showAccessAndPasswords = false
+        case .dynamicDNS: showingDynamicDNS = false
+        case .notifications: showingNotifications = false
+        case .security: securityRoute = nil
+        case .logs: logsService = nil
+        case .history: panelHistory = nil
+        }
+    }
+
+    /// A sheet only when there is no column
+    private func sheet(_ flag: Binding<Bool>) -> Binding<Bool> {
+        Binding(get: { flag.wrappedValue && !wide }, set: { flag.wrappedValue = $0 })
+    }
+
+    @ViewBuilder private func columnPage(_ page: DashboardSidePage) -> some View {
+        switch page {
+        case .agent: agentForm.screenTitle(Text("Agent")).withPageClose()
+        case .system: SystemPage(viewModel: viewModel).withPageClose()
+        case .configuration: ServerConfigExportView(viewModel: viewModel).withPageClose()
+        case .logins: InstallReportView(deployment: viewModel.deployment).withPageClose()
+        case .security(let route): securityScreen(route).withPageClose()
+        case .history(let target): ServerPageDestination(value: target).withPageClose()
+        case .dynamicDNS, .notifications, .logs: columnSheetPage(page)
+        }
+    }
+
+    /// Pages that bring their own bar buttons
+    @ViewBuilder private func columnSheetPage(_ page: DashboardSidePage) -> some View {
+        switch page {
+        case .dynamicDNS:
+            if #available(macOS 15.0, *) { DynamicDNSSheet(viewModel: viewModel) }
+        case .notifications:
+            if #available(macOS 15.0, *) { NotificationsSheet(viewModel: viewModel) }
+        case .logs(let id):
+            if let service = ServiceRegistry.service(id) {
+                ServiceLogsSheet(deployment: viewModel.deployment, service: service,
+                                 source: logsSource(for: service))
+            }
+        default: EmptyView()
+        }
     }
 
     private var chrome: some View {
         content
-            .navigationTitle(viewModel.deployment.name)
+            .pendingRowEdits(viewModel.rowEdits)
+            .screenTitle(viewModel.deployment.name)
             .raisedNavigationTitle()
+            #if os(tvOS)
+            .tvHeaderActions {
+                RunningProcessButton()
+                moreMenu
+            }
+            #else
             .toolbar { toolbarItems }
+            #endif
             #if os(iOS)
             .toolbarBackground(Self.headerPlate, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
@@ -152,6 +259,7 @@ struct DashboardView: View {
                                       deploymentID: viewModel.deployment.id)
             }
             .task(id: viewModel.deployment.id) { await storage.load(viewModel.deployment) }
+            .onReceive(navigator.$serverTab) { _ in showAskedTab() }
             #if DEBUG
             .task {
                 if ProcessInfo.processInfo.environment["GRYONIXNEXUS_DEMO_ARRANGE_SEGMENTS"] != nil {
@@ -191,6 +299,13 @@ struct DashboardView: View {
             #endif
     }
 
+    private func showAskedTab() {
+        guard let asked = navigator.takeServerTab(for: viewModel.deployment.id) else { return }
+        if visibleTabs.contains(asked) { tab = asked }
+        if let service = navigator.takeServerService(for: viewModel.deployment.id) { logsService = service }
+        if let card = navigator.takeServerAlert(for: viewModel.deployment.id) { alertCard = card }
+    }
+
     @ToolbarContentBuilder
     private var toolbarItems: some ToolbarContent {
         #if os(macOS)
@@ -200,27 +315,33 @@ struct DashboardView: View {
         #endif
         ToolbarItemGroup(placement: .primaryAction) {
             RunningProcessButton()
-            Menu {
-                Button {
-                    showSettings = true
-                } label: {
-                    Label("Connection Settings", systemImage: "gearshape")
-                }
-                Button {
-                    showKeySheet = true
-                } label: {
-                    Label("App SSH Key", systemImage: "key.horizontal")
-                }
-                Button {
-                    arrangingSegments = true
-                } label: {
-                    Label("Sections", systemImage: "arrow.up.arrow.down")
-                }
-            } label: {
-                Label("More", systemImage: "ellipsis")
-            }
-            .toolbarGlassButtonStyle()
+            moreMenu
         }
+    }
+
+    private var moreMenu: some View {
+        Menu {
+            Button {
+                showSettings = true
+            } label: {
+                Label("Connection Settings", systemImage: "gearshape")
+            }
+            #if !os(tvOS)
+            Button {
+                showKeySheet = true
+            } label: {
+                Label("App SSH Key", systemImage: "key.horizontal")
+            }
+            #endif
+            Button {
+                arrangingSegments = true
+            } label: {
+                Label("Sections", systemImage: "arrow.up.arrow.down")
+            }
+        } label: {
+            ToolbarIcon("More", systemImage: "ellipsis")
+        }
+        .toolbarGlassButtonStyle()
     }
 
     private func connectionSheets(_ base: some View) -> some View {
@@ -252,7 +373,7 @@ struct DashboardView: View {
             }) { target in
                 if let service = ServiceRegistry.service(target.id) {
                     BackupConfirmSheet(
-                        serviceName: service.displayName,
+                        serviceName: viewModel.title(of: service),
                         encryptsByDefault: service.actions(viewModel.deployment.serviceContext)
                             .backup?.encryptsByDefault ?? false,
                         loadEstimate: { try await viewModel.estimateBackup(service) },
@@ -289,6 +410,7 @@ struct DashboardView: View {
                 if let service = ServiceRegistry.service(target.id) {
                     RestoreSheet(
                         service: service,
+                        name: viewModel.title(of: service),
                         needsPassphrase: service.actions(viewModel.deployment.serviceContext)
                             .restore?.needsPassphrase ?? false,
                         loadBackups: { try await viewModel.restorableBackups(service) },
@@ -307,20 +429,19 @@ struct DashboardView: View {
         base
             .sheet(isPresented: $addingService) {
                 AddServiceSheet(
-                    installed: viewModel.deployment.services,
-                    localOnly: viewModel.deployment.scope == .localOnly,
+                    deployment: viewModel.deployment,
                     installsAgentFirst: !viewModel.deployment.usesAgent,
                     loadArrays: { await viewModel.dataArrays() },
                     memoryBytes: viewModel.hostMetrics[viewModel.deployment.servicesHost]?.value?.memTotalBytes,
+                    checkMachine: { await viewModel.checkInstall($0) },
                     onCancel: { addingService = false },
-                    onInstall: { services, mount in
+                    onInstall: { services, mount, settings in
                         addingService = false
+                        onUpdate(viewModel.adoptSettings(settings))
                         if let mount { onUpdate(viewModel.placeData(of: services, under: mount)) }
-                        let pending = PendingAdd(services: services,
-                                                 scripts: AddedServiceScripts.scripts(for: services,
-                                                                                      on: viewModel.deployment))
-                        // One sheet closes before the next opens.
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { choosingInstall = pending }
+                        Task {
+                            if let updated = await viewModel.addServices(services) { onUpdate(updated) }
+                        }
                     }
                 )
             }
@@ -329,6 +450,7 @@ struct DashboardView: View {
                     services: pending.services,
                     scripts: pending.scripts,
                     purpose: pending.purpose,
+                    deployment: viewModel.deployment,
                     onDevice: {
                         rerunning = nil
                         Task {
@@ -343,6 +465,7 @@ struct DashboardView: View {
                 InstallMethodSheet(
                     services: pending.services,
                     scripts: pending.scripts,
+                    deployment: viewModel.deployment,
                     onDevice: {
                         choosingInstall = nil
                         Task {
@@ -368,6 +491,7 @@ struct DashboardView: View {
                 if let service = ServiceRegistry.service(target.id) {
                     UninstallServiceSheet(
                         service: service,
+                        name: viewModel.title(of: service),
                         alsoRemoved: Self.alsoRemovedNames(with: service, installed: viewModel.deployment.services),
                         unguardedPanels: unguardedPanelNames(removing: service),
                         onCancel: { uninstallService = nil },
@@ -410,7 +534,7 @@ struct DashboardView: View {
                 guard erased else { return }
                 let deployment = viewModel.deployment
                 dismiss()
-                DispatchQueue.main.async { onDelete?(deployment) }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { onDelete?(deployment) }
             }
             .alert("Repair this server?", isPresented: $confirmingRepair) {
                 Button("Repair") { startReinstall(editFirst: false) }
@@ -431,8 +555,14 @@ struct DashboardView: View {
                         showErase = false
                     })
             }
+            .sheet(item: refusedResult) { result in
+                RefusalSheet(message: result.message)
+            }
+            .sheet(item: $alertCard) { card in
+                AlertCardSheet(card: card)
+            }
             .alert(quickActionTitle,
-                   isPresented: Binding(get: { viewModel.quickActionResult != nil },
+                   isPresented: Binding(get: { viewModel.quickActionResult != nil && refusedResult.wrappedValue == nil },
                                         set: { if !$0 { viewModel.quickActionResult = nil } }),
                    presenting: viewModel.quickActionResult) { _ in
                 Button("OK") { viewModel.quickActionResult = nil }
@@ -443,7 +573,7 @@ struct DashboardView: View {
 
     private func panelSheets(_ base: some View) -> some View {
         base
-            .sheet(isPresented: $showAccessAndPasswords) {
+            .sheet(isPresented: sheet($showAccessAndPasswords)) {
                 NavigationStack {
                     InstallReportView(deployment: viewModel.deployment)
                         .toolbar {
@@ -456,7 +586,7 @@ struct DashboardView: View {
                 .frame(minWidth: 480, minHeight: 520)
                 #endif
             }
-            .sheet(isPresented: $showConfigExport) {
+            .sheet(isPresented: sheet($showConfigExport)) {
                 NavigationStack {
                     ServerConfigExportView(viewModel: viewModel)
                         .toolbar {
@@ -469,9 +599,9 @@ struct DashboardView: View {
                 .frame(minWidth: 480, minHeight: 520)
                 #endif
             }
-            .sheet(isPresented: $showSystem) {
+            .sheet(isPresented: sheet($showSystem)) {
                 NavigationStack {
-                    SystemUpdatePage(viewModel: viewModel)
+                    SystemPage(viewModel: viewModel)
                         .toolbar {
                             ToolbarItem(placement: .cancellationAction) {
                                 Button("Done") { showSystem = false }
@@ -482,12 +612,17 @@ struct DashboardView: View {
                 .frame(minWidth: 480, minHeight: 520)
                 #endif
             }
-            .sheet(isPresented: $showDeviceManagement) {
+            .sheet(isPresented: sheet($showingDynamicDNS)) {
                 if #available(macOS 15.0, *) {
-                    DeviceManagementSheet(deployment: viewModel.deployment)
+                    DynamicDNSSheet(viewModel: viewModel)
                 }
             }
-            .sheet(isPresented: $showAgent) { agentPage }
+            .sheet(isPresented: sheet($showingNotifications)) {
+                if #available(macOS 15.0, *) {
+                    NotificationsSheet(viewModel: viewModel)
+                }
+            }
+            .sheet(isPresented: sheet($showAgent)) { agentPage }
             .onReceive(NotificationCenter.default.publisher(for: .gryonixDeploymentInstalled)) { note in
                 guard note.object as? UUID == viewModel.deployment.id else { return }
                 viewModel.invalidateSession()
@@ -498,6 +633,15 @@ struct DashboardView: View {
             }
     }
 
+    /// A failed action the app has advice for
+    private var refusedResult: Binding<QuickActionResult?> {
+        Binding(get: {
+            guard let result = viewModel.quickActionResult, result.isError,
+                  RefusalSolution.advice(for: result.message) != nil else { return nil }
+            return result
+        }, set: { if $0 == nil { viewModel.quickActionResult = nil } })
+    }
+
     private var quickActionTitle: Text {
         viewModel.quickActionResult?.isError == true ? Text("Error") : Text("Done")
     }
@@ -506,6 +650,28 @@ struct DashboardView: View {
     private var content: some View {
         #if os(macOS)
         dashboardList
+        #elseif os(tvOS)
+        dashboardList
+            .mask {
+                VStack(spacing: 0) {
+                    LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
+                        .frame(height: 60)
+                    Color.black
+                }
+                .padding(.top, -20)
+                .padding(.horizontal, -80)
+                .padding(.bottom, -120)
+            }
+            .safeAreaInset(edge: .top, spacing: 8) {
+                // Up from the list reaches the strip first
+                sectionStrip.focused($stripFocused).frame(maxWidth: .infinity).focusSection()
+            }
+            .defaultFocus($stripFocused, true)
+            .task {
+                // Moves the first focus onto the strip
+                try? await Task.sleep(for: .milliseconds(300))
+                stripFocused = true
+            }
         #else
         dashboardList
             .contentMargins(.top, 12, for: .scrollContent)
@@ -517,7 +683,18 @@ struct DashboardView: View {
         #endif
     }
 
-    #if os(iOS)
+    #if os(tvOS)
+    /// The sections as one system segmented control
+    private var sectionStrip: some View {
+        Picker("View", selection: $tab) {
+            ForEach(visibleTabs) { tab in
+                Text(tab.title).tag(tab)
+            }
+        }
+        .pickerStyle(.segmented)
+        .fixedSize()
+    }
+    #elseif os(iOS)
 
     /// The system strip cannot scroll, so long titles use ours
     @ViewBuilder
@@ -553,7 +730,7 @@ struct DashboardView: View {
 
     private var customStrip: some View {
         DashboardSegmentStrip(tabs: visibleTabs, labels: barSettings.sectionLabels,
-                              tunnelActive: tunnel.status.isActive,
+                              tunnelActive: tunnelActive,
                               selection: $tab) { held in
             segmentMenu(for: held)
         }
@@ -575,19 +752,13 @@ struct DashboardView: View {
     }
 
     private func systemTabPicker(showsTitles: Bool) -> some View {
-        Picker("View", selection: $tab) {
-            ForEach(visibleTabs) { tab in
-                if showsTitles {
-                    Text(tab.title).tag(tab)
-                } else {
-                    tab.icon(tunnelActive: tunnel.status.isActive)
-                        .accessibilityLabel(Text(tab.title))
-                        .tag(tab)
-                }
-            }
-        }
-        .pickerStyle(.segmented)
-        .controlSize(.large)
+        StillSegmentedPicker(
+            items: visibleTabs.map { tab in
+                StillSegmentedPicker.Item(id: tab.rawValue, title: tab.localizedTitle,
+                                          imageName: showsTitles ? nil : tab.iconName(tunnelActive: tunnelActive))
+            },
+            selection: Binding(get: { tab.rawValue },
+                               set: { id in if let picked = DashboardTab(rawValue: id) { tab = picked } }))
     }
     #endif
 
@@ -602,7 +773,7 @@ struct DashboardView: View {
     }
     #endif
 
-    #if os(iOS)
+    #if os(iOS) || os(tvOS)
     private func segmentMenu(for held: DashboardTab) -> UIMenu {
         var children: [UIMenuElement] = []
         let id = viewModel.deployment.id
@@ -714,7 +885,7 @@ struct DashboardView: View {
         #if os(macOS)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(string, forType: .string)
-        #else
+        #elseif os(iOS)
         UIPasteboard.general.string = string
         #endif
     }
@@ -738,7 +909,7 @@ struct DashboardView: View {
 
     private var logsSheetBinding: Binding<ServiceSheetTarget?> {
         Binding(
-            get: { logsService.map(ServiceSheetTarget.init) },
+            get: { wide ? nil : logsService.map(ServiceSheetTarget.init) },
             set: { logsService = $0?.id }
         )
     }
@@ -785,7 +956,7 @@ struct DashboardView: View {
     }
 
     private func scrollToTop(during step: AppTourStep) async {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         for delay in [350, 500, 700] {
             try? await Task.sleep(for: .milliseconds(delay))
             guard tour.step == step else { return }
@@ -801,7 +972,7 @@ struct DashboardView: View {
         guard tour.step == .security else { return }
         withAnimation(.easeInOut(duration: 0.5)) { scroll.scrollTo("security", anchor: .top) }
         try? await Task.sleep(for: .milliseconds(600))
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         guard tour.step == .security, let strip = tour.frames[.serverStrip],
               let security = tour.frames[.serverSecurity] else { return }
         let offset = security.minY - (strip.maxY + 56)
@@ -811,7 +982,7 @@ struct DashboardView: View {
         #endif
     }
 
-    #if os(iOS)
+    #if os(iOS) || os(tvOS)
     /// Through a binding, which stays live in a kept closure
     private func move(by step: Int, showing tab: Binding<DashboardTab>,
                       among sections: [DashboardTab]) {
@@ -834,15 +1005,24 @@ struct DashboardView: View {
         }
         #if DEBUG
         .modifier(DemoStartAtBottom())
+        .navigationDestination(isPresented: $showSpeakerSettings) {
+            if DemoSpeakerScreen.asked == "hub" {
+                AudioHubView(viewModel: viewModel)
+            } else {
+                AirPlaySpeakerSettingsView(viewModel: viewModel) { _ in }
+            }
+        }
         #endif
         .onChange(of: visibleTabs, initial: true) { _, visible in
             if !visible.contains(tab) { tab = visible.first ?? .general }
         }
-        .navigationDestination(item: $panelHistory) { target in
+        .navigationDestination(item: Binding(get: { wide ? nil : panelHistory },
+                                             set: { panelHistory = $0 })) { target in
             MetricsHistoryView(deployment: target.deployment, host: target.host,
                                initialMetric: target.metric)
         }
-        .navigationDestination(item: $securityRoute) { route in
+        .navigationDestination(item: Binding(get: { wide ? nil : securityRoute },
+                                             set: { securityRoute = $0 })) { route in
             securityScreen(route)
         }
         .sheet(isPresented: $addingPanel) {
@@ -862,16 +1042,26 @@ struct DashboardView: View {
         .refreshableWithShortcut { await viewModel.refreshAll() }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
-            Task { await viewModel.resumeInstalls() }
+            Task {
+                await viewModel.resumeInstalls()
+                await viewModel.retryWhatFailed(pauses: [.zero])
+            }
         }
         .task {
-            await viewModel.refreshAll()
-            if let updated = await viewModel.refreshWakeOnLANQuietly() { onUpdate(updated) }
-            await viewModel.loadAgentVersion()
-            if #available(macOS 15.0, *) { await viewModel.syncNotifyPreferences() }
-            await viewModel.loadSelfUpdateStatus()
-            await viewModel.resumeInstalls()
+            guard viewModel.claimFirstLoad() else { return }
+            Task { await firstLoad() }
         }
+    }
+
+    /// Everything read when the server opens, once
+    private func firstLoad() async {
+        await viewModel.refreshAll()
+        await viewModel.retryWhatFailed()
+        if let updated = await viewModel.refreshWakeOnLANQuietly() { onUpdate(updated) }
+        await viewModel.loadAgentVersion()
+        if #available(macOS 15.0, *) { await viewModel.syncNotifyPreferences() }
+        await viewModel.loadSelfUpdateStatus()
+        await viewModel.resumeInstalls()
     }
 
     private func sectionPage(_ section: DashboardTab) -> some View {
@@ -890,13 +1080,15 @@ struct DashboardView: View {
             case .hosts: if showsMetricsTab { hostsTab }
             case .containers:
                 if showsContainersInside, #available(macOS 15.0, *) {
-                    ServerContainersSection(deployment: viewModel.deployment)
+                    ServerContainersSection(deployment: viewModel.deployment, edits: viewModel.rowEdits)
                 }
             case .vpn: if showsVPNTab { vpnTab }
             case .terminal:
+                #if !os(tvOS)
                 if showsTerminalInside, #available(macOS 15.0, *) {
                     ServerTerminalSection(deployment: viewModel.deployment)
                 }
+                #endif
                 FilesSection(deployment: viewModel.deployment)
             }
         }
@@ -954,9 +1146,13 @@ struct DashboardView: View {
                 }
                 Button("Later", role: .cancel) { viewModel.agentUpdateOffer = nil }
             } message: { installed in
-                Text(verbatim: UIL10n.string(
-                    "This server runs %1$@; the app carries %2$@. Updating rebuilds it on the server and takes a few minutes.",
-                    installed, viewModel.bundledAgentVersion))
+                if DashboardViewModel.chosenAgentSource == .app {
+                    Text(verbatim: UIL10n.string(
+                        "This server runs %1$@; the app carries %2$@. Updating rebuilds it on the server and takes a few minutes.",
+                        installed, viewModel.agentUpdateTarget))
+                } else {
+                    Text(verbatim: "\(installed) → \(viewModel.agentUpdateTarget)")
+                }
             }
     }
 
@@ -983,11 +1179,39 @@ struct DashboardView: View {
         .contentShape(Rectangle())
     }
 
+    #if os(tvOS)
+    /// The TV's general page: no passwords, exports, notifications or erase
     @ViewBuilder private var generalTab: some View {
         SitesSection(viewModel: viewModel)
-        if viewModel.isRelay {
-            GeneralStatusSection(viewModel: viewModel)
+        GeneralStatusSection(viewModel: viewModel, onUpdate: onUpdate, onDynamicDNS: {})
+        Section {
+            Button {
+                showSystem = true
+            } label: {
+                disclosureRow("System", systemImage: "gearshape.2")
+            }
+            .buttonStyle(.plain)
         }
+        .id("access")
+        StorageSection(deployment: viewModel.deployment, overview: storage)
+        if viewModel.canShowSecurity {
+            SecuritySection(viewModel: viewModel, route: .constant(nil))
+                .id("security")
+        }
+        Section {
+            Button {
+                showAgent = true
+            } label: {
+                disclosureRow("Agent", systemImage: "cpu")
+            }
+            .buttonStyle(.plain)
+        }
+        hostActionsSection
+    }
+    #else
+    @ViewBuilder private var generalTab: some View {
+        SitesSection(viewModel: viewModel)
+        GeneralStatusSection(viewModel: viewModel, onUpdate: onUpdate, onDynamicDNS: { showingDynamicDNS = true })
         Section {
             Button {
                 Task { await requestAccessAndPasswords() }
@@ -1001,18 +1225,10 @@ struct DashboardView: View {
                 disclosureRow("Configuration (DNS, DKIM, ports)", systemImage: "doc.text.magnifyingglass")
             }
             .buttonStyle(.plain)
-            if viewModel.canManageDevices {
-                Button {
-                    showDeviceManagement = true
-                } label: {
-                    disclosureRow("Paired Devices", systemImage: "list.bullet.rectangle.portrait")
-                }
-                .buttonStyle(.plain)
-            }
             Button {
                 showSystem = true
             } label: {
-                disclosureRow("Server system", systemImage: "shippingbox")
+                disclosureRow("System", systemImage: "gearshape.2")
             }
             .buttonStyle(.plain)
         }
@@ -1021,6 +1237,16 @@ struct DashboardView: View {
         if viewModel.canShowSecurity {
             SecuritySection(viewModel: viewModel, route: $securityRoute)
                 .id("security")
+        }
+        if viewModel.canManageNotifications {
+            Section {
+                Button {
+                    showingNotifications = true
+                } label: {
+                    disclosureRow("Notifications", systemImage: "bell.badge")
+                }
+                .buttonStyle(.plain)
+            }
         }
         Section {
             Button {
@@ -1033,12 +1259,32 @@ struct DashboardView: View {
         hostActionsSection
         eraseSection
     }
+    #endif
 
     /// The agent's own page, opened from its row
     private var agentPage: some View {
         NavigationStack {
+            agentForm
+                .screenTitle(Text("Agent"))
+                #if os(iOS) || os(tvOS)
+                .navigationBarTitleDisplayMode(.inline)
+                #endif
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Done") { showAgent = false }
+                    }
+                }
+        }
+        #if os(macOS)
+        .frame(minWidth: 480, minHeight: 520)
+        #endif
+    }
+
+    /// The agent rows, in a sheet or the pane
+    private var agentForm: some View {
             Form {
                 AgentSection(version: viewModel.agentVersion,
+                             health: viewModel.agentHealth,
                              usesAgent: viewModel.deployment.usesAgent,
                              command: viewModel.agentInstallCommand,
                              onCopy: {
@@ -1065,47 +1311,23 @@ struct DashboardView: View {
                                  case .unreachable(let reason): return .unreachable(reason)
                                  }
                              },
-                             showsRelay: viewModel.canProvisionRelay,
-                             onConfigureRelay: { Task { await viewModel.provisionRelay() } },
-                             showsDynamicDNS: viewModel.canManageDynamicDNS,
-                             dynamicDNSIsOn: viewModel.dynamicDNS?.enabled ?? false,
-                             onDynamicDNS: { showingDynamicDNS = true },
-                             showsNotifications: viewModel.canManageNotifications,
-                             onNotifications: { showingNotifications = true },
+                             onDevices: viewModel.canManageDevices ? { showDeviceManagement = true } : nil,
                              onRemove: {
                                  Task { if let updated = await viewModel.removeAgent() { onUpdate(updated) } }
                              },
                              onReinstall: {
                                  Task { if let updated = await viewModel.installAgent(reinstall: true) { onUpdate(updated) } }
-                             },
-                             nodesDestination: AnyView(DeploymentNodesView(deployment: viewModel.deployment,
-                                                                          onUpdate: onUpdate)))
+                             })
+                AgentSelfUpdateSection(viewModel: viewModel)
                 AgentOpeningCheckRow(deploymentID: viewModel.deployment.id)
+                if viewModel.deployment.usesAgent { McpAccessSection(viewModel: viewModel) }
             }
             .formStyle(.grouped)
-            .navigationTitle(Text("Agent"))
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { showAgent = false }
-                }
-            }
-            .sheet(isPresented: $showingDynamicDNS) {
+            .subpage(isPresented: $showDeviceManagement) {
                 if #available(macOS 15.0, *) {
-                    DynamicDNSSheet(viewModel: viewModel)
+                    DeviceManagementSheet(deployment: viewModel.deployment)
                 }
             }
-            .sheet(isPresented: $showingNotifications) {
-                if #available(macOS 15.0, *) {
-                    NotificationsSheet(viewModel: viewModel)
-                }
-            }
-        }
-        #if os(macOS)
-        .frame(minWidth: 480, minHeight: 520)
-        #endif
     }
 
     @ViewBuilder private var hostActionsSection: some View {
@@ -1148,7 +1370,6 @@ struct DashboardView: View {
                 .id("autobackup")
         }
         AutoUpdateSection(viewModel: viewModel)
-        AgentSelfUpdateSection(viewModel: viewModel)
     }
 
     /// The entry point for growing a server
@@ -1232,14 +1453,18 @@ struct DashboardView: View {
     }
 }
 
-#if os(iOS)
+#if os(iOS) || os(tvOS)
 extension DashboardView {
     static let headerPlate = Color(.secondarySystemGroupedBackground)
 }
 
 private extension View {
-    func onHeaderPlate() -> some View {
+    @ViewBuilder func onHeaderPlate() -> some View {
+        #if os(tvOS)
+        background(.regularMaterial)
+        #else
         background(DashboardView.headerPlate)
+        #endif
     }
 }
 #endif
@@ -1285,7 +1510,7 @@ enum DashboardTab: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "square.grid.2x2"
         case .operations: return "slider.horizontal.3"
-        case .hosts: return "chart.bar.xaxis"
+        case .hosts: return "chart.xyaxis.line"
         case .containers: return "shippingbox"
         case .vpn: return "lock.shield"
         case .terminal: return "apple.terminal"
@@ -1410,6 +1635,13 @@ struct SingleHostActionsSection: View {
 }
 
 #if DEBUG
+/// What a screenshot run asks of the speaker screen
+enum DemoSpeakerScreen {
+    static var asked: String? {
+        ProcessInfo.processInfo.environment["GRYONIXNEXUS_DEMO_OPEN_SPEAKER"]
+    }
+}
+
 private struct DemoStartAtBottom: ViewModifier {
     private var wanted: Bool {
         ProcessInfo.processInfo.environment["GRYONIXNEXUS_DEMO_SCROLL"] != nil

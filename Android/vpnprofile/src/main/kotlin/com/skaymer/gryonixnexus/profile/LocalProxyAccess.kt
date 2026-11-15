@@ -15,7 +15,7 @@ data class LocalProxyAccess(val port: Int, val username: String, val password: S
             return bytes.joinToString("") { "%02x".format(it) }
         }
 
-        private fun freeLoopbackPort(): Int =
+        fun freeLoopbackPort(): Int =
             ServerSocket(0, 0, InetAddress.getLoopbackAddress()).use { it.localPort }
     }
 }

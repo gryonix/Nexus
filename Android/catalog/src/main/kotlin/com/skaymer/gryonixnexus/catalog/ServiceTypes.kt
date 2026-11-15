@@ -22,6 +22,9 @@ data class ServerRequirements(
 /** How the service runs on the server */
 sealed class ServiceRuntime {
     data class Docker(val composeProject: String) : ServiceRuntime()
+
+    /** Installed from packages and run by systemd, without docker */
+    data class Systemd(val unit: String) : ServiceRuntime()
 }
 
 /** A file the setup script writes for a docker service */
@@ -59,5 +62,9 @@ data class WebIngress(
     val adminGuard: Boolean = true,
     val upstreamHTTPS: Boolean = false,
     val publicPaths: List<String> = emptyList(),
-    val overwriteForwardedFor: Boolean = false
+    val overwriteForwardedFor: Boolean = false,
+    /** Caddy snippet file with basic_auth, imported into the site */
+    val basicAuthSnippet: String? = null,
+    /** Answers at a .local name on Caddy's own certificate */
+    val homeOnly: Boolean = false
 )

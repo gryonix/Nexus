@@ -34,7 +34,7 @@ struct LicenseCodeSection: View {
         .labelsHidden()
         .font(.body.monospaced())
         .autocorrectionDisabled()
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         .textInputAutocapitalization(.characters)
         #endif
         Button("Activate") { Task { await activate() } }

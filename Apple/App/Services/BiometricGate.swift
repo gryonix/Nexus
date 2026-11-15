@@ -1,8 +1,13 @@
 import Foundation
+#if !os(tvOS)
 import LocalAuthentication
+#endif
 
 enum BiometricGate {
     static func authenticate(reason: String) async -> Bool {
+        #if os(tvOS)
+        return true
+        #else
         let context = LAContext()
         var error: NSError?
         guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else {
@@ -13,6 +18,7 @@ enum BiometricGate {
                 continuation.resume(returning: success)
             }
         }
+        #endif
     }
 }
 

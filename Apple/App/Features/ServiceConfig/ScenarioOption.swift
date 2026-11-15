@@ -65,10 +65,18 @@ struct ScenarioOption: Identifiable, Hashable {
         ScenarioOption(
             id: "meshOnly",
             titleKey: "Only my own devices",
-            subtitle: "No public address and no open ports: the services answer only to phones and laptops joined to your private mesh. The certificate is self-signed, since there is no way in for a public one. Mail and VPN aren't available.",
+            subtitle: "The services answer only to phones and laptops joined to a private mesh run by Headscale on this server. The certificate is self-signed, so devices join only from your own network — away from home, use the Tailscale option below. Mail and VPN aren't available.",
             systemImage: "point.3.filled.connected.trianglepath.dotted",
             topology: .singleHost,
             scope: .meshOnly
+        ),
+        ScenarioOption(
+            id: "tailscaleOnly",
+            titleKey: "Only my own devices (Tailscale)",
+            subtitle: "Like the option above, but the private network is your own Tailscale account, so it works behind any router. Needs an account at tailscale.com. Mail and VPN aren't available.",
+            systemImage: "network",
+            topology: .singleHost,
+            scope: .tailscaleOnly
         )
     ]
 }

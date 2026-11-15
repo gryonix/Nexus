@@ -532,6 +532,34 @@ enum L10nGeneration {
         ])
     }
 
+    static func errAirPlayScreenNeedsAirPlay1(_ l: AppLanguage) -> String {
+        l.pick([
+            .en: "AirPlay screen and an AirPlay 2 speaker cannot share one machine. Switch the speaker to AirPlay 1 or use another machine.",
+            .de: "AirPlay-Bildschirm und ein AirPlay-2-Lautsprecher können sich keinen Rechner teilen. Stellen Sie den Lautsprecher auf AirPlay 1 um oder verwenden Sie einen anderen Rechner.",
+            .fr: "L'écran AirPlay et une enceinte AirPlay 2 ne peuvent pas partager la même machine. Passez l'enceinte en AirPlay 1 ou utilisez une autre machine.",
+            .es: "La pantalla AirPlay y un altavoz AirPlay 2 no pueden compartir una misma máquina. Cambie el altavoz a AirPlay 1 o use otra máquina.",
+            .ru: "Экран AirPlay и колонка AirPlay 2 не могут работать на одной машине. Переключите колонку на AirPlay 1 или используйте другую машину.",
+            .uk: "Екран AirPlay і колонка AirPlay 2 не можуть працювати на одній машині. Перемкніть колонку на AirPlay 1 або використайте іншу машину.",
+            .it: "Lo schermo AirPlay e un altoparlante AirPlay 2 non possono condividere la stessa macchina. Passi l'altoparlante ad AirPlay 1 o usi un'altra macchina.",
+            .ja: "AirPlay スクリーンと AirPlay 2 スピーカーは 1 台のマシンで共存できません。スピーカーを AirPlay 1 に切り替えるか、別のマシンを使ってください。",
+            .zh: "AirPlay 屏幕和 AirPlay 2 扬声器不能共用同一台机器。请将扬声器切换到 AirPlay 1，或使用另一台机器。"
+        ])
+    }
+
+    static func errOverlapsAudioHub(_ l: AppLanguage, service: String) -> String {
+        l.pick([
+            .en: "\(service) is already part of the audio hub (odio) on this machine; two copies fight over the sound card. Use the hub's own, or remove one of them.",
+            .de: "\(service) ist bereits Teil des Audio-Hubs (odio) auf diesem Rechner; zwei Kopien streiten um die Soundkarte. Nutzen Sie die des Hubs oder entfernen Sie eine davon.",
+            .fr: "\(service) fait déjà partie du hub audio (odio) de cette machine ; deux copies se disputent la carte son. Utilisez celui du hub ou supprimez l'un des deux.",
+            .es: "\(service) ya forma parte del centro de audio (odio) de esta máquina; dos copias se pelean por la tarjeta de sonido. Use la del centro o quite una de ellas.",
+            .ru: "\(service) уже входит в аудиоцентр (odio) на этой машине; две копии дерутся за звуковую карту. Используйте ту, что в аудиоцентре, или удалите одну из них.",
+            .uk: "\(service) уже входить до аудіоцентру (odio) на цій машині; дві копії змагаються за звукову карту. Використайте ту, що в аудіоцентрі, або видаліть одну з них.",
+            .it: "\(service) fa già parte dell'hub audio (odio) su questa macchina; due copie si contendono la scheda audio. Usi quello dell'hub o ne rimuova uno.",
+            .ja: "\(service) はこのマシンのオーディオハブ (odio) に既に含まれています。2 つあるとサウンドカードを奪い合います。ハブのものを使うか、どちらかを削除してください。",
+            .zh: "\(service) 已包含在本机的音频中心 (odio) 中；两份会争用声卡。请使用音频中心自带的，或删除其中一个。"
+        ])
+    }
+
     static func errZigbeeNeedsAStick(_ l: AppLanguage) -> String {
         l.pick([
             .en: "Zigbee2MQTT talks to a Zigbee stick plugged into the machine, and no stick was named. Enter its path under Home Assistant's settings, or take Zigbee2MQTT off.",

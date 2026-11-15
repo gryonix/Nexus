@@ -67,7 +67,7 @@ struct CreateShellUserSheet: View {
                 }
             }
         }
-        .navigationTitle("New account")
+        .screenTitle("New account")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

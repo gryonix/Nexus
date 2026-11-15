@@ -31,7 +31,7 @@ struct SecurityAutoRulesView: View {
         .formRowButtons()
         #endif
         .bottomBarClearance()
-        .navigationTitle("Automatic blocking")
+        .screenTitle("Automatic blocking")
         .raisedNavigationTitle()
         .pleaseWait(viewModel.securityAutoRulesBusy)
         .task(id: draft) { await autosave() }
@@ -185,7 +185,7 @@ struct SecurityAutoRulesView: View {
                 HStack {
                     TextField("Service", text: $newService,
                               prompt: Text(verbatim: "smtp").foregroundStyle(.secondary))
-                        #if os(iOS)
+                        #if os(iOS) || os(tvOS)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         #endif

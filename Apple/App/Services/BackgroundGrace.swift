@@ -8,8 +8,10 @@ final class BackgroundGrace {
     #if canImport(UIKit)
     private var id: UIBackgroundTaskIdentifier = .invalid
 
-    init() {
+    /// `onExpire` runs just before iOS suspends the app
+    init(onExpire: (@MainActor () -> Void)? = nil) {
         id = UIApplication.shared.beginBackgroundTask(withName: "gryonixnexus.install") { [weak self] in
+            MainActor.assumeIsolated { onExpire?() }
             self?.end()
         }
     }
@@ -20,7 +22,7 @@ final class BackgroundGrace {
         id = .invalid
     }
     #else
-    init() {}
+    init(onExpire: (@MainActor () -> Void)? = nil) {}
     func end() {}
     #endif
 }

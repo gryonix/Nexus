@@ -20,7 +20,7 @@ final class CommandCatalogTests: XCTestCase {
     }
 
     func testSudoersSensitiveLiterals() {
-        XCTAssertEqual(CommandCatalog.ipForwardingCheck, "sudo sysctl net.ipv4.ip_forward")
+        XCTAssertEqual(CommandCatalog.ipForwardingCheck, "PATH=$PATH:/usr/sbin:/sbin sysctl net.ipv4.ip_forward")
         XCTAssertEqual(CommandCatalog.restartWireGuard(interface: "wg0"),
                        "sudo systemctl restart wg-quick@wg0")
         XCTAssertEqual(CommandCatalog.restartSSHD, "sudo systemctl restart sshd")
@@ -214,7 +214,7 @@ final class StatusOperationsTests: XCTestCase {
 
         XCTAssertTrue(enabled)
         XCTAssertEqual(runner.calls, [.init(kind: .run,
-                                            command: "sudo sysctl net.ipv4.ip_forward",
+                                            command: "PATH=$PATH:/usr/sbin:/sbin sysctl net.ipv4.ip_forward",
                                             host: .home)])
     }
 

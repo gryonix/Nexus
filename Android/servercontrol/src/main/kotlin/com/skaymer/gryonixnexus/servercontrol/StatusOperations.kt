@@ -105,9 +105,13 @@ class StatusOperations(
     }
 
     /** Guards only the given vhosts */
-    suspend fun setAdminLockdown(hosts: List<String>, host: SSHHostID): AdminLockdownState {
+    suspend fun setAdminLockdown(
+        hosts: List<String>,
+        host: SSHHostID,
+        denyVPN: List<String>? = null,
+    ): AdminLockdownState {
         if (hosts.isEmpty()) return setAdminLockdown(false, host)
-        val invalid = hosts.filterNot { CommandCatalog.AdminLockdown.isValidHost(it) }
+        val invalid = (hosts + denyVPN.orEmpty()).filterNot { CommandCatalog.AdminLockdown.isValidHost(it) }
         if (invalid.isNotEmpty()) {
             throw ServerControlError.CommandFailed(
                 "lockdown",
@@ -116,7 +120,7 @@ class StatusOperations(
             )
         }
         return parseLockdownAnswer(
-            runSucceeding(CommandCatalog.AdminLockdown.only(hosts), host, config.restartTimeout),
+            runSucceeding(CommandCatalog.AdminLockdown.only(hosts, denyVPN), host, config.restartTimeout),
         )
     }
 

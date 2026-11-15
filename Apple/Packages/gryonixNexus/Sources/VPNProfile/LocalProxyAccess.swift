@@ -20,7 +20,7 @@ public struct LocalProxyAccess: Equatable, Sendable {
         (0..<16).map { _ in String(format: "%02x", UInt8.random(in: 0...255)) }.joined()
     }
 
-    private static func freeLoopbackPort() -> Int {
+    public static func freeLoopbackPort() -> Int {
         let fallback = Int.random(in: 49152...65535)
         let descriptor = socket(AF_INET, SOCK_STREAM, 0)
         guard descriptor >= 0 else { return fallback }

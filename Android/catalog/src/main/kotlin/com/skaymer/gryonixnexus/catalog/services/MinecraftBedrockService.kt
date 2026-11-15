@@ -1,7 +1,7 @@
 package com.skaymer.gryonixnexus.catalog.services
 
-import com.skaymer.gryonixnexus.catalog.SH
 import com.skaymer.gryonixnexus.catalog.ArchiveBackupPlan
+import com.skaymer.gryonixnexus.catalog.BackupPart
 import com.skaymer.gryonixnexus.catalog.BackupPlan
 import com.skaymer.gryonixnexus.catalog.BackupSpec
 import com.skaymer.gryonixnexus.catalog.BackupWrapperSpec
@@ -11,6 +11,7 @@ import com.skaymer.gryonixnexus.catalog.L10nServices
 import com.skaymer.gryonixnexus.catalog.ManagedService
 import com.skaymer.gryonixnexus.catalog.PrivilegedCommand
 import com.skaymer.gryonixnexus.catalog.RestoreSpec
+import com.skaymer.gryonixnexus.catalog.SH
 import com.skaymer.gryonixnexus.catalog.ServiceActions
 import com.skaymer.gryonixnexus.catalog.ServiceCategory
 import com.skaymer.gryonixnexus.catalog.ServiceCommand
@@ -131,6 +132,7 @@ class MinecraftBedrockService : ManagedService {
                 plan = BackupPlan.Archive(ArchiveBackupPlan(
                     composeProject = COMPOSE_PROJECT,
                     dataPath = "$path/data",
+                    dataPart = BackupPart.FILES,
                     databases = emptyList(),
                     quiesceServices = listOf(CONTAINER),
                     encryptsByDefault = false,

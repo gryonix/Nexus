@@ -1,5 +1,12 @@
 package com.skaymer.gryonixnexus.app.ui
 
+import androidx.compose.material.icons.automirrored.outlined.ListAlt
+import androidx.compose.material.icons.outlined.NotificationsActive
+import androidx.compose.material.icons.outlined.Sync
+import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.AddCircleOutline
+import com.skaymer.gryonixnexus.app.ui.design.SymbolIcons
+import com.skaymer.gryonixnexus.app.servers.MetricsFormat
 import com.skaymer.gryonixnexus.app.servers.AddedServiceScripts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ContentTransform
@@ -25,11 +32,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MoreHoriz
 import com.skaymer.gryonixnexus.app.terminal.TerminalSessions
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -47,16 +55,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.CompositionLocalProvider
+import com.skaymer.gryonixnexus.app.ui.design.PullToRefresh
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
+import kotlin.math.roundToInt
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.skaymer.gryonixnexus.app.ui.design.ActionRow
+import com.skaymer.gryonixnexus.app.ui.design.DisclosureChevron
+import androidx.compose.ui.text.font.FontWeight
 import com.skaymer.gryonixnexus.app.ui.design.GroupedContentPadding
 import com.skaymer.gryonixnexus.app.ui.design.GroupedRow
 import com.skaymer.gryonixnexus.app.ui.design.GroupedSection
+import com.skaymer.gryonixnexus.app.ui.design.ValueRow
 import com.skaymer.gryonixnexus.app.ui.design.InfoNoteButton
 import com.skaymer.gryonixnexus.app.terminal.ShellUserViewModel
 import com.skaymer.gryonixnexus.app.ui.design.GroupedSpacing
@@ -196,6 +212,8 @@ fun ServerScreen(
     agentRemoval: com.skaymer.gryonixnexus.app.agent.AgentRemoval? = null,
     /** The server's own packages — see `SystemUpdateDialog` */
     systemUpdates: com.skaymer.gryonixnexus.app.servers.SystemUpdateViewModel? = null,
+    /** The bar's "…" — see `ServerBarMenu` */
+    serverBar: ServerBarCommands? = null,
 ) {
     val context = remember(deployment) { deployment.serviceContext }
     var showingConfiguration by rememberSaveable(deployment.id) { mutableStateOf(false) }
@@ -204,17 +222,51 @@ fun ServerScreen(
     val shelves = remember(deployment) { shelves(deployment.services) }
     val flat = remember(deployment) { deployment.services.toList() }
 
-    LaunchedEffect(deployment.id) { services.refresh(deployment) }
+    LaunchedEffect(deployment.id, deployment.services) { services.refresh(deployment) }
     LaunchedEffect(deployment.id) { agentSelfUpdate.load(deployment) }
-    LaunchedEffect(deployment.id) { moves.refreshInterrupted(deployment.id) }
+    var refreshTick by remember(deployment.id) { mutableIntStateOf(0) }
     val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val homeOnlyScope = rememberCoroutineScope()
+    val serviceTools = remember(backups, updates, fleet, hostActions) {
+        val app = appContext as? com.skaymer.gryonixnexus.app.GryonixApplication
+        val homeOnly = com.skaymer.gryonixnexus.app.servers.HomeOnlyController(
+            scope = homeOnlyScope,
+            persist = { fleet.update(it) },
+            reprovision = { app?.reprovisionRelay(it) },
+            guardHost = { changed, host, clearing -> hostActions.setLockdown(changed, host, true, clearing) },
+            probe = { changed, ports -> app?.probePublicPorts(changed, ports) },
+            dns = app?.homeOnlyDNS(),
+            rootCA = { changed -> app?.localRootCA(changed).orEmpty() },
+            localAliases = { changed, host, on -> checkNotNull(app).localAliases(changed, host, on) },
+            keepPortsHome = { changed, ports -> app?.setHomeOnlyPorts(changed, ports); Unit },
+        )
+        ServiceTools(
+            backups, updates, homeOnly,
+            reapply = { changed, service -> adding.reapply(changed, service) },
+            audioOutputs = { changed -> app?.audioOutputs(changed).orEmpty() },
+            odio = { changed, method, path, body -> checkNotNull(app).odio(changed, method, path, body) },
+            names = app?.serviceNames,
+            rename = { changed, id, name -> homeOnlyScope.launch { app?.renameService(changed, id.rawValue, name) } },
+        )
+    }
+    LaunchedEffect(deployment.id) { moves.refreshInterrupted(deployment.id) }
+    LaunchedEffect(deployment.id) {
+        (appContext as? com.skaymer.gryonixnexus.app.GryonixApplication)?.loadAppModules(deployment)
+    }
+    LaunchedEffect(deployment.id) {
+        (appContext as? com.skaymer.gryonixnexus.app.GryonixApplication)?.loadServiceNames(deployment)
+    }
     LaunchedEffect(deployment.id) { (appContext as? com.skaymer.gryonixnexus.app.GryonixApplication)?.notify?.sync(deployment) }
+    LaunchedEffect(deployment.id) { (appContext as? com.skaymer.gryonixnexus.app.GryonixApplication)?.homeDoors?.load(deployment) }
     DisposableEffect(deployment.id) { onDispose { services.stop() } }
     val serviceStates by services.states.collectAsState()
+    val fleetDeployments by fleet.deployments.collectAsState()
 
     DisposableEffect(deployment.id) { onDispose { updates.reset() } }
     var showingUpdates by rememberSaveable(deployment.id) { mutableStateOf(false) }
     var showingSystemUpdate by rememberSaveable(deployment.id) { mutableStateOf(false) }
+    var showingSystem by rememberSaveable(deployment.id) { mutableStateOf(false) }
+    var showingSwap by rememberSaveable(deployment.id) { mutableStateOf(false) }
     var choosingInstall by remember(deployment.id) {
         mutableStateOf<Triple<List<com.skaymer.gryonixnexus.catalog.ManagedService>, String?, List<com.skaymer.gryonixnexus.core.Artifact>>?>(null)
     }
@@ -231,6 +283,7 @@ fun ServerScreen(
     var showingErase by rememberSaveable(deployment.id) { mutableStateOf(false) }
     var arranging by rememberSaveable(deployment.id) { mutableStateOf(false) }
     var logsService by rememberSaveable(deployment.id) { mutableStateOf<String?>(null) }
+    var alertCard by remember(deployment.id) { mutableStateOf<com.skaymer.gryonixnexus.app.notify.AlertCard?>(null) }
     var addingService by rememberSaveable(deployment.id) { mutableStateOf(false) }
     var showingMailboxes by rememberSaveable(deployment.id) { mutableStateOf(false) }
     var showingModelKeys by rememberSaveable(deployment.id) { mutableStateOf(false) }
@@ -249,6 +302,10 @@ fun ServerScreen(
     var removingMachine by rememberSaveable(deployment.id) { mutableStateOf<String?>(null) }
     var machineError by remember(deployment.id) { mutableStateOf<String?>(null) }
     var removingService by rememberSaveable(deployment.id) { mutableStateOf<String?>(null) }
+    var page by rememberSaveable(deployment.id) { mutableStateOf<String?>(null) }
+    var filesNode by rememberSaveable(deployment.id) { mutableStateOf<String?>(null) }
+    val sectionIcons by tabs.sectionIcons.collectAsState()
+    val tunnelActive = vpnTunnel.state.collectAsState().value.carriesASession()
     val hostActionsState by hostActions.state.collectAsState()
     val guard = rememberGuard()
     DisposableEffect(deployment.id) { onDispose { hostActions.reset() } }
@@ -277,6 +334,13 @@ fun ServerScreen(
         mutableStateOf(sections.startSection(available, deployment.id).raw)
     }
     val current = ServerSection.of(currentRaw) ?: ServerSection.GENERAL
+    val alertAsked by navigator.askedSection.collectAsState()
+    LaunchedEffect(alertAsked, ordered) {
+        val asked = navigator.takeSection(deployment.id) ?: return@LaunchedEffect
+        if (asked in ordered) currentRaw = asked.raw
+        navigator.takeService(deployment.id)?.let { logsService = it }
+        navigator.takeAlert(deployment.id)?.let { alertCard = it }
+    }
     val generalList = rememberLazyListState()
     val tourStep by AppTourFocus.step.collectAsState()
     LaunchedEffect(tourStep) {
@@ -368,136 +432,80 @@ fun ServerScreen(
         return
     }
 
-    Column(Modifier.fillMaxSize()) {
-        Box(Modifier.appTourTarget(AppTourTarget.SERVER_STRIP)) {
-            ServerSectionsStrip(
-                sections = ordered,
-                available = available,
-                current = current,
-                settings = sections,
-                deploymentID = deployment.id,
-                onSelect = { currentRaw = it.raw },
-                onArrange = { arranging = true },
-            )
+    val categoryExtras: (String) -> (@Composable () -> Unit)? = { id ->
+        when (id) {
+            "mail" -> if (MailboxesViewModel.hasEngine(deployment) || DKIMViewModel.hasMailEngine(deployment)) ({
+                if (MailboxesViewModel.hasEngine(deployment)) MailboxesCard({ showingMailboxes = true })
+                if (DKIMViewModel.hasMailEngine(deployment)) DKIMCard({ showingDKIM = true }, showDivider = false)
+            }) else null
+            "passwords" -> if (canToggleVaultwardenSignups(deployment) || VaultwardenTwoFactorViewModel.canShow(deployment)) ({
+                if (canToggleVaultwardenSignups(deployment)) {
+                    VaultwardenSignupsCard(deployment, { open ->
+                        val settings = deployment.serviceSettings.copy(vaultwardenAllowSignups = open)
+                        ServiceRegistry.service(ServiceID.VAULTWARDEN)?.let {
+                            adding.reapply(deployment.copy(serviceSettings = settings), it)
+                        }
+                    }, VaultwardenTwoFactorViewModel.canShow(deployment))
+                }
+                if (VaultwardenTwoFactorViewModel.canShow(deployment)) VaultwardenTwoFactorCard(deployment, false)
+            }) else null
+            "ai" -> if (ModelKeysViewModel.canManage(deployment) || LocalModelsViewModel.canManage(deployment)) ({
+                if (ModelKeysViewModel.canManage(deployment)) ModelKeysCard({ showingModelKeys = true })
+                if (LocalModelsViewModel.canManage(deployment)) LocalModelsCard({ showingLocalModels = true }, false)
+            }) else null
+            "games" -> if (ModsViewModel.canManage(deployment)) ({
+                ModsCard(
+                    callsThemPlugins = AgentModOperations.slot(deployment.serviceSettings.minecraftJavaFlavour) == ModSlot.MOD_SLOT_PLUGINS,
+                    onOpen = { showingMods = true },
+                    showDivider = false,
+                )
+            }) else null
+            "mesh" -> if (MeshViewModel.managesMesh(deployment, agentTransportAvailable = true)) ({
+                MeshCard(mesh, { showingMesh = true }, false)
+            }) else if (MeshViewModel.usesTailscaleAccount(deployment)) ({
+                val uri = androidx.compose.ui.platform.LocalUriHandler.current
+                ValueRow(
+                    title = stringResource(R.string.mesh),
+                    value = null,
+                    onClick = { uri.openUri(MeshViewModel.TAILSCALE_DEVICES_URL) },
+                    showDivider = false,
+                )
+            }) else null
+            else -> null
         }
-
-        Box(Modifier.fillMaxSize().sectionSwipe(ordered, current) { currentRaw = it.raw }) {
-        AnimatedContent(
-            targetState = current,
-            transitionSpec = { sectionSlide(ordered.indexOf(targetState) >= ordered.indexOf(initialState)) },
-            label = "section",
-        ) { current ->
-        when (current) {
-            ServerSection.GENERAL -> LazyColumn(
-                state = generalList,
+    }
+    val openPage = page
+    if (openPage != null) {
+        val back = { page = null }
+        BackHandler { back() }
+        val title = pageTitle(openPage)
+        DisposableEffect(title) {
+            val refresh: (() -> Unit)? = when (openPage) {
+                PAGE_CROWDSEC -> ({ security.load(deployment); security.loadAutoRules(deployment) })
+                PAGE_SSH -> ({ security.loadSshAccess(deployment); security.loadSshUsers(deployment) })
+                else -> null
+            }
+            pushed.push(title, onBack = back, onRefresh = refresh)
+            onDispose { pushed.clear() }
+        }
+        when (openPage) {
+            PAGE_CROWDSEC -> CrowdSecPage(deployment, security, store)
+            PAGE_SSH -> SshAccessPage(deployment, security)
+            PAGE_LOCKDOWN -> LockdownPage(
+                deployment, hostActions,
+                (androidx.compose.ui.platform.LocalContext.current.applicationContext as? com.skaymer.gryonixnexus.app.GryonixApplication)?.openAPI,
+            )
+            PAGE_FILES -> Box(Modifier.fillMaxSize().background(Gryonix.colors.groupedBackground)) {
+                FileBrowserSection(deployment, files)
+                LaunchedEffect(filesNode) {
+                    deployment.nodes.firstOrNull { it.id.toString() == filesNode }?.let { files.open(deployment, it.sshHost) }
+                }
+            }
+            PAGE_HOST -> LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = GroupedContentPadding,
                 verticalArrangement = GroupedSpacing,
             ) {
-                item { ConnectionRow(deployment, check) }
-                item { RelayStatusCard(deployment, relay) }
-                item { Box(Modifier.appTourTarget(AppTourTarget.SERVER_SITES)) { SitesCard(deployment, tabs) } }
-
-                item {
-                    val rows = buildList<@Composable (Boolean) -> Unit> {
-                        add { divider ->
-                            AccessCard(
-                                onOpen = {
-                                    guard(GatedAction.ACCESS_SCREEN, deployment.name) {
-                                        showingAccess = true
-                                    }
-                                },
-                                showDivider = divider,
-                            )
-                        }
-                        if (deployment.usesAgent) {
-                            add { divider ->
-                                DevicesCard(
-                                    onOpen = {
-                                        guard(GatedAction.ACCESS_SCREEN, deployment.name) {
-                                            showingDevices = true
-                                        }
-                                    },
-                                    showDivider = divider,
-                                )
-                            }
-                        }
-                        if (systemUpdates != null) {
-                            add { divider -> SystemUpdateCard({ showingSystemUpdate = true }, divider) }
-                        }
-                        add { divider ->
-                            UpdatesCard(deployment, updates, { showingUpdates = true }, divider)
-                        }
-                        if (MailboxesViewModel.hasEngine(deployment)) {
-                            add { divider -> MailboxesCard({ showingMailboxes = true }, divider) }
-                        }
-                        if (ModelKeysViewModel.canManage(deployment)) {
-                            add { divider -> ModelKeysCard({ showingModelKeys = true }, divider) }
-                        }
-                        if (canToggleVaultwardenSignups(deployment)) {
-                            add { divider ->
-                                VaultwardenSignupsCard(deployment, { open ->
-                                    val settings = deployment.serviceSettings.copy(vaultwardenAllowSignups = open)
-                                    ServiceRegistry.service(ServiceID.VAULTWARDEN)?.let {
-                                        adding.reapply(deployment.copy(serviceSettings = settings), it)
-                                    }
-                                }, divider)
-                            }
-                        }
-                        if (VaultwardenTwoFactorViewModel.canShow(deployment)) {
-                            add { divider -> VaultwardenTwoFactorCard(deployment, divider) }
-                        }
-                        if (LocalModelsViewModel.canManage(deployment)) {
-                            add { divider -> LocalModelsCard({ showingLocalModels = true }, divider) }
-                        }
-                        if (ModsViewModel.canManage(deployment)) {
-                            add { divider ->
-                                ModsCard(
-                                    callsThemPlugins = AgentModOperations.slot(deployment.serviceSettings.minecraftJavaFlavour) == ModSlot.MOD_SLOT_PLUGINS,
-                                    onOpen = { showingMods = true },
-                                    showDivider = divider,
-                                )
-                            }
-                        }
-                        if (DKIMViewModel.hasMailEngine(deployment)) {
-                            add { divider -> DKIMCard({ showingDKIM = true }, divider) }
-                        }
-                        if (DynamicDNSViewModel.canManage(deployment)) {
-                            add { divider -> DynamicDNSCard({ showingDDNS = true }, divider) }
-                        }
-                        if (com.skaymer.gryonixnexus.app.notify.NotifyViewModel.canManage(deployment)) {
-                            add { divider -> NotificationsCard({ showingNotify = true }, divider) }
-                        }
-                        if (BackupsViewModel.backupCapableServices(deployment).isNotEmpty()) {
-                            add { divider ->
-                                BackupsCard(deployment, backups, { showingBackups = true }, divider)
-                            }
-                        }
-                        if (MeshViewModel.managesMesh(deployment, agentTransportAvailable = true)) {
-                            add { divider -> MeshCard(mesh, { showingMesh = true }, divider) }
-                        }
-                    }
-                    GroupedSection {
-                        rows.forEachIndexed { index, row -> row(index != rows.lastIndex) }
-                    }
-                }
-
-                item {
-                    StorageCard(
-                        deployment = deployment,
-                        onOpenStorage = { storageHost = it },
-                        onOpenCache = { cacheHost = it },
-                    )
-                }
-
-                if (SecurityViewModel.canShow(deployment, agentTransportAvailable = true)) {
-                    item {
-                        Box(Modifier.appTourTarget(AppTourTarget.SERVER_SECURITY)) {
-                            SecurityCard(deployment, security, store)
-                        }
-                    }
-                }
-
                 item {
                     val probes by hostProbes.state.collectAsState()
                     LaunchedEffect(deployment.id) {
@@ -528,7 +536,29 @@ fun ServerScreen(
                         }
                     }
                 }
-
+            }
+            PAGE_AGENT -> LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = GroupedContentPadding,
+                verticalArrangement = GroupedSpacing,
+            ) {
+                item {
+                    AgentCard(deployment, agentInstall, onInstalled = { fleet.reload() }, removal = agentRemoval) {
+                        if (deployment.usesAgent) {
+                            NavRow(Icons.AutoMirrored.Outlined.ListAlt, stringResource(R.string.general_devices), {
+                                guard(GatedAction.ACCESS_SCREEN, deployment.name) { showingDevices = true }
+                            })
+                        }
+                    }
+                }
+                item { AgentSelfUpdateCard(deployment, agentSelfUpdate) }
+                if (deployment.usesAgent) item { McpAccessCard(deployment) }
+            }
+            else -> LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = GroupedContentPadding,
+                verticalArrangement = GroupedSpacing,
+            ) {
                 item {
                     GroupedSection(header = stringResource(R.string.machines)) {
                         deployment.nodes.forEach { node ->
@@ -577,53 +607,105 @@ fun ServerScreen(
                         )
                     }
                 }
+            }
+        }
+    } else Column(Modifier.fillMaxSize()) {
+        Box(Modifier.appTourTarget(AppTourTarget.SERVER_STRIP)) {
+            ServerSectionsStrip(
+                sections = ordered,
+                available = available,
+                current = current,
+                settings = sections,
+                deploymentID = deployment.id,
+                onSelect = { currentRaw = it.raw },
+                onArrange = { arranging = true },
+                icons = sectionIcons,
+                tunnelActive = tunnelActive,
+            )
+        }
 
+        PullToRefresh(onRefresh = {
+            refreshTick += 1
+            services.refresh(deployment)
+            agentSelfUpdate.load(deployment)
+        }) {
+        Box(Modifier.fillMaxSize().sectionSwipe(ordered, current) { currentRaw = it.raw }) {
+        key(refreshTick) {
+        AnimatedContent(
+            targetState = current,
+            transitionSpec = { sectionSlide(ordered.indexOf(targetState) >= ordered.indexOf(initialState)) },
+            label = "section",
+        ) { current ->
+        when (current) {
+            ServerSection.GENERAL -> LazyColumn(
+                state = generalList,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = GroupedContentPadding,
+                verticalArrangement = GroupedSpacing,
+            ) {
+                item { Box(Modifier.appTourTarget(AppTourTarget.SERVER_SITES)) { SitesCard(deployment, tabs) } }
                 item {
-                    GroupedSection {
-                        ActionRow(
-                            text = stringResource(R.string.configuration_open),
-                            onClick = { showingConfiguration = true },
-                        )
-                        if (deployment.usesAgent) {
-                            ActionRow(
-                                text = stringResource(R.string.repair_server),
-                                onClick = { rerunning = true to AddedServiceScripts.scripts(ServiceRegistry.services(deployment.services), deployment) },
+                    ConnectionCard(
+                        deployment, relay,
+                        onServers = { page = PAGE_MACHINES },
+                        onDynamicDNS = if (DynamicDNSViewModel.canManage(deployment)) ({ showingDDNS = true }) else null,
+                    )
+                }
+                item {
+                    GeneralLinks(
+                        onLogins = { guard(GatedAction.ACCESS_SCREEN, deployment.name) { showingAccess = true } },
+                        onConfiguration = { showingConfiguration = true },
+                        onSystem = if (systemUpdates != null) ({ showingSystem = true }) else null,
+                    )
+                }
+                item {
+                    StorageCard(
+                        deployment = deployment,
+                        onOpenStorage = { storageHost = it },
+                        onOpenCache = { cacheHost = it },
+                    )
+                }
+                if (SecurityViewModel.canShow(deployment, agentTransportAvailable = true)) {
+                    item {
+                        Box(Modifier.appTourTarget(AppTourTarget.SERVER_SECURITY)) {
+                            SecuritySummary(
+                                deployment, security, hostActions,
+                                onLockdown = { page = PAGE_LOCKDOWN },
+                                onCrowdSec = { page = PAGE_CROWDSEC },
+                                onSsh = { page = PAGE_SSH },
                             )
                         }
-                        ActionRow(
-                            text = stringResource(R.string.reinstall_server),
-                            onClick = {
-                                if (deployment.usesAgent) {
-                                    rerunning = false to AddedServiceScripts.scripts(ServiceRegistry.services(deployment.services), deployment)
-                                } else {
-                                    configurator.adopt(ConfiguratorForm.of(deployment), deployment)
-                                    navigator.show(AppTab.CONFIGURATOR)
-                                }
-                            },
-                            showDivider = false,
-                            trailing = {
-                                InfoNoteButton(
-                                    title = stringResource(R.string.reinstall_server),
-                                    note = stringResource(R.string.reinstall_server_hint),
-                                )
-                            },
-                        )
                     }
                 }
-
-                item {
-                    AgentCard(deployment, agentInstall, onInstalled = { fleet.reload() }, removal = agentRemoval)
+                if (com.skaymer.gryonixnexus.app.notify.NotifyViewModel.canManage(deployment)) {
+                    item {
+                        GroupedSection {
+                            NavRow(Icons.Outlined.NotificationsActive, stringResource(R.string.notify_title),
+                                { showingNotify = true }, showDivider = false)
+                        }
+                    }
                 }
+                item { AgentLink { page = PAGE_AGENT } }
                 item {
-                    AgentSelfUpdateCard(deployment, agentSelfUpdate)
+                    HostActionsCard(
+                        deployment, hostActions, wakeOnLAN,
+                        onRepair = if (deployment.usesAgent) ({
+                            rerunning = true to AddedServiceScripts.scripts(ServiceRegistry.services(deployment.services), deployment)
+                        }) else null,
+                        onReinstall = {
+                            if (deployment.usesAgent) {
+                                rerunning = false to AddedServiceScripts.scripts(ServiceRegistry.services(deployment.services), deployment)
+                            } else {
+                                configurator.adopt(ConfiguratorForm.of(deployment), deployment)
+                                navigator.show(AppTab.CONFIGURATOR)
+                            }
+                        },
+                    )
                 }
-
-                item { HostActionsCard(deployment, hostActions, wakeOnLAN) }
-
                 item { EraseCard { showingErase = true } }
             }
 
-            ServerSection.APPS -> LazyColumn(
+            ServerSection.APPS -> CompositionLocalProvider(LocalServiceTools provides serviceTools) { LazyColumn(
                 modifier = Modifier.fillMaxSize().appTourTarget(AppTourTarget.SERVER_APPS),
                 contentPadding = GroupedContentPadding,
                 verticalArrangement = GroupedSpacing,
@@ -642,10 +724,11 @@ fun ServerScreen(
                     shelves.forEach { (category, ids) ->
                         item(key = "shelf-${category.id}") {
                             Shelf(
-                                category, ids, context, serviceStates, deployment, services,
+                                category, ids, context, serviceStates, deployment, services, store,
                                 onLogs = { logsService = it.rawValue },
                                 onRemove = { removingService = it.rawValue },
                                 onPlace = { service, node -> moves.request(deployment, service, node) },
+                                extras = categoryExtras(category.id),
                             )
                         }
                     }
@@ -663,61 +746,78 @@ fun ServerScreen(
                 if (AddServiceViewModel.canAdd(deployment)) {
                     item {
                         GroupedSection {
-                            ActionRow(
-                                text = stringResource(R.string.add_service),
+                            GroupedRow(
                                 onClick = { addingService = true },
                                 showDivider = false,
-                            )
+                                leading = { Icon(Icons.Outlined.AddCircleOutline, null, modifier = Modifier.size(22.dp)) },
+                                trailing = {
+                                    InfoNoteButton(
+                                        title = stringResource(R.string.add_service),
+                                        note = stringResource(R.string.add_service_hint),
+                                    )
+                                },
+                            ) {
+                                Text(stringResource(R.string.add_service), style = MaterialTheme.typography.bodyLarge,
+                                    color = Gryonix.colors.accent)
+                            }
                         }
                     }
                 }
-            }
+                if (BackupsViewModel.backupCapableServices(deployment).isNotEmpty()) {
+                    item { GroupedSection { BackupsCard(deployment, backups, { showingBackups = true }, false) } }
+                }
+                item { GroupedSection { UpdatesCard(deployment, updates, { showingUpdates = true }, false) } }
+            } }
 
-            ServerSection.METRICS -> Box(Modifier.appTourTarget(AppTourTarget.SERVER_METRICS)) {
-                MetricsSection(fleet, history, board, panels, onlyServer = deployment)
+            ServerSection.METRICS -> Column(Modifier.appTourTarget(AppTourTarget.SERVER_METRICS)) {
+                Box(Modifier.padding(top = 16.dp)) {
+                    ServerMachinesRow(deployment) { page = PAGE_HOST }
+                }
+                Box(Modifier.weight(1f)) {
+                    MetricsSection(fleet, history, board, panels, onlyServer = deployment)
+                }
             }
-            ServerSection.CONTAINERS -> ContainersSection(fleet, containers, only = deployment.id)
+            ServerSection.CONTAINERS -> DockerTabs(deployment) { ContainersSection(fleet, containers, only = deployment.id) }
             ServerSection.VPN ->
                 VPNSection(fleet, vpnClients, only = deployment.id, tunnel = vpnTunnel,
                            onChangeRealitySite = adding::changeRealitySite,
                            onRenewRealityKey = adding::renewRealityKey)
-            ServerSection.TERMINAL -> Column(
-                Modifier.fillMaxSize().background(Gryonix.colors.groupedBackground)
-            ) {
-                var shell by rememberSaveable(deployment.id) { mutableStateOf(false) }
-                if (shell) {
-                    TerminalSection(deployment, terminals, Modifier.weight(1f), shellUsers = shellUsers)
-                    PlainButton(
-                        text = stringResource(R.string.terminal_close),
-                        onClick = { shell = false },
-                        modifier = Modifier.padding(horizontal = 8.dp),
-                    )
-                } else {
-                    Column(Modifier.padding(vertical = 16.dp)) {
-                        GroupedSection {
-                            ActionRow(
-                                text = stringResource(R.string.terminal_open),
-                                onClick = { shell = true },
-                                showDivider = false,
-                            )
-                        }
-                    }
-                    Box(Modifier.weight(1f)) { FileBrowserSection(deployment, files) }
-                }
+            ServerSection.TERMINAL -> ServerTerminalTab(deployment, terminals, shellUsers) { node ->
+                filesNode = node.id.toString()
+                page = PAGE_FILES
             }
+        }
+        }
         }
         }
         }
     }
 
     if (showingUpdates) {
-        UpdatesDialog(deployment, updates) { showingUpdates = false }
+        val parts = remember(deployment.id) { backups.parts() }
+        UpdatesDialog(
+            deployment, updates,
+            onSystemUpdate = systemUpdates?.let { { showingUpdates = false; showingSystemUpdate = true } },
+            parts = parts,
+            agentSelfUpdate = agentSelfUpdate,
+        ) { showingUpdates = false }
+    }
+    if (showingSystem && systemUpdates != null) {
+        SystemDialog(
+            deployment,
+            updates = systemUpdates,
+            onUpdates = { showingSystem = false; showingSystemUpdate = true },
+            onSwap = { showingSystem = false; showingSwap = true },
+        ) { showingSystem = false }
     }
     if (showingSystemUpdate && systemUpdates != null) {
         SystemUpdateDialog(deployment, systemUpdates) { showingSystemUpdate = false }
     }
+    if (showingSwap && systemUpdates != null) {
+        SystemSwapDialog(deployment, systemUpdates) { showingSwap = false }
+    }
     if (showingBackups) {
-        BackupsDialog(deployment, backups, fleet.deployments.value) { showingBackups = false }
+        BackupsDialog(deployment, backups, fleetDeployments) { showingBackups = false }
     }
     if (showingMesh) {
         MeshDialog(deployment, mesh) { showingMesh = false }
@@ -801,6 +901,9 @@ fun ServerScreen(
         AddServiceDialog(
             deployment = deployment,
             canIssueTunnelToken = cloudflare.canIssueTunnelToken,
+            checkMachine = { ids ->
+                (appContext as? com.skaymer.gryonixnexus.app.GryonixApplication)?.checkInstall(deployment, ids).orEmpty()
+            },
             onCancel = { addingService = false },
             onInstall = { ids, mount ->
                 addingService = false
@@ -828,12 +931,16 @@ fun ServerScreen(
         )
     }
     choosingInstall?.let { (services, mount, scripts) ->
-        InstallMethodSheet(
+        val app = appContext as? com.skaymer.gryonixnexus.app.GryonixApplication
+        AddServiceInstallSheet(
+            deployment = deployment,
             services = services,
             scripts = scripts,
-            onDevice = {
+            makeModel = { app?.let { ConfiguratorViewModel(fleet = it.fleet, secrets = it.secrets) } },
+            onInstall = { updated ->
                 choosingInstall = null
-                adding.install(deployment, services, mount)
+                app?.fleet?.update(updated)
+                adding.install(updated, services, mount)
             },
             onCancel = { choosingInstall = null },
         )
@@ -858,6 +965,7 @@ fun ServerScreen(
     }
     RemoveServiceRunDialog(removal)
     ServiceMoveDialogs(moves)
+    alertCard?.let { card -> AlertCardDialog(card) { alertCard = null } }
     logsService?.let { raw ->
         val service = ServiceRegistry.service(ServiceID(raw))
         if (service == null) {
@@ -868,6 +976,80 @@ fun ServerScreen(
     }
     UpdateRunDialog(updates)
     BackupRunDialog(backups)
+
+    val asked = serverBar?.pending
+    var barDialog by remember(deployment.id) { mutableStateOf<ServerBarCommands.Command?>(null) }
+    LaunchedEffect(asked) {
+        if (asked == null) return@LaunchedEffect
+        serverBar.taken()
+        if (asked == ServerBarCommands.Command.SECTIONS) arranging = true else barDialog = asked
+    }
+    val secrets = (androidx.compose.ui.platform.LocalContext.current.applicationContext
+        as com.skaymer.gryonixnexus.app.GryonixApplication).secrets
+    when (barDialog) {
+        ServerBarCommands.Command.CONNECTION ->
+            ServerSettingsDialog(deployment, fleet, secrets, store) { barDialog = null }
+        ServerBarCommands.Command.KEY -> ServerAccessDialog(
+            deployment = deployment,
+            secrets = secrets,
+            onCredentialsChanged = { fleet.reload() },
+            onClose = { barDialog = null },
+        )
+        else -> Unit
+    }
+}
+
+private const val PAGE_AGENT = "agent"
+private const val PAGE_CROWDSEC = "crowdsec"
+private const val PAGE_SSH = "ssh"
+private const val PAGE_LOCKDOWN = "lockdown"
+private const val PAGE_HOST = "host"
+private const val PAGE_MACHINES = "machines"
+private const val PAGE_FILES = "files"
+
+/** "Server 31 %" above the panels; opens the machine's own page */
+@Composable
+private fun ServerMachinesRow(deployment: Deployment, onOpen: () -> Unit) {
+    val app = androidx.compose.ui.platform.LocalContext.current.applicationContext
+        as? com.skaymer.gryonixnexus.app.GryonixApplication
+    val readings = app?.metrics?.card(deployment.id)?.collectAsState()?.value.orEmpty()
+    GroupedSection {
+        deployment.nodes.forEachIndexed { index, node ->
+            val cpu = readings[node.sshHost]?.snapshot?.cpuPercent
+            GroupedRow(
+                onClick = onOpen,
+                showDivider = index != deployment.nodes.lastIndex,
+                trailing = {
+                    Text(
+                        cpu?.let { "${it.roundToInt()}%" } ?: "—",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Gryonix.colors.secondaryLabel,
+                    )
+                    DisclosureChevron()
+                },
+            ) {
+                Text(
+                    if (deployment.isMultiHost) node.name.ifEmpty { node.endpoint.host }
+                    else stringResource(R.string.host_badge_server),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Gryonix.colors.label,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun pageTitle(page: String): String = when (page) {
+    PAGE_CROWDSEC -> "CrowdSec"
+    PAGE_SSH -> stringResource(R.string.security_ssh_title)
+    PAGE_LOCKDOWN -> stringResource(R.string.actions_lockdown)
+    PAGE_HOST -> stringResource(R.string.host_badge_server)
+    PAGE_MACHINES -> stringResource(R.string.agent_servers)
+    PAGE_FILES -> stringResource(R.string.terminal_files)
+    else -> stringResource(R.string.general_agent)
 }
 
 private fun shelves(services: Set<ServiceID>): List<Pair<ServiceCategory, List<ServiceID>>> {
@@ -879,6 +1061,7 @@ private fun shelves(services: Set<ServiceID>): List<Pair<ServiceCategory, List<S
     return byShelf.entries.sortedBy { it.key }.map { it.key to it.value }
 }
 
+/** One category as its own card, folded away by default */
 @Composable
 private fun Shelf(
     category: ServiceCategory,
@@ -887,47 +1070,70 @@ private fun Shelf(
     states: Map<ServiceID, ServiceState>,
     deployment: Deployment,
     services: ServiceControlViewModel,
+    store: SettingsStore,
     onLogs: (ServiceID) -> Unit,
     onRemove: (ServiceID) -> Unit,
     onPlace: (ServiceID, String) -> Unit,
+    extras: (@Composable () -> Unit)?,
 ) {
-    var expanded by rememberSaveable(category.id) { mutableStateOf(true) }
-    Column {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .clickable { expanded = !expanded }
-                .padding(
-                    start = Metrics.listInset + 4.dp,
-                    end = Metrics.listInset + 4.dp,
-                    bottom = 6.dp,
-                ),
-            verticalAlignment = Alignment.CenterVertically,
+    val key = "serviceCategoryExpanded.${deployment.id}.${category.id}"
+    var expanded by remember(key) { mutableStateOf(store.boolean(key) ?: false) }
+    GroupedSection(dividerInset = 46.dp) {
+        GroupedRow(
+            onClick = {
+                expanded = !expanded
+                store.setBoolean(key, expanded)
+            },
+            showDivider = expanded,
+            leading = { Icon(SymbolIcons.of(category.systemImage), null, modifier = Modifier.size(22.dp)) },
+            trailing = {
+                Icon(
+                    if (expanded) Icons.Filled.ExpandMore else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp),
+                )
+            },
         ) {
-            Text(
-                category.title.uppercase(),
-                style = MaterialTheme.typography.bodySmall,
-                color = Gryonix.colors.secondaryLabel,
-                modifier = Modifier.weight(1f),
-            )
-            Icon(
-                if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                contentDescription = null,
-                tint = Gryonix.colors.accent,
-                modifier = Modifier.size(20.dp),
-            )
-        }
-        if (expanded) {
-            GroupedSection(dividerInset = 46.dp) {
-                ids.forEach {
-                    ServiceRow(
-                        it, context, states[it], deployment, services, onLogs, onRemove, onPlace,
-                        showDivider = it != ids.last(),
-                    )
-                }
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                Text(categoryTitle(category), style = MaterialTheme.typography.bodyLarge, color = Gryonix.colors.label,
+                    modifier = Modifier.weight(1f, fill = false))
+                Text("${ids.size}", style = MaterialTheme.typography.bodyLarge, color = Gryonix.colors.secondaryLabel,
+                    modifier = Modifier.padding(start = 8.dp))
             }
         }
+        if (expanded) {
+            ids.forEach {
+                ServiceRow(
+                    it, context, states[it], deployment, services, onLogs, onRemove, onPlace,
+                    showDivider = it != ids.last() || extras != null,
+                )
+            }
+            extras?.invoke()
+        }
     }
+}
+
+@Composable
+internal fun categoryTitle(category: ServiceCategory): String = when (category.id) {
+    "mail" -> stringResource(R.string.category_mail)
+    "passwords" -> stringResource(R.string.category_passwords)
+    "secrets" -> stringResource(R.string.category_secrets)
+    "files" -> stringResource(R.string.category_files)
+    "photos" -> stringResource(R.string.category_photos)
+    "media" -> stringResource(R.string.category_media)
+    "code" -> stringResource(R.string.category_code)
+    "network" -> stringResource(R.string.category_network)
+    "vpn" -> stringResource(R.string.category_vpn)
+    "mesh" -> stringResource(R.string.category_mesh)
+    "dashboard" -> stringResource(R.string.category_dashboard)
+    "sso" -> stringResource(R.string.category_sso)
+    "games" -> stringResource(R.string.category_games)
+    "ai" -> stringResource(R.string.category_ai)
+    "automation" -> stringResource(R.string.category_automation)
+    "smart-home" -> stringResource(R.string.category_smart_home)
+    "remote-access" -> stringResource(R.string.category_remote_access)
+    "audio" -> stringResource(R.string.category_audio)
+    else -> category.title
 }
 
 @Composable
@@ -943,28 +1149,44 @@ private fun ServiceRow(
     showDivider: Boolean = true,
 ) {
     val service = ServiceRegistry.service(id)
+    val title = serviceTitle(service, id, deployment)
     val workers = deployment.nodes.filter { it.runsServices }
     val runsOn = deployment.nodeRunning(id)
+    val openAPI = (androidx.compose.ui.platform.LocalContext.current.applicationContext as? com.skaymer.gryonixnexus.app.GryonixApplication)?.openAPI
+    val offersAccess = openAPI != null && deployment.usesAgent && com.skaymer.gryonixnexus.catalog.ServiceAPIGroups.groups(id).isNotEmpty()
+    var showingAccess by remember(deployment.id, id) { mutableStateOf(false) }
+    if (showingAccess && openAPI != null) {
+        ServiceOpenAPISheet(deployment, id, title, openAPI, onClose = { showingAccess = false })
+    }
+    var expanded by rememberSaveable(deployment.id, id) { mutableStateOf(false) }
     GroupedRow(
-        showDivider = showDivider,
+        showDivider = showDivider || expanded,
+        onClick = { expanded = !expanded },
         leading = { HealthDot(state) },
         trailing = {
-            if (service != null) PowerMenu(
+            if (service != null && workers.size > 1) PowerMenu(
                 busy = state?.isBusy == true,
                 onAction = { services.power(deployment, id, it) },
                 onRefresh = { services.refresh(deployment) },
                 onLogs = { onLogs(id) },
                 onRemove = { onRemove(id) },
+                onAccess = if (offersAccess) ({ showingAccess = true }) else null,
                 workers = if (workers.size > 1) workers else emptyList(),
                 runsOn = runsOn?.id,
                 onPlace = { node -> onPlace(id, node) },
+            )
+            Icon(
+                if (expanded) Icons.Filled.ExpandMore else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
             )
         },
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
-                service?.displayName ?: id.rawValue,
+                title,
                 style = MaterialTheme.typography.bodyLarge,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                 color = Gryonix.colors.label,
             )
             val address = service?.let { ServiceAddress.of(it, context) }
@@ -976,7 +1198,32 @@ private fun ServiceRow(
                 )
             }
             ServiceStatusLine(state)
+            if (id in deployment.homeOnlyServices) HomeBadge()
         }
+    }
+    if (expanded && service != null) {
+        ServiceDetail(
+            service, deployment, services,
+            onLogs = { onLogs(id) },
+            onRemove = { onRemove(id) },
+            onAccess = if (offersAccess) ({ showingAccess = true }) else null,
+        )
+    }
+}
+
+/** A service's given name here, or the catalog one */
+@Composable
+private fun serviceTitle(service: com.skaymer.gryonixnexus.catalog.ManagedService?, id: ServiceID, deployment: Deployment): String {
+    val names = LocalServiceTools.current?.names ?: return service?.displayName ?: id.rawValue
+    val servers by names.servers.collectAsState()
+    return servers[deployment.id]?.get(id.rawValue) ?: service?.displayName ?: id.rawValue
+}
+
+@Composable
+private fun HomeBadge() {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Icon(Icons.Outlined.Home, contentDescription = null, modifier = Modifier.size(14.dp), tint = Gryonix.colors.secondaryLabel)
+        Text(stringResource(R.string.home_only_badge), style = MaterialTheme.typography.bodySmall, color = Gryonix.colors.secondaryLabel)
     }
 }
 
@@ -1024,6 +1271,7 @@ private fun ServiceStatusLine(state: ServiceState?) {
             }
             state.errorMessage?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                RefusalAdvice(it)
             }
         }
     }
@@ -1066,6 +1314,7 @@ private fun PowerMenu(
     onRefresh: () -> Unit,
     onLogs: () -> Unit,
     onRemove: () -> Unit,
+    onAccess: (() -> Unit)?,
     workers: List<DeploymentNode>,
     runsOn: String?,
     onPlace: (String) -> Unit,
@@ -1074,7 +1323,7 @@ private fun PowerMenu(
     var placing by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }, enabled = !busy) {
-            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.service_actions))
+            Icon(Icons.Filled.MoreHoriz, contentDescription = stringResource(R.string.service_actions))
         }
         DropdownMenu(expanded = placing, onDismissRequest = { placing = false }) {
             workers.forEach { node ->
@@ -1110,6 +1359,12 @@ private fun PowerMenu(
                 text = { Text(stringResource(R.string.service_logs)) },
                 onClick = { onLogs(); open = false }
             )
+            if (onAccess != null) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.api_access_row)) },
+                    onClick = { open = false; onAccess() }
+                )
+            }
             if (workers.isNotEmpty()) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.service_runs_on)) },

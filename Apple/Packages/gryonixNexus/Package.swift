@@ -5,7 +5,8 @@ let package = Package(
     name: "gryonixNexus",
     platforms: [
         .iOS(.v17),
-        .macOS(.v14)
+        .macOS(.v14),
+        .tvOS(.v17)
     ],
     products: [
         .library(name: "ServiceCatalog", targets: ["ServiceCatalog"]),
@@ -19,10 +20,15 @@ let package = Package(
         .library(name: "AgentClientSSH", targets: ["AgentClientSSH"]),
         .library(name: "AgentControl", targets: ["AgentControl"]),
         .library(name: "VPNProfile", targets: ["VPNProfile"]),
-        .library(name: "VPNTunnel", targets: ["VPNTunnel"])
+        .library(name: "VPNTunnel", targets: ["VPNTunnel"]),
+        .library(name: "TVLink", targets: ["TVLink"]),
+        .library(name: "AIAssistant", targets: ["AIAssistant"])
     ],
     dependencies: [
         .package(url: "https://github.com/orlandos-nl/Citadel.git", .upToNextMinor(from: "0.12.0")),
+        // Citadel's SSH fork; 0.3.7 stops the window-adjust-after-close trap
+        .package(url: "https://github.com/Wellz26/swift-nio-ssh.git", "0.3.7"..<"0.4.0"),
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.105.0"),
         .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.38.0"),
         .package(url: "https://github.com/apple/swift-crypto.git", from: "3.0.0")
     ],
@@ -33,14 +39,16 @@ let package = Package(
         .target(name: "ServerControl", dependencies: ["ServiceCatalog", "gryonixNexusCore"]),
         .target(name: "ServerControlSSH", dependencies: [
             "ServerControl",
-            .product(name: "Citadel", package: "Citadel")
+            .product(name: "Citadel", package: "Citadel"),
+            .product(name: "NIOSSH", package: "swift-nio-ssh")
         ]),
         .target(name: "AgentClient", dependencies: [
             .product(name: "SwiftProtobuf", package: "swift-protobuf")
         ]),
         .target(name: "AgentClientSSH", dependencies: [
             "AgentClient",
-            .product(name: "Citadel", package: "Citadel")
+            .product(name: "Citadel", package: "Citadel"),
+            .product(name: "NIOSSH", package: "swift-nio-ssh")
         ]),
         .target(name: "AgentControl", dependencies: [
             "AgentClient",
@@ -48,6 +56,8 @@ let package = Package(
             "ServiceCatalog"
         ]),
         .target(name: "VPNProfile", dependencies: ["ServiceCatalog"]),
+        .target(name: "TVLink"),
+        .target(name: "AIAssistant"),
         // Real traffic through Network Extension
         .target(name: "VPNTunnel", dependencies: ["ServiceCatalog", "VPNProfile"],
                 swiftSettings: [.define("GRYONIX_SYSTEM_TUNNEL")]),
@@ -87,6 +97,8 @@ let package = Package(
         .testTarget(name: "ServerControlSSHTests", dependencies: ["ServerControlSSH"]),
         .testTarget(name: "AgentClientTests", dependencies: ["AgentClient"]),
         .testTarget(name: "AgentControlTests", dependencies: ["AgentControl", "ServiceCatalog"]),
+        .testTarget(name: "AIAssistantTests", dependencies: ["AIAssistant"]),
+        .testTarget(name: "TVLinkTests", dependencies: ["TVLink"], resources: [.copy("Resources")]),
         .testTarget(name: "VPNProfileTests", dependencies: ["VPNProfile", "ServiceCatalog"]),
         .testTarget(name: "VPNTunnelTests",
                     dependencies: ["VPNTunnel", "VPNProfile", "ServiceCatalog"],

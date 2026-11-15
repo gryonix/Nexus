@@ -14,7 +14,7 @@ struct WrappingPicker<Selection: Hashable, Content: View>: View {
     }
 
     var body: some View {
-        #if os(macOS)
+        #if os(macOS) || os(tvOS)
         Picker(title, selection: $selection) { content }
         #else
         AdaptiveRow(title) { _ in picker }

@@ -1,5 +1,5 @@
 import Foundation
-#if os(iOS)
+#if os(iOS) || os(tvOS)
 import UIKit
 #else
 import AppKit
@@ -13,7 +13,7 @@ enum SecretPasteboard {
         UIPasteboard.general.setItems(
             [["public.utf8-plain-text": string]],
             options: [.localOnly: true, .expirationDate: Date().addingTimeInterval(lifetime)])
-        #else
+        #elseif os(macOS)
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(string, forType: .string)

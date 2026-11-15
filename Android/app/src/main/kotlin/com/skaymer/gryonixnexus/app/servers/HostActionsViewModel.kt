@@ -1,5 +1,6 @@
 package com.skaymer.gryonixnexus.app.servers
 
+import com.skaymer.gryonixnexus.app.security.SecurityViewModel
 import com.skaymer.gryonixnexus.catalog.ServiceID
 import com.skaymer.gryonixnexus.catalog.ServiceRegistry
 import com.skaymer.gryonixnexus.servercontrol.AdminLockdownManaging
@@ -126,7 +127,20 @@ class HostActionsViewModel(
     // ------------------------------------------------------- Admin lockdown
 
     fun refreshLockdown(deployment: Deployment) {
+        lockdownFor = deployment.id
+        lockdownAt = System.currentTimeMillis()
         readLockdown(deployment) { it.status() }
+    }
+
+    private var lockdownFor: String? = null
+    private var lockdownAt = 0L
+
+    /** Reads the guard again when stale or another server */
+    fun refreshLockdownIfStale(deployment: Deployment, now: Long = System.currentTimeMillis()) {
+        val answered = _state.value.lockdown.value != null
+        val age = if (answered) SecurityViewModel.FRESH_MS else SecurityViewModel.RETRY_MS
+        if (lockdownFor == deployment.id && now - lockdownAt < age) return
+        refreshLockdown(deployment)
     }
 
     fun setLockdown(deployment: Deployment, enabled: Boolean) {
@@ -134,13 +148,16 @@ class HostActionsViewModel(
     }
 
     /** Turns ONE page's guard on or off */
-    fun setLockdown(deployment: Deployment, host: String, guarded: Boolean) {
-        val current = _state.value.lockdown.value ?: return
-        val request = request(deployment, current, host, guarded)
+    fun setLockdown(deployment: Deployment, host: String, guarded: Boolean, clearingDeny: Boolean = false) {
+        val known = _state.value.lockdown.value
+        val refusing = deployment.hostsRefusingVPN
+        val deny = if (refusing.isEmpty() && !clearingDeny) null else refusing
         readLockdown(deployment) { operations ->
+            val request = request(deployment, known ?: operations.status(), host, guarded)
             when (request) {
-                is LockdownRequest.All -> operations.set(true)
-                is LockdownRequest.Only -> operations.set(request.hosts)
+                is LockdownRequest.All ->
+                    if (deny == null) operations.set(true) else operations.set(allHosts(deployment), deny)
+                is LockdownRequest.Only -> operations.set(request.hosts, deny)
             }
         }
     }
@@ -188,6 +205,12 @@ class HostActionsViewModel(
                     LockdownPage(service.id, service.displayName, it.hostname)
                 }
             }
+        }
+
+        /** Every guarded page with its mirrored names */
+        fun allHosts(deployment: Deployment): List<String> {
+            val context = deployment.serviceContext
+            return lockdownPages(deployment).flatMap { listOf(it.host) + context.mirroredHostnames(it.host) }.sorted()
         }
 
         fun order(deployment: Deployment): List<DeploymentNode> = deployment.teardownOrder

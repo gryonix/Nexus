@@ -31,7 +31,9 @@ class ServiceDNSPublisher(
 
     /** Publishes through the saved DNS token, one line per zone */
     suspend fun publish(service: ManagedService, deployment: Deployment): List<String> {
-        if (!deployment.scope.publishesAddressRecords || ServiceID.CLOUDFLARED in deployment.services) {
+        if (!deployment.scope.publishesAddressRecords || ServiceID.CLOUDFLARED in deployment.services ||
+            service.id in deployment.homeOnlyDNSRemoved
+        ) {
             return emptyList()
         }
         val names = hostnames(service, deployment)
@@ -60,7 +62,9 @@ class ServiceDNSPublisher(
 
     /** What adding a service leaves DNS to catch up with */
     suspend fun pendingAdd(service: ManagedService, deployment: Deployment): Pair<Update?, List<String>> {
-        if (!deployment.scope.publishesAddressRecords || ServiceID.CLOUDFLARED in deployment.services) {
+        if (!deployment.scope.publishesAddressRecords || ServiceID.CLOUDFLARED in deployment.services ||
+            service.id in deployment.homeOnlyDNSRemoved
+        ) {
             return null to emptyList()
         }
         val names = hostnames(service, deployment)
@@ -159,7 +163,7 @@ class ServiceDNSPublisher(
         fun hostnames(service: ManagedService, deployment: Deployment): List<String> {
             val context = deployment.serviceContext
             val names = mutableListOf<String>()
-            service.webIngress(context)?.let { names += context.servedHostnames(it.hostname) }
+            service.webIngress(context)?.takeIf { !it.homeOnly }?.let { names += context.servedHostnames(it.hostname) }
             names += service.dnsHostnames(context)
             return names.distinctBy { it.lowercase() }
         }

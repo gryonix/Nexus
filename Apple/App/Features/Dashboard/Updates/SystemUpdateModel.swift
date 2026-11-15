@@ -12,35 +12,56 @@ final class SystemUpdateModel: ObservableObject {
     private let session: () async throws -> any SSHCommandRunner
     private let isDemo: Bool
     private var polling: Task<Void, Never>?
-    private var islands: [SSHHostID: IslandRun] = [:]
 
     private let serverName: String
+    /// Its agent moves the services machine's card
+    private let deployment: Deployment?
 
-    init(isDemo: Bool = false, serverName: String = "",
+    init(isDemo: Bool = false, serverName: String = "", deployment: Deployment? = nil,
          session: @escaping () async throws -> any SSHCommandRunner) {
         self.isDemo = isDemo
         self.serverName = serverName
+        self.deployment = deployment
         self.session = session
     }
 
     deinit { polling?.cancel() }
 
+    static func make(for viewModel: DashboardViewModel) -> SystemUpdateModel {
+        SystemUpdateModel(isDemo: DemoFleet.covers(viewModel.deployment),
+                          serverName: viewModel.deployment.name,
+                          deployment: viewModel.deployment,
+                          session: { [viewModel] in try await viewModel.commandSession() })
+    }
+
     func load(_ hosts: [SSHHostID]) async {
-        for host in hosts { await perform(host) { try await $0.status(on: host) } }
+        for host in hosts {
+            await perform(host) { try await $0.status(on: host) }
+            followIsland(host)
+        }
         pollWhileRunning(hosts)
     }
 
     func start(_ host: SSHHostID, among hosts: [SSHHostID]) async {
-        islands[host] = IslandRun(title: UIL10n.string("Updating the system"), serverName: serverName,
-                                  progressText: UIL10n.string("Starting…"))
+        let agentHost = deployment.flatMap { $0.servicesHost == host && !isDemo ? $0 : nil }
+        SystemUpdateIslands.runs[islandKey(host)] = IslandRun(title: UIL10n.string("Updating the system"), serverName: serverName,
+                                  progressText: UIL10n.string("Starting…"),
+                                  deployment: agentHost, jobID: agentHost == nil ? nil : Self.islandJob)
         await perform(host) { try await $0.start(on: host) }
         followIsland(host)
         pollWhileRunning(hosts)
     }
 
+    /// The job the agent follows by the updater's log
+    static let islandJob = "system-update"
+
+    private func islandKey(_ host: SSHHostID) -> String {
+        "\(deployment?.id.uuidString ?? serverName)|\(host)"
+    }
+
     /// Mirrors one machine's run in its island card
     private func followIsland(_ host: SSHHostID) {
-        guard let island = islands[host] else { return }
+        guard let island = SystemUpdateIslands.runs[islandKey(host)] else { return }
         if let error = errors[host] {
             island.finish("", error: error)
         } else if let status = statuses[host], status.isRunning {
@@ -51,7 +72,7 @@ final class SystemUpdateModel: ObservableObject {
         } else {
             island.finish(UIL10n.string("The system is up to date."))
         }
-        islands[host] = nil
+        SystemUpdateIslands.runs[islandKey(host)] = nil
     }
 
     func setSwap(sizeGB: Int?, host: SSHHostID) async {
@@ -62,6 +83,12 @@ final class SystemUpdateModel: ObservableObject {
         await perform(host) { try await $0.setSchedule(schedule, host: host) }
     }
 
+    func setRebootSchedule(_ schedule: RebootSchedule, host: SSHHostID) async {
+        await perform(host, demoChange: { $0.rebootSchedule = schedule }) {
+            try await $0.setRebootSchedule(schedule, host: host)
+        }
+    }
+
     func setAtStart(_ part: SystemUpdate.Part, on: Bool, host: SSHHostID) async {
         await perform(host) { try await $0.setAtStart(part, on: on, host: host) }
     }
@@ -70,12 +97,14 @@ final class SystemUpdateModel: ObservableObject {
         await perform(host) { try await $0.setAtStop(part, on: on, host: host) }
     }
 
-    private func perform(_ host: SSHHostID,
+    private func perform(_ host: SSHHostID, demoChange: (inout SystemUpdateStatus) -> Void = { _ in },
                          _ work: (SystemUpdateOperations) async throws -> SystemUpdateStatus) async {
         busy.insert(host)
         defer { busy.remove(host) }
         if isDemo {
-            statuses[host] = Self.demo(statuses[host])
+            var demo = Self.demo(statuses[host])
+            demoChange(&demo)
+            statuses[host] = demo
             return
         }
         do {
@@ -98,6 +127,7 @@ final class SystemUpdateModel: ObservableObject {
         status.swapBytes = 2_147_483_648
         status.offersAtStop = true
         status.schedule = previous?.schedule ?? .off
+        status.rebootSchedule = previous?.rebootSchedule ?? .off
         return status
     }
 
@@ -114,4 +144,10 @@ final class SystemUpdateModel: ObservableObject {
             self?.polling = nil
         }
     }
+}
+
+/// Island cards outlive the page that opened them
+@MainActor
+enum SystemUpdateIslands {
+    static var runs: [String: IslandRun] = [:]
 }

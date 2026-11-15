@@ -1,3 +1,4 @@
+#if !os(tvOS)
 #if DEBUG
 import SwiftUI
 import VPNTunnel
@@ -32,7 +33,7 @@ struct WidgetGalleryView: View {
             }
             .id(Anchor.home)
 
-            #if os(iOS)
+            #if os(iOS) || os(tvOS)
             Section {
                 gallery(.accessoryCircular, label: "Circular")
                 gallery(.accessoryRectangular, label: "Rectangular")
@@ -53,7 +54,7 @@ struct WidgetGalleryView: View {
             }
             .id(Anchor.devices)
         }
-        .navigationTitle(Text(verbatim: "Widget gallery"))
+        .screenTitle(Text(verbatim: "Widget gallery"))
         .raisedNavigationTitle()
         .onAppear(perform: reload)
         .task {
@@ -126,7 +127,7 @@ struct WidgetGalleryView: View {
 
     /// Where the content sits in its slot
     private static func alignment(_ family: WidgetFamily) -> Alignment {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         if family == .accessoryCircular { return .center }
         if family == .accessoryInline { return .leading }
         #endif
@@ -134,7 +135,7 @@ struct WidgetGalleryView: View {
     }
 
     private static func isInline(_ family: WidgetFamily) -> Bool {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         return family == .accessoryInline
         #else
         return false
@@ -146,7 +147,7 @@ struct WidgetGalleryView: View {
         switch family {
         case .systemSmall, .systemMedium, .systemLarge: return 12
         default:
-            #if os(iOS)
+            #if os(iOS) || os(tvOS)
             if family == .accessoryInline { return 0 }
             if family == .accessoryCircular { return 4 }
             if family == .accessoryRectangular { return 2 }
@@ -156,7 +157,7 @@ struct WidgetGalleryView: View {
     }
 
     private static func shape(_ family: WidgetFamily) -> AnyShape {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         if family == .accessoryCircular { return AnyShape(Circle()) }
         if family == .accessoryInline { return AnyShape(Capsule()) }
         if family == .accessoryRectangular {
@@ -172,7 +173,7 @@ struct WidgetGalleryView: View {
         case .systemMedium: return CGSize(width: 338, height: 158)
         case .systemLarge: return CGSize(width: 338, height: 354)
         default:
-            #if os(iOS)
+            #if os(iOS) || os(tvOS)
             if family == .accessoryCircular { return CGSize(width: 76, height: 76) }
             if family == .accessoryRectangular { return CGSize(width: 172, height: 76) }
             if family == .accessoryInline { return CGSize(width: 250, height: 26) }
@@ -181,4 +182,5 @@ struct WidgetGalleryView: View {
         }
     }
 }
+#endif
 #endif

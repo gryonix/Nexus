@@ -1,5 +1,7 @@
 package com.skaymer.gryonixnexus.app.storage
 
+import com.skaymer.gryonixnexus.app.servers.DemoDeployments
+import com.skaymer.gryonixnexus.app.servers.DemoHardware
 import com.skaymer.gryonixnexus.R
 import com.skaymer.gryonixnexus.app.notify.OperationNotice
 import com.skaymer.gryonixnexus.app.notify.OperationNotices
@@ -105,8 +107,9 @@ class StorageViewModel(
 
     private suspend fun read(deployment: Deployment, host: SSHHostID) {
         try {
-            val result = control(deployment).run(ServerHardware.PROBE_COMMAND, host, 20.seconds)
-            val hardware = ServerHardware.parse(result.stdout)
+            val output = if (DemoDeployments.isDemoID(deployment.id)) DemoHardware.degradedProbe
+            else control(deployment).run(ServerHardware.PROBE_COMMAND, host, 20.seconds).stdout
+            val hardware = ServerHardware.parse(output)
             _state.value = _state.value.copy(
                 hardware = hardware, isLoading = false,
                 errorMessage = if (hardware == null) "The server did not answer the disk check." else null,

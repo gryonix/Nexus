@@ -37,18 +37,37 @@ struct AdminLockdownRow: View {
 /// Which admin panels answer over the tunnel only
 struct AdminPanelsView: View {
     @ObservedObject var viewModel: DashboardViewModel
+    @State private var apiService: ServiceID?
 
     var body: some View {
         Form {
             guardSection
+            if !apiServices.isEmpty {
+                AllOpenAPISection(model: viewModel.openAPI, services: apiServices)
+            }
             pagesSection
         }
-        .navigationTitle("Restrict admin panels")
-        #if os(iOS)
+        .screenTitle("Restrict admin panels")
+        #if os(iOS) || os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
-        .refreshableWithShortcut { await viewModel.refreshAdminLockdown() }
-        .task { await viewModel.refreshAdminLockdownIfStale() }
+        .navigationDestination(item: $apiService) { id in
+            ServiceOpenAPIView(viewModel: viewModel, model: viewModel.openAPI, service: id,
+                               name: ServiceRegistry.service(id)?.displayName ?? id.rawValue)
+        }
+        .refreshableWithShortcut {
+            await viewModel.refreshAdminLockdown()
+            await viewModel.openAPI.refresh()
+        }
+        .task {
+            await viewModel.refreshAdminLockdownIfStale()
+            if !apiServices.isEmpty { await viewModel.openAPI.refresh() }
+        }
+    }
+
+    /// Services whose apps can be let past the VPN
+    private var apiServices: [ServiceID] {
+        viewModel.offersOpenAPI ? OpenAPIModel.services(in: viewModel.deployment) : []
     }
 
     @ViewBuilder private var guardSection: some View {
@@ -82,6 +101,23 @@ struct AdminPanelsView: View {
     }
 
     private func pageRow(_ page: (id: ServiceID, name: String, host: String)) -> some View {
+        HStack(spacing: 10) {
+            pageToggle(page)
+            if apiServices.contains(page.id) {
+                Button { apiService = page.id } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .frame(width: 24, height: 32)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel(Text("Access without the VPN"))
+            }
+        }
+    }
+
+    private func pageToggle(_ page: (id: ServiceID, name: String, host: String)) -> some View {
         Toggle(isOn: Binding(
             get: { viewModel.adminLockdown.value?.guards(page.host) ?? false },
             set: { wanted in Task { await viewModel.setLockdown(host: page.host, guarded: wanted) } }
@@ -96,5 +132,39 @@ struct AdminPanelsView: View {
             }
         }
         .disabled(viewModel.adminLockdown.value == nil)
+    }
+}
+
+/// One switch for every service's app APIs
+struct AllOpenAPISection: View {
+    @ObservedObject var model: OpenAPIModel
+    let services: [ServiceID]
+
+    var body: some View {
+        Section {
+            Toggle(isOn: Binding(
+                get: { model.allOpen(services: services) == true },
+                set: { wanted in Task { await model.setAll(open: wanted, services: services) } }
+            )) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Label("App APIs without the VPN", systemImage: "app.connected.to.app.below.fill")
+                    if model.allOpen(services: services) == nil, model.sites.value != nil {
+                        Text("Some are open — the arrow next to a service shows which.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .disabled(model.sites.value == nil || !model.busy.isEmpty)
+        } header: {
+            InfoSectionHeader("App APIs", isRefreshing: model.sites.isLoading || !model.busy.isEmpty,
+                              refresh: { await model.refresh() }) {
+                Text("Apps such as Bitwarden, mail and photo backup reach their server without the VPN, and still sign in with their own password. The pages and admin of each site stay behind the VPN.")
+            }
+        } footer: {
+            if let message = model.failure ?? model.sites.errorMessage {
+                Text(verbatim: message)
+            }
+        }
     }
 }

@@ -1,5 +1,6 @@
 import AgentControl
 import ServerControl
+import ServiceCatalog
 import SwiftUI
 
 @available(macOS 15.0, *)
@@ -11,6 +12,7 @@ struct ContainersFleetView: View {
 
     @State private var inspecting: InspectedContainer?
     @State private var busyKey: String?
+    @StateObject private var edits = PendingRowEdits()
     @State private var path = NavigationPath()
     @ObservedObject private var navigator = AppNavigator.shared
 
@@ -40,7 +42,8 @@ struct ContainersFleetView: View {
                 ContainersServerView(deployment: deployment, model: model,
                                      preferences: preferences)
             }
-            .navigationTitle("Containers")
+            .pendingRowEdits(edits)
+            .screenTitle("Containers")
             .sectionToolbar(.containers) {
                 Toggle("Show services this app installed",
                        isOn: $preferences.showsCatalogServices)
@@ -81,7 +84,7 @@ struct ContainersFleetView: View {
             ServerContainersDisclosure(deployment: deployment,
                                        summary: model.summary(for: deployment.id)) {
                 ContainerGroupRows(deployment: deployment, model: model,
-                                   preferences: preferences,
+                                   preferences: preferences, edits: edits,
                                    inspecting: $inspecting, busyKey: $busyKey)
             }
         }
@@ -142,16 +145,24 @@ private struct ContainersServerView: View {
 
     @State private var inspecting: InspectedContainer?
     @State private var busyKey: String?
+    @StateObject private var edits = PendingRowEdits()
+    @State private var tab = DockerTab.containers
 
     var body: some View {
         List {
+            Section { DockerTabPicker(tab: $tab, server: deployment.id.uuidString) }
             Section {
-                ContainerGroupRows(deployment: deployment, model: model,
-                                   preferences: preferences,
-                                   inspecting: $inspecting, busyKey: $busyKey)
+                if tab == .containers {
+                    ContainerGroupRows(deployment: deployment, model: model,
+                                       preferences: preferences, edits: edits,
+                                       inspecting: $inspecting, busyKey: $busyKey)
+                } else {
+                    DockerAssetsRows(deployment: deployment, tab: tab).id(tab)
+                }
             }
         }
-        .navigationTitle(Text(verbatim: deployment.name))
+        .pendingRowEdits(edits)
+        .screenTitle(Text(verbatim: deployment.name))
         .raisedNavigationTitle()
         .refreshableWithShortcut { await model.load([deployment]) }
         .sheet(item: $inspecting) { inspected in
@@ -182,11 +193,10 @@ struct ContainerGroupRows: View {
     let deployment: Deployment
     @ObservedObject var model: ContainersFleetViewModel
     @ObservedObject var preferences: ContainersPreferences
+    let edits: PendingRowEdits
     @Binding var inspecting: InspectedContainer?
     @Binding var busyKey: String?
 
-    @State private var renaming: ContainerGroup?
-    @State private var renameText = ""
     /// Which groups are open
     @State private var expandedKeys: Set<String> = []
     @State private var showingLogs: ContainerGroup?
@@ -274,6 +284,11 @@ struct ContainerGroupRows: View {
         }
     }
 
+    /// A service's given name, unless the group has its own
+    private func title(of group: ContainerGroup) -> String {
+        ServiceOwnNames.shared.title(ofGroup: group, server: deployment.id)
+    }
+
     @ViewBuilder
     private func groupRow(_ group: ContainerGroup) -> some View {
         let isExpanded = expandedKeys.contains(group.key)
@@ -292,7 +307,7 @@ struct ContainerGroupRows: View {
                         .frame(width: 24, alignment: .leading)
                     StatusDot(status: group.status)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(verbatim: group.displayName)
+                        Text(verbatim: title(of: group))
                             .foregroundStyle(.primary)
                         Text(subtitle(for: group))
                             .font(.caption)
@@ -303,7 +318,7 @@ struct ContainerGroupRows: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text(verbatim: group.displayName))
+            .accessibilityLabel(Text(verbatim: title(of: group)))
             .accessibilityHint(isExpanded ? Text("Collapse") : Text("Expand"))
             if busyKey == group.key {
                 ProgressView().controlSize(.small)
@@ -311,26 +326,13 @@ struct ContainerGroupRows: View {
                 actions(for: group)
             }
         }
-        .alert("Rename", isPresented: Binding(
-            get: { renaming?.key == group.key },
-            set: { if !$0 { renaming = nil } }
-        )) {
-            TextField("Name", text: $renameText)
-            Button("Save") {
-                Task { await model.rename(group.key, to: renameText, on: deployment) }
-                renaming = nil
-            }
-            if group.isRenamed {
-                Button("Use the detected name") {
-                    Task { await model.rename(group.key, to: "", on: deployment) }
-                    renaming = nil
-                }
-            }
-            Button("Cancel", role: .cancel) { renaming = nil }
-        } message: {
-            Text("Detected as “\(group.derivedName)”. The name is stored on the server, so your other devices see it too.")
-        }
         if isExpanded {
+            PendingTextRow(id: "group-name-\(group.key)", title: "Name", prompt: group.derivedName,
+                           saved: group.displayName, edits: edits, valid: { _ in true }) { name in
+                await model.rename(group.key, to: name.trimmingCharacters(in: .whitespaces), on: deployment)
+                return true
+            }
+            .padding(.leading, 34)
             ForEach(group.containers) { container in
                 Button {
                     inspecting = InspectedContainer(container: container, deployment: deployment)
@@ -355,12 +357,6 @@ struct ContainerGroupRows: View {
 
     private func actions(for group: ContainerGroup) -> some View {
         Menu {
-            Button {
-                renameText = group.displayName
-                renaming = group
-            } label: {
-                Label("Rename…", systemImage: "pencil")
-            }
             Button { showingLogs = group } label: { Label("Logs", systemImage: "doc.text") }
             Divider()
             Button { act(group, .start) } label: { Label("Start", systemImage: "play") }

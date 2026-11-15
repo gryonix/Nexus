@@ -60,7 +60,7 @@ final class TunnelConfigurationBuilderTests: XCTestCase {
         let configuration = try TunnelConfigurationBuilder.make(from: parsed, name: "test")
 
         XCTAssertEqual(configuration.interface.addresses.map(\.stringRepresentation),
-                       ["10.10.0.2/24"])
+                       ["10.10.0.2/24", "fd10::2/128"])
         XCTAssertEqual(configuration.interface.dns.map(\.stringRepresentation), ["1.1.1.1"])
         XCTAssertEqual(configuration.interface.mtu, 1280)
         XCTAssertEqual(configuration.interface.junkPacketCount, 4)
@@ -75,7 +75,7 @@ final class TunnelConfigurationBuilderTests: XCTestCase {
         let peer = try XCTUnwrap(configuration.peers.first)
         XCTAssertNotNil(peer.preSharedKey, "the panel gives AmneziaWG a PresharedKey")
         XCTAssertEqual(peer.endpoint?.stringRepresentation, "vpn.example.com:51830")
-        XCTAssertEqual(peer.allowedIPs.map(\.stringRepresentation), ["0.0.0.0/0"])
+        XCTAssertEqual(peer.allowedIPs.map(\.stringRepresentation), ["0.0.0.0/0", "::/0"])
         XCTAssertEqual(peer.persistentKeepAlive, "25")
     }
 

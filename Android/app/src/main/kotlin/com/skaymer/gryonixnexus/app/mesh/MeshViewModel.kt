@@ -61,7 +61,7 @@ class MeshViewModel(
 
     /** Mint a join key for a new device */
     fun mintJoinKey(deployment: Deployment) {
-        if (!LicensePrompt.allow()) return
+        if (!LicensePrompt.allow(deployment)) return
         scope.launch {
             _state.value = _state.value.copy(isMinting = true, errorMessage = null, notice = null)
             try {
@@ -159,6 +159,13 @@ class MeshViewModel(
             deployment.usesAgent &&
                 agentTransportAvailable &&
                 deployment.services.contains(ServiceID.HEADSCALE)
+
+        /** Devices are listed in the user's Tailscale account */
+        fun usesTailscaleAccount(deployment: Deployment): Boolean =
+            deployment.services.contains(ServiceID.TAILSCALE_NODE) &&
+                !deployment.services.contains(ServiceID.HEADSCALE)
+
+        const val TAILSCALE_DEVICES_URL = "https://login.tailscale.com/admin/machines"
 
         /** Where a joining device is told to log in */
         fun loginServer(deployment: Deployment): String =

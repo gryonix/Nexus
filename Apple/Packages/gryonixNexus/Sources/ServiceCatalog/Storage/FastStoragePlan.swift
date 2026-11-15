@@ -109,7 +109,7 @@ public struct FastStoragePlan: Sendable, Hashable {
     }
 
     static func bindLine(source: String, target: String) -> String {
-        "grep -qF \" \(target) none bind\" /etc/fstab || echo \"\(source) \(target) none bind,nofail,x-systemd.requires-mounts-for=$FAST 0 0\" >> /etc/fstab"
+        "grep -qF \" \(target) none bind\" /etc/fstab || echo \"\(source) \(target) none bind,nofail,x-systemd.requires-mounts-for=$FAST,x-systemd.after=zfs-mount.service 0 0\" >> /etc/fstab"
     }
 
     private func bindFunction() -> [String] {
@@ -122,7 +122,7 @@ public struct FastStoragePlan: Sendable, Hashable {
             "    echo \"$target already holds data, left in place\"",
             "    return 0",
             "  fi",
-            "  grep -qF \" $target none bind\" /etc/fstab || echo \"$source $target none bind,nofail,x-systemd.requires-mounts-for=$FAST 0 0\" >> /etc/fstab",
+            "  grep -qF \" $target none bind\" /etc/fstab || echo \"$source $target none bind,nofail,x-systemd.requires-mounts-for=$FAST,x-systemd.after=zfs-mount.service 0 0\" >> /etc/fstab",
             "  mount \"$target\"",
             "}",
         ]

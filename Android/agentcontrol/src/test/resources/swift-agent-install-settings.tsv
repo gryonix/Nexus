@@ -51,6 +51,8 @@ minecraft_java_version
 minecraft_java_whitelist	
 nextcloud_hostname	
 nextcloud_path	/opt/nextcloud
+odio_hostname	
+odio_path	/opt/odio
 ollama_path	/opt/ollama
 open_webui_allow_signups	false
 open_webui_hostname	
@@ -75,9 +77,16 @@ seafile_path	/opt/seafile
 searxng_path	/opt/searxng
 shadowsocks_path	/opt/shadowsocks
 shadowsocks_port	8388
+shairport_mode	airplay2
+shairport_name	gryonix
+shairport_options	
+shairport_output	default
+shairport_path	/opt/shairport-sync
+speaker_name	
 tailscale_login_server	
 tailscale_node_name	
 tailscale_node_path	/opt/tailscale
+uxplay_name	gryonix TV
 vaultwarden_allow_signups	false
 vaultwarden_container	vaultwarden
 vaultwarden_data_path	/opt/vaultwarden/data

@@ -12,6 +12,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import java.util.UUID
+import androidx.annotation.RequiresApi
 import kotlin.coroutines.resume
 import kotlinx.coroutines.suspendCancellableCoroutine
 
@@ -22,6 +23,7 @@ class BiometricGate(private val context: Context) : DeviceGate {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) prompt(reason) else credentialScreen(keyguard, reason)
     }
 
+    @RequiresApi(Build.VERSION_CODES.R)
     private suspend fun prompt(reason: String): Boolean = suspendCancellableCoroutine { continuation ->
         val cancellation = CancellationSignal()
         continuation.invokeOnCancellation { cancellation.cancel() }

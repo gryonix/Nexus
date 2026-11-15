@@ -11,3 +11,10 @@ The gryonixNexus app for iPhone, iPad and Mac: one project, one set of sources.
 - `Screenshots/`: the pictures shown in the main README.
 - `AppTests/`, `TunnelExtensionTests/`: unit tests.
 - `project.yml`: the project definition for all targets.
+
+## SSH library
+
+Citadel's swift-nio-ssh fork is required at 0.3.7 or later in
+`Packages/gryonixNexus/Package.swift`. Older releases send a channel window
+adjust after CLOSE, and a terminal closed mid-output then traps in
+`sendChannelWindowAdjust`. `Tools/verify.sh` checks the requirement.

@@ -7,6 +7,8 @@ interface AdminLockdownManaging {
 
     /** Guards only the given vhosts */
     suspend fun set(hosts: List<String>): AdminLockdownState
+
+    suspend fun set(hosts: List<String>, denyVPN: List<String>?): AdminLockdownState = set(hosts)
 }
 
 /** Applies a state that status returned */
@@ -37,4 +39,7 @@ class SSHAdminLockdown(
 
     override suspend fun set(hosts: List<String>): AdminLockdownState =
         operations().setAdminLockdown(hosts, host)
+
+    override suspend fun set(hosts: List<String>, denyVPN: List<String>?): AdminLockdownState =
+        operations().setAdminLockdown(hosts, host, denyVPN)
 }

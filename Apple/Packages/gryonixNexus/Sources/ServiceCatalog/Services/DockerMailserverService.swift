@@ -530,6 +530,7 @@ public struct DockerMailserverService: MailEngineService {
                 plan: .archive(ArchiveBackupPlan(
                     composeProject: Self.composeProject,
                     dataPath: path,
+                    dataPart: .files,
                     databases: [],
                     quiesceServices: ["mailserver", "webmail"],
                     encryptsByDefault: true,

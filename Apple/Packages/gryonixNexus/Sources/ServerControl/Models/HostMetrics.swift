@@ -182,6 +182,11 @@ public struct HostMetricsSnapshot: Sendable, Hashable {
         memTotalBytes > 0 ? Double(memUsedBytes) / Double(memTotalBytes) : 0
     }
 
+    /// Nil when the machine has no swap
+    public var swapUsedFraction: Double? {
+        swapTotalBytes > 0 ? Double(swapUsedBytes) / Double(swapTotalBytes) : nil
+    }
+
     public var diskUsedFraction: Double {
         diskTotalBytes > 0 ? Double(diskUsedBytes) / Double(diskTotalBytes) : 0
     }

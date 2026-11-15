@@ -86,6 +86,39 @@ final class AgentClientUnitTests: XCTestCase {
         XCTAssertEqual(got.services.first?.status, .running)
     }
 
+    func testSystemSettingsDecodeAndSettersSendTheirValues() async throws {
+        var settings = Gryonixnexusd_V1_SystemSettings()
+        settings.timeZone = "Europe/Berlin"
+        settings.hostName = "orion"
+        settings.ntpEnabled = true
+        settings.ntpSynchronized = true
+        settings.timeZones = ["Europe/Berlin", "UTC"]
+        let reply: Data = try settings.serializedBytes()
+        let client = AgentClient(transport: MockTransport(
+            onUnary: { path, request in
+                switch path {
+                case "/gryonixnexusd.v1.Control/SetTimeZone":
+                    XCTAssertEqual(try Gryonixnexusd_V1_SetTimeZoneRequest(serializedBytes: request).timeZone, "UTC")
+                case "/gryonixnexusd.v1.Control/SetHostName":
+                    XCTAssertEqual(try Gryonixnexusd_V1_SetHostNameRequest(serializedBytes: request).hostName, "draco")
+                case "/gryonixnexusd.v1.Control/SetTimeSync":
+                    XCTAssertFalse(try Gryonixnexusd_V1_SetTimeSyncRequest(serializedBytes: request).enabled)
+                default:
+                    XCTAssertEqual(path, "/gryonixnexusd.v1.Control/GetSystemSettings")
+                }
+                return reply
+            },
+            onStream: noStream))
+        let got = try await client.systemSettings()
+        XCTAssertEqual(got.timeZone, "Europe/Berlin")
+        XCTAssertEqual(got.hostName, "orion")
+        XCTAssertTrue(got.ntpEnabled && got.ntpSynchronized)
+        XCTAssertEqual(got.timeZones.count, 2)
+        _ = try await client.setTimeZone("UTC")
+        _ = try await client.setHostName("draco")
+        _ = try await client.setTimeSync(enabled: false)
+    }
+
     func testPairSendsFieldsAndReturnsDevice() async throws {
         var device = Gryonixnexusd_V1_Device()
         device.id = "dev-abc"

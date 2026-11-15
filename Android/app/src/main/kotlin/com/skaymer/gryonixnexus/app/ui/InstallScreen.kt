@@ -139,9 +139,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.setup(
 @Composable
 private fun SectionTitle(text: String) {
     Text(
-        text.uppercase(),
-        style = MaterialTheme.typography.bodySmall,
-        color = Gryonix.colors.secondaryLabel,
+        text,
+        style = MaterialTheme.typography.titleSmall,
+        color = Gryonix.colors.accent,
         modifier = Modifier.padding(
             start = Metrics.listInset + 4.dp,
             end = Metrics.listInset + 4.dp,

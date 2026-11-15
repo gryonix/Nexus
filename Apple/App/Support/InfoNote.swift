@@ -112,8 +112,8 @@ private struct InfoNoteSheet<Content: View>: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(20)
             }
-            .navigationTitle(Text(title))
-            #if os(iOS)
+            .screenTitle(Text(title))
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {

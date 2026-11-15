@@ -58,7 +58,7 @@ fun ServiceLogsDialog(
     DisposableEffect(deployment.id, service.id) { onDispose { logs.close() } }
 
     IOSFullSheet(
-        title = service.displayName,
+        title = serviceTitles(deployment.id)(service),
         onClose = onClose,
         closeLabel = stringResource(R.string.containers_done),
         action = SheetAction(
@@ -68,6 +68,11 @@ fun ServiceLogsDialog(
         ),
     ) {
         Header(state.status, state.errorMessage, state.isLive, logs::reload)
+        if (state.visible.isNotEmpty()) {
+            AiExplainButton(context = {
+                com.skaymer.gryonixnexus.app.ai.AiExplain.service(service.displayName, deployment.name, state.plainText())
+            }, after = onClose)
+        }
         if (state.containers.size > 1) {
             ContainerFilter(state.containers, state.filter, logs::filter)
         }

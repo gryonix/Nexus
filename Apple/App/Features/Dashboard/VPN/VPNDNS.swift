@@ -237,7 +237,7 @@ struct OwnDNSSheet: View {
                     TextField(text: $text, prompt: Text(verbatim: "1.1.1.1, 2606:4700:4700::1111")) {
                         Text("DNS servers")
                     }
-                    #if os(iOS)
+                    #if os(iOS) || os(tvOS)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .keyboardType(.numbersAndPunctuation)
@@ -254,8 +254,8 @@ struct OwnDNSSheet: View {
             .formStyle(.grouped)
             .frame(minWidth: 420, minHeight: 220)
             #endif
-            .navigationTitle("Your own DNS")
-            #if os(iOS)
+            .screenTitle("Your own DNS")
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
@@ -299,8 +299,8 @@ struct PublicDNSInfoView: View {
                     Text("Every device can use its own DNS. A choice here changes only devices added after it.")
                 }
             }
-            .navigationTitle("Public DNS")
-            #if os(iOS)
+            .screenTitle("Public DNS")
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {

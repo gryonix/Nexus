@@ -128,7 +128,7 @@ internal object NftablesConfig {
                 # Restore the mark onto every packet of an already-marked
                 # connection (both directions) so the policy-routing table below
                 # actually sees it — ct mark alone is invisible to `ip rule`.
-                meta mark set ct mark
+                ct mark != 0 meta mark set ct mark
             }
 
             # Every relayed service on this host terminates at a LOCAL
@@ -146,7 +146,7 @@ internal object NftablesConfig {
             chain output {
                 type route hook output priority mangle; policy accept;
                 @MAILMARK@
-                meta mark set ct mark
+                ct mark != 0 meta mark set ct mark
             }
 
             # The mark reroutes a host process after it picked its

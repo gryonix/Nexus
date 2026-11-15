@@ -1,10 +1,10 @@
 package com.skaymer.gryonixnexus.app.ui.design
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,44 +17,38 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** The iPhone's tab bar — the FLOATING one */
+/** Flat bottom navigation bar, edge to edge */
 @Composable
-fun IOSTabBar(content: @Composable RowScope.() -> Unit) {
+fun AppBottomBar(content: @Composable RowScope.() -> Unit) {
     val colors = Gryonix.colors
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .background(colors.groupedBackground)
-            .padding(horizontal = TabBarSideInset, vertical = TabBarFloatInset),
-    ) {
+    Column(Modifier.fillMaxWidth().background(colors.barBackground)) {
+        Separator()
         Row(
-            Modifier
-                .fillMaxWidth()
-                .height(TabBarHeight)
-                .shadow(TabBarShadow, TabBarShape, clip = false)
-                .clip(TabBarShape)
-                .background(colors.barBackground)
-                .border(0.5.dp, colors.separator.copy(alpha = 0.35f), TabBarShape)
-                .padding(horizontal = 4.dp),
+            Modifier.fillMaxWidth().height(BottomBarHeight),
             verticalAlignment = Alignment.CenterVertically,
             content = content,
         )
@@ -62,45 +56,43 @@ fun IOSTabBar(content: @Composable RowScope.() -> Unit) {
     }
 }
 
-/** 56dp, not the 49pt the old bar had */
-val TabBarHeight = 56.dp
+val BottomBarHeight = 64.dp
 
-/** How far the capsule stands in from the screen's edges */
-val TabBarSideInset = 12.dp
-
-/** And off the bottom, above the gesture area */
-val TabBarFloatInset = 8.dp
-
-/** Half the height: a capsule, not a rounded rectangle */
-val TabBarShape = RoundedCornerShape(TabBarHeight / 2)
-
-/** Soft and short */
-val TabBarShadow = 8.dp
-
+/** One destination: icon in a pill when selected, label below */
 @Composable
-fun RowScope.IOSTabItem(
+fun RowScope.BottomBarItem(
     icon: ImageVector,
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
     val colors = Gryonix.colors
-    val tint = if (selected) colors.accent else colors.secondaryLabel
-    val interaction = remember { MutableInteractionSource() }
+    val tint by animateColorAsState(if (selected) colors.accent else colors.secondaryLabel, label = "tint")
+    val pill by animateColorAsState(
+        if (selected) colors.accent.copy(alpha = 0.14f) else Color.Transparent,
+        label = "pill",
+    )
     Column(
         Modifier
             .weight(1f)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
-            .padding(vertical = 4.dp),
+            .height(BottomBarHeight)
+            .clickable(role = Role.Tab, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
+        verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
     ) {
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(26.dp))
+        Box(
+            Modifier.clip(RoundedCornerShape(16.dp)).background(pill)
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+        ) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(24.dp))
+        }
         Text(
             label,
             color = tint,
-            fontSize = 10.sp,
-            lineHeight = 12.sp,
+            fontSize = 11.sp,
+            lineHeight = 16.sp,
+            letterSpacing = 0.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
@@ -108,83 +100,121 @@ fun RowScope.IOSTabItem(
     }
 }
 
-/** A navigation bar in the iPhone's two shapes */
+/** iOS-style top bar: large title, or back and centered title */
 @Composable
-fun IOSNavBar(
+fun AppTopBar(
     title: String,
     modifier: Modifier = Modifier,
-    large: Boolean = false,
     onBack: (() -> Unit)? = null,
-    /** What the bar carries on the right */
+    /** The page scrolled: the large title shrinks to the middle */
+    collapsed: Boolean = false,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
-    val colors = Gryonix.colors
-    Column(modifier.fillMaxWidth().background(colors.barBackground)) {
+    Column(modifier.fillMaxWidth().background(Gryonix.colors.groupedBackground)) {
         Box(Modifier.fillMaxWidth().statusBarsPadding())
-        Row(
-            Modifier.fillMaxWidth().height(if (large) 52.dp else 44.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (onBack != null) {
-                IOSBarButton(onClick = onBack) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = null,
-                        modifier = Modifier.size(28.dp),
-                    )
-                }
-            } else {
-                Box(Modifier.width(Metrics.rowInset))
-            }
-            Text(
-                title,
-                style = if (large) {
-                    MaterialTheme.typography.displaySmall
-                } else {
-                    MaterialTheme.typography.titleMedium
-                },
-                color = colors.label,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = if (large) TextAlign.Start else TextAlign.Center,
-                modifier = Modifier.weight(1f),
-            )
-            CompositionLocalProvider(LocalContentColor provides colors.accent) {
-                Row(
-                    Modifier.padding(end = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                    content = actions,
-                )
-                if (!large && onBack != null) Box(Modifier.width(6.dp))
-            }
+        when {
+            onBack != null -> InlineTitleBar(title, onBack, actions)
+            collapsed -> InlineTitleBar(title, null, actions)
+            else -> LargeTitleBar(title, actions)
         }
     }
 }
 
+/** Says when a scrolled page should shrink its large title */
+class LargeTitleScroll : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+    private var offset by androidx.compose.runtime.mutableFloatStateOf(0f)
+
+    val collapsed: Boolean get() = offset < -COLLAPSE_AFTER
+
+    override fun onPostScroll(
+        consumed: androidx.compose.ui.geometry.Offset,
+        available: androidx.compose.ui.geometry.Offset,
+        source: androidx.compose.ui.input.nestedscroll.NestedScrollSource,
+    ): androidx.compose.ui.geometry.Offset {
+        offset = (offset + consumed.y).coerceAtMost(0f)
+        return androidx.compose.ui.geometry.Offset.Zero
+    }
+
+    fun reset() {
+        offset = 0f
+    }
+
+    private companion object {
+        const val COLLAPSE_AFTER = 80f
+    }
+}
+
+/** A root screen: big bold title on the left */
 @Composable
-fun IOSBarButton(
+private fun LargeTitleBar(title: String, actions: @Composable RowScope.() -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().height(72.dp).padding(start = 20.dp, end = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            title,
+            color = Gryonix.colors.label,
+            fontSize = 32.sp,
+            lineHeight = 38.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, content = actions)
+    }
+}
+
+/** A pushed screen: round back button, title in the middle */
+@Composable
+private fun InlineTitleBar(title: String, onBack: (() -> Unit)?, actions: @Composable RowScope.() -> Unit) {
+    Box(Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 12.dp)) {
+        if (onBack != null) {
+            BarIconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart)) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBackIos, contentDescription = null, modifier = Modifier.size(20.dp).padding(start = 4.dp))
+            }
+        }
+        Text(
+            title,
+            color = Gryonix.colors.label,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.align(Alignment.Center).padding(horizontal = 112.dp),
+        )
+        Row(
+            Modifier.align(Alignment.CenterEnd),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            content = actions,
+        )
+    }
+}
+
+/** A round 44dp top bar button */
+@Composable
+fun BarIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val colors = Gryonix.colors
-    val interaction = remember { MutableInteractionSource() }
-    Box(
-        modifier
+    IconButton(
+        onClick = onClick,
+        modifier = modifier
             .size(44.dp)
-            .clickable(
-                enabled = enabled,
-                interactionSource = interaction,
-                indication = null,
-                onClick = onClick,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        CompositionLocalProvider(
-            LocalContentColor provides if (enabled) colors.accent else colors.tertiaryLabel,
-            content = content,
-        )
-    }
+            .shadow(1.dp, CircleShape, ambientColor = colors.separator, spotColor = colors.separator)
+            .border(0.5.dp, colors.separator.copy(alpha = 0.15f), CircleShape),
+        enabled = enabled,
+        colors = IconButtonDefaults.iconButtonColors(
+            containerColor = colors.cardBackground,
+            contentColor = colors.label,
+            disabledContainerColor = colors.cardBackground,
+            disabledContentColor = colors.tertiaryLabel,
+        ),
+        content = content,
+    )
 }

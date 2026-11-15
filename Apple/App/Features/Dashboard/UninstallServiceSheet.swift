@@ -5,6 +5,7 @@ import SwiftUI
 /// Confirms removing one service from the server
 struct UninstallServiceSheet: View {
     let service: any ManagedService
+    var name: String?
     let alsoRemoved: [String]
     let unguardedPanels: [String]
     let onCancel: () -> Void
@@ -50,8 +51,8 @@ struct UninstallServiceSheet: View {
             #if os(macOS)
             .formStyle(.grouped)
             #endif
-            .navigationTitle("Remove \(service.displayName)?")
-            #if os(iOS)
+            .screenTitle("Remove \(name ?? service.displayName)?")
+            #if os(iOS) || os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {

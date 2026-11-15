@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="tab_servers"
+        android:enabled="true"
+        android:icon="@drawable/tab_icon_logo"
+        android:shortcutShortLabel="@string/tab_servers"
+        android:shortcutLongLabel="@string/tab_servers">
+        <intent
+            android:action="com.skaymer.gryonixnexus.OPEN"
+            android:targetPackage="@string/shortcut_package"
+            android:targetClass="com.skaymer.gryonixnexus.app.MainActivity">
+            <extra android:name="tab" android:value="servers" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="tab_vpn"
+        android:enabled="true"
+        android:icon="@drawable/tab_icon_logo"
+        android:shortcutShortLabel="@string/tab_vpn"
+        android:shortcutLongLabel="@string/tab_vpn">
+        <intent
+            android:action="com.skaymer.gryonixnexus.OPEN"
+            android:targetPackage="@string/shortcut_package"
+            android:targetClass="com.skaymer.gryonixnexus.app.MainActivity">
+            <extra android:name="tab" android:value="vpn" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="tab_terminal"
+        android:enabled="true"
+        android:icon="@drawable/tab_icon_logo"
+        android:shortcutShortLabel="@string/tab_terminal"
+        android:shortcutLongLabel="@string/tab_terminal">
+        <intent
+            android:action="com.skaymer.gryonixnexus.OPEN"
+            android:targetPackage="@string/shortcut_package"
+            android:targetClass="com.skaymer.gryonixnexus.app.MainActivity">
+            <extra android:name="tab" android:value="terminal" />
+        </intent>
+    </shortcut>
+</shortcuts>

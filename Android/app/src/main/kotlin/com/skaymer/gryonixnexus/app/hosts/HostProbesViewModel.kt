@@ -5,6 +5,7 @@ import com.skaymer.gryonixnexus.servercontrol.DeploymentNode
 import com.skaymer.gryonixnexus.servercontrol.DiskMount
 import com.skaymer.gryonixnexus.servercontrol.MemoryUsage
 import com.skaymer.gryonixnexus.servercontrol.SSHHostID
+import com.skaymer.gryonixnexus.servercontrol.ServerControlError
 import com.skaymer.gryonixnexus.servercontrol.WGStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -66,6 +67,8 @@ class HostProbesViewModel(
                         here.copy(wireGuard = wireGuard(deployment, host))
                     } catch (cancelled: CancellationException) {
                         throw cancelled
+                    } catch (denied: ServerControlError.SudoPasswordRequired) {
+                        here
                     } catch (failure: Exception) {
                         here.copy(wireGuardFailed = failure.message ?: "could not read WireGuard")
                     }

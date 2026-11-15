@@ -20,6 +20,8 @@ class LicenseStore(
     private val api: LicenseApi = LicenseApi(),
     private val publicKey: String = LicenseTokens.PRODUCTION_KEY,
     private val clock: () -> Long = { System.currentTimeMillis() / 1000 },
+    /** A side-by-side debug copy */
+    private val devCopy: Boolean = false,
 ) {
     private val _status = MutableStateFlow<LicenseStatus>(LicenseStatus.Demo)
     val status: StateFlow<LicenseStatus> = _status
@@ -34,13 +36,15 @@ class LicenseStore(
         _code.value = secrets.string(CODE)
         val token = storedToken()
         val everActive = secrets.string(EVER_ACTIVE) != null
+        val override = devCopyOverride()
         _status.value = when {
+            override != null -> override
             token != null -> LicenseStatus.Active(token.plan, token.expires)
             everActive -> LicenseStatus.Expired
             else -> LicenseStatus.Demo
         }
         if (token != null) secrets.setString(EVER_ACTIVE, "1")
-        LicenseGate.unlocked = token != null
+        LicenseGate.unlocked = token != null || override != null
         LicenseGate.everActive = everActive || token != null
         LicenseGate.status.value = _status.value
     }
@@ -89,6 +93,9 @@ class LicenseStore(
 
     fun thisDevice(): String = deviceUid()
 
+    /** The signed token an Apple TV checks itself */
+    fun storedTokenText(): String? = secrets.string(TOKEN)
+
     suspend fun devices(): LicenseDeviceList? = _code.value?.let { runCatching { api.devices(it) }.getOrNull() }
 
     suspend fun removeDevice(device: String) {
@@ -108,6 +115,8 @@ class LicenseStore(
         secrets.setString(CODE, grant.code ?: code)
         reload()
     }
+
+    private fun devCopyOverride(): LicenseStatus? = null
 
     private fun storedToken(): LicenseToken? {
         val text = secrets.string(TOKEN) ?: return null

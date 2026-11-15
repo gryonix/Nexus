@@ -20,7 +20,7 @@ struct VPNIslandSettingsView: View {
             }
             Section {
                 Picker("Right side", selection: $settings.vpnIslandStyle.compactDetail) {
-                    ForEach(VPNIslandStyle.CompactDetail.allCases, id: \.self) { detail in
+                    ForEach(VPNIslandStyle.CompactDetail.offered, id: \.self) { detail in
                         Text(detail.title).tag(detail)
                     }
                 }
@@ -51,7 +51,7 @@ struct VPNIslandSettingsView: View {
                 Button("Reset to defaults") { settings.vpnIslandStyle = settings.vpnIslandStyle.islandReset }
             }
         }
-        .navigationTitle("Dynamic Island")
+        .screenTitle("Dynamic Island")
         .navigationBarTitleDisplayMode(.inline)
     }
 

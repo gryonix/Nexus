@@ -136,6 +136,8 @@ class InstallViewModel(
     private val homeAddress: String = "",
     /** Mints the tunnel's connector token and publishes its names */
     private val tunnel: TunnelSetup? = null,
+    /** The saved Tailscale join key */
+    private val tailscaleKey: () -> String? = { null },
 ) {
     fun interface Installing {
         fun install(
@@ -638,17 +640,21 @@ class InstallViewModel(
         val base = AgentInstallSettings.vpnProtocolList(id, deployment.services)?.let { protocols ->
             given.copy(settings = given.settings + (AgentInstallSettings.VPN_PROTOCOLS_KEY to protocols))
         } ?: given
-        val setup = tunnel ?: return base
-        if (id != ServiceID.CLOUDFLARED) return base
+        // Without our own control server, the node joins Tailscale.
+        val joined = tailscaleKey().takeIf {
+            id == ServiceID.TAILSCALE_NODE && ServiceID.HEADSCALE !in deployment.services
+        }?.let { base.copy(settings = base.settings + (AgentInstallSettings.TAILSCALE_AUTH_KEY_KEY to it)) } ?: base
+        val setup = tunnel ?: return joined
+        if (id != ServiceID.CLOUDFLARED) return joined
         return try {
             val token = setup.connectorToken(deployment)
             tunnelConnected = true
-            base.copy(settings = base.settings + (AgentInstallSettings.CLOUDFLARED_TOKEN_KEY to token))
+            joined.copy(settings = joined.settings + (AgentInstallSettings.CLOUDFLARED_TOKEN_KEY to token))
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failure: Exception) {
             appendWarning(failure.message ?: failure::class.simpleName.orEmpty())
-            base
+            joined
         }
     }
 

@@ -8,19 +8,21 @@ struct AppRootView: View {
     @StateObject private var navigator = AppNavigator.shared
     /// Bumped to rebuild the stack at its root
     @State private var stackID = UUID()
-    #if os(iOS)
-    @State private var openScenario: ScenarioOption?
-    #endif
+    /// The open setup, if any
+    @State private var path: [ScenarioOption] = []
 
-    #if os(iOS)
     private func open(scenario id: String) {
         navigator.configuratorScenarioID = nil
-        openScenario = ScenarioOption.all.first { $0.id == id }
+        path = ScenarioOption.all.first { $0.id == id }.map { [$0] } ?? []
     }
-    #endif
+
+    private func resetStack() {
+        path = []
+        stackID = UUID()
+    }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             Group {
                 #if DEBUG
                 if ProcessInfo.processInfo.environment["GRYONIXNEXUS_DEBUG_DKIM"] != nil {
@@ -40,10 +42,11 @@ struct AppRootView: View {
                 #endif
             }
             .sectionToolbar(.configurator)
-            #if os(iOS)
-            .navigationDestination(item: $openScenario) { option in
-                SimpleWizardView(topology: option.topology, scope: option.scope)
+            .navigationDestination(for: ScenarioOption.self) { option in
+                SimpleWizardView(topology: option.topology, scope: option.scope,
+                                 onLeave: { if !path.isEmpty { path.removeLast() } })
             }
+            #if os(iOS) || os(tvOS)
             .onReceive(navigator.$configuratorScenarioID.compactMap { $0 }) { open(scenario: $0) }
             .task { if let id = navigator.configuratorScenarioID { open(scenario: id) } }
             #endif
@@ -53,16 +56,16 @@ struct AppRootView: View {
             #if DEBUG
             InstallResetProbe.note("AppRootView stackID bump — openServerID=\(id)", trace: true)
             #endif
-            stackID = UUID()
+            resetStack()
         }
         .onReceive(navigator.$configuratorResetToken.dropFirst()) { _ in
             #if DEBUG
             InstallResetProbe.note("AppRootView stackID bump — configuratorResetToken", trace: true)
             #endif
-            stackID = UUID()
+            resetStack()
         }
-        #if os(iOS)
-        .popToRootOnReselect(.configurator) { stackID = UUID() }
+        #if os(iOS) || os(tvOS)
+        .popToRootOnReselect(.configurator) { resetStack() }
         #endif
     }
 

@@ -17,7 +17,7 @@ struct LicenseView: View {
             if license.code != nil { LicenseDevicesSection() }
             LicenseDemoSection()
         }
-        .navigationTitle(Text("License"))
+        .screenTitle(Text("License"))
         .task { await license.refreshIfDue() }
     }
 

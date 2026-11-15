@@ -79,7 +79,7 @@ private fun ScopeRow(scope: OnDemandPolicy.Scope, onSelect: (OnDemandPolicy.Scop
 @Composable
 private fun NetworkRows(settings: OnDemandSettings, policy: OnDemandPolicy) {
     val context = LocalContext.current
-    val askLocation = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    val askLocation = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {}
     var draft by rememberSaveable { mutableStateOf("") }
     GroupedRow {
         IOSSegmentedControl(
@@ -118,7 +118,12 @@ private fun NetworkRows(settings: OnDemandSettings, policy: OnDemandPolicy) {
             draft = ""
             val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
                 PackageManager.PERMISSION_GRANTED
-            if (!granted) askLocation.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            // Android 12 ignores a fine request without the coarse one.
+            if (!granted) {
+                askLocation.launch(
+                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                )
+            }
         },
     )
 }

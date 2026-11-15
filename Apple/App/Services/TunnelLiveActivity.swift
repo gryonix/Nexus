@@ -23,6 +23,27 @@ struct NoTunnelActivity: TunnelActivityPresenting {
     func setStopArmed(_ armed: Bool) {}
 }
 
+/// How often the island is redrawn while the app runs
+struct IslandUpdatePace {
+    static let trafficInterval: TimeInterval = 15
+    private var sentStatus: TunnelStatus?
+    private var sentAt: Date?
+
+    mutating func shouldSend(_ status: TunnelStatus, at now: Date = Date()) -> Bool {
+        if status == sentStatus, let sentAt, now.timeIntervalSince(sentAt) < Self.trafficInterval {
+            return false
+        }
+        sentStatus = status
+        sentAt = now
+        return true
+    }
+
+    mutating func reset() {
+        sentStatus = nil
+        sentAt = nil
+    }
+}
+
 @MainActor
 func makeTunnelActivityPresenter() -> any TunnelActivityPresenting {
     #if os(iOS)
@@ -44,6 +65,7 @@ final class TunnelLiveActivity: TunnelActivityPresenting {
     private(set) var isStopArmed = false
     private var lastStatus: TunnelStatus = .off
     private var lastStatistics = TunnelStatistics.zero
+    private var pace = IslandUpdatePace()
 
     func start(profile: TunnelProfile, since: Date, isSimulated: Bool,
                statistics: TunnelStatistics, style: VPNIslandStyle) {
@@ -59,6 +81,7 @@ final class TunnelLiveActivity: TunnelActivityPresenting {
         let state = TunnelActivityAttributes.ContentState(status: .connected(since: since),
                                                           statistics: statistics)
         activity = Self.request(attributes, content: ActivityContent(state: state, staleDate: nil))
+        _ = pace.shouldSend(state.status)
         if let activity, !isSimulated { followPushToken(of: activity, profile: profile, since: since) }
     }
 
@@ -98,7 +121,7 @@ final class TunnelLiveActivity: TunnelActivityPresenting {
     func update(status: TunnelStatus, statistics: TunnelStatistics) {
         lastStatus = status
         lastStatistics = statistics
-        guard let activity else { return }
+        guard let activity, pace.shouldSend(status) else { return }
         let state = TunnelActivityAttributes.ContentState(status: status, statistics: statistics,
                                                           stopArmed: isStopArmed ? true : nil)
         Task { await activity.update(ActivityContent(state: state, staleDate: nil)) }
@@ -117,6 +140,7 @@ final class TunnelLiveActivity: TunnelActivityPresenting {
         tokenWatch = nil
         TunnelActivityTicket.clear()
         isStopArmed = false
+        pace.reset()
         guard let activity else { return }
         self.activity = nil
         let state = TunnelActivityAttributes.ContentState(status: .off, statistics: statistics)

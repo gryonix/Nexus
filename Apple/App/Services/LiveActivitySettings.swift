@@ -54,9 +54,9 @@ final class LiveActivitySettings: ObservableObject {
         showsOperations ? hiddenOperationKinds.map(\.rawValue).sorted() : OperationKind.allCases.map(\.rawValue)
     }
 
-    /// Whether a card of this kind may show
-    func shows(_ kind: OperationKind) -> Bool {
-        showsOperations && !hiddenOperationKinds.contains(kind)
+    /// Whether a card may show; nil: the main switch only
+    func shows(_ kind: OperationKind?) -> Bool {
+        showsOperations && !(kind.map(hiddenOperationKinds.contains) ?? false)
     }
 
     private let defaults: UserDefaults

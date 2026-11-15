@@ -53,7 +53,6 @@ class VPNPanelService : ManagedService {
                 restart: unless-stopped
                 cap_add:
                   - NET_ADMIN
-                  - SYS_MODULE
                 sysctls:
                   - net.ipv4.ip_forward=1
                 env_file:
@@ -167,6 +166,7 @@ class VPNPanelService : ManagedService {
         # so a host matcher inside it narrows which vhosts actually block.
         set -euo pipefail
         GUARD=$ADMIN_GUARD_PATH
+        NOVPN="${SH}GUARD.novpn"
         # Shown to blocked visitors so a locked panel is a clear "denied"
         # page, not an empty-bodied 403 that browsers render as a blank
         # white screen. It names WireGuard specifically: whoever reads this
@@ -176,9 +176,20 @@ class VPNPanelService : ManagedService {
         # ASCII only and no quotes: it rides through a Caddyfile heredoc and
         # lands inside a double-quoted respond argument.
         DENY='Access denied. The admin panels are reachable only over the VPN. Connect to your VPN and try again.'
+        DENY_HOME='Access denied. This site is reachable only from the home network.'
         reload_caddy() { systemctl reload caddy 2>/dev/null || systemctl restart caddy || true; }
         write_guard() {
           hosts="${SH}1"
+          novpn=""
+          if [ -s "${SH}NOVPN" ]; then
+            for n in ${SH}(cat "${SH}NOVPN"); do
+              if [ -z "${SH}hosts" ]; then
+                novpn="${SH}novpn ${SH}n"
+              else
+                case " ${SH}hosts " in *" ${SH}n "*) novpn="${SH}novpn ${SH}n" ;; esac
+              fi
+            done
+          fi
           # Scenario-A hairpin allow-source. VPN clients on the containerised
           # protocols (amneziaWG / OpenVPN / shadowsocks / xray) that open an
           # admin panel served on THIS host's own public IP loop back through
@@ -224,6 +235,13 @@ class VPNPanelService : ManagedService {
               printf '@gryonixnexus_tunnel header Cf-Connecting-IP *\n'
               printf 'respond @gryonixnexus_tunnel "%s" 403\n' "${SH}DENY"
             fi
+            if [ -n "${SH}novpn" ]; then
+              printf '@gryonixnexus_novpn {\n'
+              printf '    host %s\n' "${SH}{novpn# }"
+              printf '    remote_ip 10.8.0.0/24 10.9.0.0/24 10.10.0.0/24 10.11.0.0/24 %s\n' "${SH}selfip"
+              printf '}\n'
+              printf 'respond @gryonixnexus_novpn "%s" 403\n' "${SH}DENY_HOME"
+            fi
           } > "${SH}GUARD"
           reload_caddy
         }
@@ -233,28 +251,36 @@ class VPNPanelService : ManagedService {
             echo on ;;
           only)
             shift
-            [ "${SH}#" -ge 1 ] || { echo "usage: ${SH}0 only host..." >&2; exit 64; }
+            [ "${SH}#" -ge 1 ] || { echo "usage: ${SH}0 only host... [--no-vpn host...]" >&2; exit 64; }
+            list=""
+            deny=""
+            setdeny=0
             for h in "${SH}@"; do
+              if [ "${SH}h" = "--no-vpn" ]; then setdeny=1; continue; fi
               case "${SH}h" in
                 *[!A-Za-z0-9.-]*|"") echo "invalid host: ${SH}h" >&2; exit 64 ;;
               esac
+              if [ "${SH}setdeny" = 1 ]; then deny="${SH}deny ${SH}h"; else list="${SH}list ${SH}h"; fi
             done
-            write_guard "${SH}*"
-            echo "only ${SH}*" ;;
+            [ -n "${SH}list" ] || { echo "usage: ${SH}0 only host... [--no-vpn host...]" >&2; exit 64; }
+            if [ "${SH}setdeny" = 1 ]; then printf '%s' "${SH}{deny# }" > "${SH}NOVPN"; fi
+            write_guard "${SH}{list# }"
+            echo "only ${SH}{list# }" ;;
           off)
             : > "${SH}GUARD"
             reload_caddy
             echo off ;;
           status)
+            body=${SH}(sed '/^@gryonixnexus_novpn/,${SH}d' "${SH}GUARD" 2>/dev/null || true)
             if [ ! -s "${SH}GUARD" ]; then
               echo off
-            elif grep -q 'host ' "${SH}GUARD"; then
-              echo "only ${SH}(grep -m1 'host ' "${SH}GUARD" | sed 's/^ *host //')"
+            elif grep -q 'host ' <<< "${SH}body"; then
+              echo "only ${SH}(grep -m1 'host ' <<< "${SH}body" | sed 's/^ *host //')"
             else
               echo on
             fi ;;
           *)
-            echo "usage: ${SH}0 on|off|only host...|status" >&2; exit 64 ;;
+            echo "usage: ${SH}0 on|off|only host... [--no-vpn host...]|status" >&2; exit 64 ;;
         esac
         EOF_VPNPANEL_LOCKDOWN
         chmod 750 $LOCKDOWN_SCRIPT_PATH

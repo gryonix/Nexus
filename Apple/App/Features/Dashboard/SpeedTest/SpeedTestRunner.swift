@@ -24,13 +24,16 @@ extension SpeedTestViewModel {
         #endif
         let step = StorageStep(title: UIL10n.string("Speed test"), script: script, doneMarker: SpeedTest.doneMarker)
         guard root else {
-            let runner = try await DashboardSessionFactory.makeRunnerDetached(deployment: deployment)
-            return try await StoragePreparation.output(of: step, runner: runner, host: host, elevated: false)
+            let runner = try await ownRunner()
+            defer { Task { await runner.disconnect() } }
+            return try await StoragePreparation.detachedOutput(of: step, runner: runner, host: host, elevated: false)
         }
         if InstallAddressStore.installUser(deploymentID: deployment.id, host: host) == nil || deployment.usesAgent {
-            let runner = try await DashboardSessionFactory.makeRunnerDetached(deployment: deployment)
+            let runner = try await ownRunner()
+            defer { Task { await runner.disconnect() } }
             let account = deployment.nodes.first(where: { $0.sshHost == host })?.endpoint.user ?? deployment.entry.user
-            return try await StoragePreparation.output(of: step, runner: runner, host: host, elevated: account != "root")
+            return try await StoragePreparation.detachedOutput(of: step, runner: runner, host: host,
+                                                               elevated: account != "root")
         }
         let username = InstallAddressStore.installUser(deploymentID: deployment.id, host: host) ?? "root"
         let slot = host
@@ -43,6 +46,12 @@ extension SpeedTestViewModel {
             deployment: deployment, address: endpoint.host, port: endpoint.port,
             username: username, pinSlot: host, secret: secret)
         defer { Task { await runner.disconnect() } }
-        return try await StoragePreparation.output(of: step, runner: runner, elevated: username != "root")
+        return try await StoragePreparation.detachedOutput(of: step, runner: runner, host: .vps,
+                                                           elevated: username != "root")
+    }
+
+    /// A connection no other screen hangs up
+    private func ownRunner() async throws -> any SSHCommandRunner & RemoteFileBrowser {
+        try await DashboardSessionFactory.makeRunnerDetached(deployment: deployment, shared: false)
     }
 }

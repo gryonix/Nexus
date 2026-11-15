@@ -1,5 +1,7 @@
 package com.skaymer.gryonixnexus.app.ui
 
+import com.skaymer.gryonixnexus.app.servers.PendingRules
+import com.skaymer.gryonixnexus.app.ui.design.ApplyPendingBar
 import com.skaymer.gryonixnexus.app.ui.design.RunLog
 import com.skaymer.gryonixnexus.app.ui.design.RunProgressRow
 import androidx.compose.foundation.layout.Arrangement
@@ -21,7 +23,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ListAlt
+import androidx.compose.material.icons.outlined.ArrowCircleDown
+import androidx.compose.material.icons.outlined.Memory
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Sync
+import androidx.compose.material.icons.outlined.SystemUpdate
+import androidx.compose.material3.Icon
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -33,15 +46,17 @@ import com.skaymer.gryonixnexus.app.ui.design.Gryonix
 import com.skaymer.gryonixnexus.app.ui.design.IOSSegmentedControl
 import com.skaymer.gryonixnexus.app.ui.design.IOSSheet
 import com.skaymer.gryonixnexus.app.ui.design.PlainButton
-import com.skaymer.gryonixnexus.app.ui.design.SheetAction
 import com.skaymer.gryonixnexus.app.ui.design.StepperRow
 import com.skaymer.gryonixnexus.app.ui.design.ToggleRow
+import com.skaymer.gryonixnexus.app.ui.design.ValueRow
 import androidx.compose.ui.text.style.TextAlign
 import com.skaymer.gryonixnexus.app.ui.design.AlertAction
 import com.skaymer.gryonixnexus.app.ui.design.IOSAlert
 import com.skaymer.gryonixnexus.R
 import com.skaymer.gryonixnexus.app.ui.design.DisclosureChevron
 import com.skaymer.gryonixnexus.app.ui.design.RowLabel
+import com.skaymer.gryonixnexus.app.agent.AgentSelfUpdateViewModel
+import com.skaymer.gryonixnexus.app.servers.BackupPartsModel
 import com.skaymer.gryonixnexus.app.servers.UpdatesViewModel
 import com.skaymer.gryonixnexus.catalog.ServiceID
 import com.skaymer.gryonixnexus.catalog.ServiceRegistry
@@ -67,11 +82,10 @@ fun UpdatesCard(
     GroupedRow(
         showDivider = showDivider,
         onClick = onOpen,
+        leading = { HubIcon(Icons.Outlined.ArrowCircleDown) },
         trailing = {
             Text(
-                if (waiting > 0) stringResource(R.string.updates_waiting, waiting)
-                else if (state.hasLoadedSchedule) state.schedule.schedule.sentence()
-                else "",
+                if (waiting > 0) stringResource(R.string.updates_waiting, waiting) else "",
                 style = MaterialTheme.typography.bodyLarge,
                 color = if (waiting > 0) Gryonix.colors.accent else Gryonix.colors.secondaryLabel,
             )
@@ -82,56 +96,157 @@ fun UpdatesCard(
     }
 }
 
+/** A hub row's icon, in the label colour by default */
+@Composable
+fun HubIcon(icon: ImageVector, tint: Color = Gryonix.colors.label) {
+    Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp), tint = tint)
+}
+
 @Composable
 fun UpdatesDialog(
     deployment: Deployment,
     updates: UpdatesViewModel,
+    onSystemUpdate: (() -> Unit)? = null,
+    parts: BackupPartsModel? = null,
+    agentSelfUpdate: AgentSelfUpdateViewModel? = null,
     onClose: () -> Unit,
 ) {
     val state by updates.state.collectAsState()
-    LaunchedEffect(deployment.id) { updates.load(deployment) }
-
-    val updatable = remember(deployment) { UpdatesViewModel.updatableServices(deployment) }
+    LaunchedEffect(deployment.id) {
+        updates.load(deployment)
+        if (updates.state.value.reports.isEmpty()) updates.check(deployment)
+    }
+    var page by remember(deployment.id) { mutableStateOf<UpdatesPage?>(null) }
     val drawn = UpdatesViewModel.rows(deployment, state.reports)
-    var draft by remember(state.schedule) { mutableStateOf(state.schedule) }
+    val waiting = drawn.filter { state.reports[it] is ServiceUpdateStatus.Available }
 
-    IOSSheet(
-        title = stringResource(R.string.updates),
-        onClose = onClose,
-        closeLabel = stringResource(R.string.close),
-        action = SheetAction(
-            title = stringResource(R.string.updates_save),
-            enabled = !state.isSaving && !(draft.isOn && draft.services.isEmpty()),
-            onSelect = { updates.save(deployment, draft) },
-        ),
-    ) {
-        GroupedSection(footer = state.errorMessage) {
-            ActionRow(
-                text = stringResource(
-                    if (state.checking) R.string.updates_checking else R.string.updates_check
-                ),
-                enabled = !state.checking,
-                onClick = { updates.check(deployment) },
-                showDivider = false,
-                leading = if (!state.checking) {
-                    null
+    IOSSheet(title = stringResource(R.string.updates), onClose = onClose, closeLabel = stringResource(R.string.close)) {
+        UpdateNumbers(
+            waiting = waiting.size,
+            current = drawn.count { state.reports[it] is ServiceUpdateStatus.Current },
+            checked = state.reports.isNotEmpty(),
+            checking = state.checking,
+            lastRun = state.runLog.lastRun?.let { formatter.format(it) },
+            error = state.errorMessage,
+        )
+        UpdateActions(
+            checking = state.checking,
+            waiting = waiting.size,
+            onAll = { page = UpdatesPage.SERVICES },
+            onCheck = { updates.check(deployment) },
+            onUpdateAll = { waiting.forEach { updates.run(deployment, it) } },
+        )
+        UpdateSettings(
+            deployment, state.schedule, parts,
+            onOpen = { page = it },
+            onSystemUpdate = onSystemUpdate,
+            hasAgentPage = agentSelfUpdate != null && deployment.usesAgent,
+        )
+    }
+    when (page) {
+        UpdatesPage.SERVICES -> UpdateServicesSheet(deployment, updates) { page = null }
+        UpdatesPage.SCHEDULE -> UpdateScheduleSheet(deployment, updates) { page = null }
+        UpdatesPage.PARTS -> parts?.let {
+            BackupPartsSheet(deployment, it, BackupPartsScope.BEFORE_UPDATE) { page = null }
+        }
+        UpdatesPage.AGENT -> agentSelfUpdate?.let { AgentUpdatesSheet(deployment, it) { page = null } }
+        null -> Unit
+    }
+}
+
+/** Pages the updates hub opens */
+private enum class UpdatesPage { SERVICES, SCHEDULE, PARTS, AGENT }
+
+@Composable
+private fun UpdateActions(
+    checking: Boolean,
+    waiting: Int,
+    onAll: () -> Unit,
+    onCheck: () -> Unit,
+    onUpdateAll: () -> Unit,
+) {
+    val accent = Gryonix.colors.accent
+    GroupedSection {
+        ValueRow(
+            title = stringResource(R.string.backups_all_services),
+            value = null,
+            onClick = onAll,
+            leading = { HubIcon(Icons.AutoMirrored.Outlined.ListAlt, accent) },
+        )
+        ActionRow(
+            text = stringResource(if (checking) R.string.updates_checking else R.string.updates_check),
+            enabled = !checking,
+            onClick = onCheck,
+            showDivider = waiting > 0,
+            leading = {
+                if (checking) {
+                    CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = Gryonix.colors.tertiaryLabel)
                 } else {
-                    {
-                        CircularProgressIndicator(
-                            Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = Gryonix.colors.tertiaryLabel,
-                        )
-                    }
-                },
+                    HubIcon(Icons.Outlined.Sync, accent)
+                }
+            },
+        )
+        if (waiting > 0) {
+            ActionRow(
+                text = stringResource(R.string.updates_all, waiting),
+                onClick = onUpdateAll,
+                showDivider = false,
+                leading = { HubIcon(Icons.Outlined.ArrowCircleDown, accent) },
             )
         }
+    }
+}
 
+@Composable
+private fun UpdateSettings(
+    deployment: Deployment,
+    schedule: AutoUpdateSettings,
+    parts: BackupPartsModel?,
+    onOpen: (UpdatesPage) -> Unit,
+    onSystemUpdate: (() -> Unit)?,
+    hasAgentPage: Boolean,
+) {
+    val accent = Gryonix.colors.accent
+    GroupedSection {
+        ValueRow(
+            title = stringResource(R.string.updates_scheduled),
+            value = schedule.schedule.sentence(),
+            onClick = { onOpen(UpdatesPage.SCHEDULE) },
+            leading = { HubIcon(Icons.Outlined.Schedule, accent) },
+        )
+        parts?.let { BeforeUpdateRow(deployment, it) { onOpen(UpdatesPage.PARTS) } }
+        onSystemUpdate?.let { open ->
+            ValueRow(
+                title = stringResource(R.string.general_system),
+                value = null,
+                onClick = open,
+                showDivider = hasAgentPage,
+                leading = { HubIcon(Icons.Outlined.SystemUpdate, accent) },
+            )
+        }
+        if (hasAgentPage) {
+            ValueRow(
+                title = stringResource(R.string.agent_auto_update_header),
+                value = null,
+                onClick = { onOpen(UpdatesPage.AGENT) },
+                showDivider = false,
+                leading = { HubIcon(Icons.Outlined.Memory, accent) },
+            )
+        }
+    }
+}
+
+/** Every service and where its update stands */
+@Composable
+private fun UpdateServicesSheet(deployment: Deployment, updates: UpdatesViewModel, onClose: () -> Unit) {
+    val state by updates.state.collectAsState()
+    val drawn = UpdatesViewModel.rows(deployment, state.reports)
+    IOSSheet(title = stringResource(R.string.backups_all_services), onClose = onClose, closeLabel = stringResource(R.string.close)) {
         if (drawn.isNotEmpty()) {
             GroupedSection {
                 drawn.forEach { id ->
                     StatusRow(
-                        name = ServiceRegistry.service(id)?.displayName ?: id.rawValue,
+                        name = ServiceRegistry.service(id)?.let(serviceTitles(deployment.id)) ?: id.rawValue,
                         status = state.reports[id],
                         lastRun = state.runLog.records.lastOrNull { it.service == id }?.outcome,
                         onUpdate = { updates.run(deployment, id) },
@@ -140,14 +255,78 @@ fun UpdatesDialog(
                 }
             }
         }
-
         LastRun(state.runLog.lastRun?.let { formatter.format(it) })
+    }
+}
 
+/** The server's update timer, saved on its own page */
+@Composable
+private fun UpdateScheduleSheet(deployment: Deployment, updates: UpdatesViewModel, onClose: () -> Unit) {
+    val state by updates.state.collectAsState()
+    val updatable = remember(deployment) { UpdatesViewModel.updatableServices(deployment) }
+    var draft by remember(state.schedule) { mutableStateOf(state.schedule) }
+    IOSSheet(
+        title = stringResource(R.string.updates_scheduled),
+        onClose = onClose,
+        closeLabel = stringResource(R.string.close),
+        bottomBar = {
+            ApplyPendingBar(
+                visible = PendingRules.waits(
+                    draft, state.schedule,
+                    valid = !(draft.isOn && draft.services.isEmpty()), busy = state.isSaving,
+                ),
+                apply = stringResource(R.string.updates_save),
+                cancel = stringResource(R.string.pending_changes_cancel),
+                onApply = { updates.save(deployment, draft) },
+                onRevert = { draft = state.schedule },
+            )
+        },
+    ) {
         ScheduleEditor(
             draft = draft,
-            services = updatable.map { it.id to it.displayName },
+            services = serviceTitles(deployment.id).let { title -> updatable.map { it.id to title(it) } },
             onChange = { draft = it },
         )
+    }
+}
+
+/** The agent's own updates */
+@Composable
+private fun AgentUpdatesSheet(deployment: Deployment, selfUpdate: AgentSelfUpdateViewModel, onClose: () -> Unit) {
+    LaunchedEffect(deployment.id) { selfUpdate.load(deployment) }
+    IOSSheet(title = stringResource(R.string.agent_auto_update_header), onClose = onClose, closeLabel = stringResource(R.string.close)) {
+        AgentSelfUpdateCard(deployment, selfUpdate)
+    }
+}
+
+/** Services waiting, services current, the last run */
+@Composable
+private fun BeforeUpdateRow(deployment: Deployment, parts: BackupPartsModel, onOpen: () -> Unit) {
+    val screen by parts.state.collectAsState()
+    LaunchedEffect(deployment.id) { parts.load(deployment) }
+    ValueRow(
+        title = stringResource(R.string.backup_parts_before_update),
+        value = backupPartsSummary(screen.parts.choice.beforeUpdate),
+        onClick = onOpen,
+        leading = { HubIcon(Icons.Outlined.Storage, Gryonix.colors.accent) },
+    )
+}
+
+@Composable
+private fun UpdateNumbers(waiting: Int, current: Int, checked: Boolean, checking: Boolean, lastRun: String?, error: String?) {
+    val colors = Gryonix.colors
+    GroupedSection(footer = error) {
+        when {
+            checked -> {
+                ValueRow(stringResource(R.string.updates_waiting_title), waiting.toString(), onClick = null,
+                    valueColor = if (waiting > 0) colors.warning else colors.secondaryLabel)
+                ValueRow(stringResource(R.string.updates_current), current.toString(), onClick = null,
+                    showDivider = lastRun != null)
+            }
+            checking -> ValueRow(stringResource(R.string.updates_checking), null, onClick = null, showDivider = lastRun != null)
+            else -> ValueRow(stringResource(R.string.updates_unchecked), null, onClick = null, showDivider = lastRun != null)
+        }
+        lastRun?.let { ValueRow(stringResource(R.string.updates_last_scheduled_run), it, onClick = null, showDivider = false) }
     }
 }
 
@@ -328,6 +507,7 @@ fun UpdateRunDialog(updates: UpdatesViewModel) {
                     textAlign = TextAlign.Center,
                 )
             }
+            AiExplainFailure(stringResource(R.string.updates_failed, run.errorMessage.orEmpty()), run.errorMessage, run.log)
             RunLog(run.log)
         }
     }

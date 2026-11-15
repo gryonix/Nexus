@@ -1,5 +1,6 @@
 package com.skaymer.gryonixnexus.app.ui
 
+import android.content.Context
 import android.text.format.DateUtils
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -18,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.skaymer.gryonixnexus.R
@@ -58,8 +60,9 @@ private fun ProblemRow(state: AllBackupsState) {
 
 /** Backup counts and sizes of this server */
 @Composable
-fun BackupNumbers(state: AllBackupsState, onOpenAll: () -> Unit) {
+fun BackupNumbers(state: AllBackupsState) {
     val colors = Gryonix.colors
+    val context = LocalContext.current
     val totals = BackupOverview.totals(state.rows)
     GroupedSection {
         if (state.rows.isEmpty()) {
@@ -82,24 +85,18 @@ fun BackupNumbers(state: AllBackupsState, onOpenAll: () -> Unit) {
                 onClick = null,
             )
             totals.newestMillis?.let {
-                ValueRow(stringResource(R.string.backups_last), dateText(it), onClick = null)
+                ValueRow(stringResource(R.string.backups_last), dateText(context, it), onClick = null,
+                    showDivider = state.failure != null)
             }
         }
         ProblemRow(state)
     }
-    GroupedSection {
-        ValueRow(
-            title = stringResource(R.string.backups_all),
-            value = null,
-            onClick = onOpenAll,
-            showDivider = false,
-        )
-    }
 }
 
-private fun dateText(millis: Long): String =
+internal fun dateText(context: Context, millis: Long): String =
     DateUtils.formatDateTime(
-        null, millis, DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME or DateUtils.FORMAT_ABBREV_MONTH,
+        context, millis, DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME or DateUtils.FORMAT_SHOW_YEAR or
+            DateUtils.FORMAT_ABBREV_MONTH,
     )
 
 /** Every backup of this server and its drives, newest first */
@@ -278,12 +275,18 @@ internal fun deletionMessage(entries: List<BackupEntry>): String {
 }
 
 @Composable
-private fun rowDetail(row: FleetBackup): String = listOfNotNull(
+private fun rowDetail(row: FleetBackup): String {
+    val context = LocalContext.current
+    return rowDetailText(row, row.entry.modifiedAtMillis?.let { dateText(context, it) } ?: row.entry.dateText)
+}
+
+@Composable
+private fun rowDetailText(row: FleetBackup, date: String): String = listOfNotNull(
     row.serviceName,
     stringResource(
         R.string.backups_entry_detail,
         row.entry.sizeText,
-        row.entry.modifiedAtMillis?.let(::dateText) ?: row.entry.dateText,
+        date,
     ),
     row.entry.drive?.let { stringResource(R.string.drive_copy_on, it) },
 ).joinToString(" · ")

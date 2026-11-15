@@ -10,6 +10,7 @@ import com.skaymer.gryonixnexus.servercontrol.DeploymentNode
 import com.skaymer.gryonixnexus.servercontrol.SSHCommandRunner
 import com.skaymer.gryonixnexus.servercontrol.StatusOperations
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +29,8 @@ class WakeOnLANViewModel(
     private val agentReading: suspend (Deployment) -> WakeOnLANInfo? = { null },
     /** Swapped in tests — a real send touches the network */
     private val sendFromPhone: (ByteArray, String, Int) -> Boolean = MagicPacketSender::send,
+    /** Where the phone's own send runs, off the main thread */
+    private val network: CoroutineDispatcher = Dispatchers.IO,
 ) {
     data class State(
         val isWorking: Boolean = false,
@@ -115,7 +118,8 @@ class WakeOnLANViewModel(
             return Note.Sent(peer.endpoint.host)
         }
         val packet = WakeOnLAN.magicPacket(normalised) ?: return Note.NoMACYet
-        return if (sendFromPhone(packet, broadcast, WakeOnLAN.PORT)) {
+        val sent = withContext(network) { sendFromPhone(packet, broadcast, WakeOnLAN.PORT) }
+        return if (sent) {
             Note.SentFromPhone(broadcast)
         } else {
             Note.ThePhoneCouldNotSend

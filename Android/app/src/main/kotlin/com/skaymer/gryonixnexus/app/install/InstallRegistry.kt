@@ -24,6 +24,8 @@ class InstallRegistry(
         val context: (Deployment) -> AgentInstallContext,
         val persistUsesAgent: (Deployment) -> Unit,
         val tunnel: TunnelSetup? = null,
+        /** The saved Tailscale join key */
+        val tailscaleKey: () -> String? = { null },
     )
 
     private class Entry(val deploymentID: String, val fingerprint: Int, val model: InstallViewModel)
@@ -61,6 +63,7 @@ class InstallRegistry(
             persistUsesAgent = agent?.persistUsesAgent ?: {},
             homeAddress = homeAddress,
             tunnel = agent?.tunnel,
+            tailscaleKey = agent?.tailscaleKey ?: { null },
         )
         current = Entry(deployment.id, fingerprint, model)
         return model

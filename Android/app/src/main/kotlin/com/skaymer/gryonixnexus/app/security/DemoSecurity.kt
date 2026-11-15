@@ -4,6 +4,8 @@ import com.skaymer.gryonixnexus.app.servers.DemoDeployments
 import com.skaymer.gryonixnexus.servercontrol.Deployment
 import com.skaymer.gryonixnexus.servercontrol.HostSecurityStatus
 import com.skaymer.gryonixnexus.servercontrol.SshPasswordAccess
+import com.skaymer.gryonixnexus.servercontrol.SshUserAccess
+import com.skaymer.gryonixnexus.servercontrol.SshUsers
 
 /** Invented protection for the demo fleet */
 object DemoSecurity {
@@ -45,5 +47,42 @@ object DemoSecurity {
             loginUser = deployment.entry.user,
             detail = "",
         )
+    }
+
+    /** Accounts that refuse passwords, per demo server */
+    private val keyOnly = java.util.concurrent.ConcurrentHashMap<String, Set<String>>()
+
+    private val hostOpen = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+
+    private fun accounts(deployment: Deployment): List<String> = listOf(deployment.entry.user, "root", "backup")
+
+    /** Three invented accounts, one without a key */
+    fun sshUsers(deployment: Deployment): SshUsers? {
+        if (!DemoDeployments.isDemoID(deployment.id)) return null
+        val login = deployment.entry.user
+        val closed = keyOnly.getOrPut(deployment.id) { setOf(login) }
+        val host = sshAccess(deployment)!!.copy(passwordLoginOpen = hostOpen[deployment.id] ?: false)
+        return SshUsers(
+            users = accounts(deployment).map { name ->
+                SshUserAccess(
+                    name = name,
+                    passwordLoginOpen = name !in closed,
+                    isKnown = true,
+                    hasKeys = name != "backup",
+                    appKeyPresent = name == login,
+                    isLoginUser = name == login,
+                )
+            },
+            host = host,
+            detail = "",
+            isKnown = true,
+        )
+    }
+
+    fun setKeyOnlyUsers(deployment: Deployment, everyone: Boolean, users: List<String>): SshUsers? {
+        if (!DemoDeployments.isDemoID(deployment.id)) return null
+        keyOnly[deployment.id] = if (everyone) accounts(deployment).toSet() else users.toSet()
+        hostOpen[deployment.id] = !everyone
+        return sshUsers(deployment)
     }
 }

@@ -11,6 +11,354 @@
       "extractionState" : "extracted_with_value",
       "shouldTranslate" : false
     },
+    "NSBluetoothAlwaysUsageDescription" : {
+      "comment" : "Privacy - Bluetooth Always Usage Description",
+      "extractionState" : "manual",
+      "localizations" : {
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus използва Bluetooth, за да прехвърля сървъри между вашите устройства, когато не са в една Wi-Fi мрежа."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus používá Bluetooth k přesunu serverů mezi vašimi zařízeními, když nejsou ve stejné Wi-Fi."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus bruger Bluetooth til at flytte servere mellem dine enheder, når de ikke er på samme Wi-Fi."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus nutzt Bluetooth, um Server zwischen deinen Geräten zu übertragen, wenn sie nicht im selben WLAN sind."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το gryonixNexus χρησιμοποιεί Bluetooth για να μεταφέρει διακομιστές μεταξύ των συσκευών σας όταν δεν είναι στο ίδιο Wi-Fi."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus uses Bluetooth to move servers between your devices when they are not on the same Wi-Fi."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus usa Bluetooth para mover servidores entre tus dispositivos cuando no están en la misma Wi-Fi."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus kasutab Bluetoothi, et viia servereid sinu seadmete vahel, kui need pole samas Wi-Fi-võrgus."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus käyttää Bluetoothia siirtääkseen palvelimia laitteidesi välillä, kun ne eivät ole samassa Wi-Fi-verkossa."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus utilise le Bluetooth pour transférer des serveurs entre tes appareils quand ils ne sont pas sur le même Wi-Fi."
+          }
+        },
+        "ga" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Úsáideann gryonixNexus Bluetooth chun freastalaithe a aistriú idir do ghléasanna nuair nach bhfuil siad ar an Wi-Fi céanna."
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus koristi Bluetooth za premještanje poslužitelja između vaših uređaja kad nisu na istoj Wi-Fi mreži."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A gryonixNexus Bluetooth-t használ a szerverek áthelyezéséhez az eszközei között, ha nem ugyanazon a Wi-Fi-n vannak."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus usa il Bluetooth per spostare i server tra i tuoi dispositivi quando non sono sulla stessa Wi-Fi."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexusは、デバイスが同じWi-Fiにないときに、デバイス間でサーバーを移すためにBluetoothを使用します。"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„gryonixNexus“ naudoja „Bluetooth“ serveriams perkelti tarp jūsų įrenginių, kai jie nėra tame pačiame „Wi-Fi“."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus izmanto Bluetooth, lai pārvietotu serverus starp jūsu ierīcēm, ja tās nav vienā Wi-Fi."
+          }
+        },
+        "mt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus juża Bluetooth biex iċċaqlaq servers bejn l-apparati tiegħek meta ma jkunux fuq l-istess Wi-Fi."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus gebruikt Bluetooth om servers tussen je apparaten te verplaatsen als ze niet op hetzelfde wifinetwerk zitten."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus używa Bluetooth do przenoszenia serwerów między twoimi urządzeniami, gdy nie są w tej samej sieci Wi-Fi."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O gryonixNexus usa o Bluetooth para mover servidores entre os seus dispositivos quando não estão na mesma rede Wi-Fi."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus folosește Bluetooth pentru a muta servere între dispozitivele tale când nu sunt în aceeași rețea Wi-Fi."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus использует Bluetooth, чтобы переносить серверы между вашими устройствами, когда они не в одной сети Wi-Fi."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus používa Bluetooth na presun serverov medzi vašimi zariadeniami, keď nie sú v tej istej Wi-Fi."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus uporablja Bluetooth za prenos strežnikov med vašimi napravami, ko niso v istem omrežju Wi-Fi."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus använder Bluetooth för att flytta servrar mellan dina enheter när de inte är på samma wifi."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus використовує Bluetooth, щоб переносити сервери між вашими пристроями, коли вони не в одній мережі Wi-Fi."
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当你的设备不在同一 Wi-Fi 下时，gryonixNexus 使用蓝牙在设备之间转移服务器。"
+          }
+        }
+      }
+    },
+    "NSCameraUsageDescription" : {
+      "comment" : "Privacy - Camera Usage Description",
+      "extractionState" : "manual",
+      "localizations" : {
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus използва камерата, за да прочете QR кода, който друго устройство показва, когато ви изпраща сървъри."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus používá fotoaparát ke čtení QR kódu, který ukazuje jiné zařízení, když vám posílá servery."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus bruger kameraet til at læse den QR-kode, en anden enhed viser, når den sender dig servere."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus nutzt die Kamera, um den QR-Code zu lesen, den ein anderes Gerät beim Senden von Servern zeigt."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το gryonixNexus χρησιμοποιεί την κάμερα για να διαβάσει τον κωδικό QR που δείχνει μια άλλη συσκευή όταν σας στέλνει διακομιστές."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus uses the camera to read the QR code another device shows when it sends you servers."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus usa la cámara para leer el código QR que muestra otro dispositivo al enviarte servidores."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus kasutab kaamerat, et lugeda QR-koodi, mida teine seade näitab, kui see sulle servereid saadab."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus käyttää kameraa lukeakseen QR-koodin, jonka toinen laite näyttää lähettäessään sinulle palvelimia."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus utilise la caméra pour lire le code QR qu'un autre appareil affiche quand il t'envoie des serveurs."
+          }
+        },
+        "ga" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Úsáideann gryonixNexus an ceamara chun an cód QR a thaispeánann gléas eile agus é ag seoladh freastalaithe chugat a léamh."
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus koristi kameru za čitanje QR koda koji drugi uređaj prikazuje kad vam šalje poslužitelje."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A gryonixNexus a kamerával olvassa be a QR-kódot, amelyet egy másik eszköz mutat, amikor szervereket küld Önnek."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus usa la fotocamera per leggere il codice QR che un altro dispositivo mostra quando ti invia dei server."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexusは、別のデバイスがサーバーを送信するときに表示するQRコードを読み取るためにカメラを使用します。"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„gryonixNexus“ naudoja kamerą nuskaityti QR kodą, kurį rodo kitas įrenginys, kai siunčia jums serverius."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus izmanto kameru, lai nolasītu QR kodu, ko rāda cita ierīce, kad tā jums sūta serverus."
+          }
+        },
+        "mt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus juża l-kamera biex jaqra l-kodiċi QR li juri apparat ieħor meta jibagħtlek servers."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus gebruikt de camera om de QR-code te lezen die een ander apparaat toont wanneer het je servers stuurt."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus używa aparatu, aby odczytać kod QR, który pokazuje inne urządzenie, gdy wysyła ci serwery."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O gryonixNexus usa a câmara para ler o código QR que outro dispositivo mostra quando lhe envia servidores."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus folosește camera pentru a citi codul QR pe care îl arată alt dispozitiv când îți trimite servere."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus использует камеру, чтобы считать QR-код, который показывает другое устройство при отправке серверов."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus používa fotoaparát na čítanie QR kódu, ktorý ukazuje iné zariadenie, keď vám posiela servery."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus uporablja kamero za branje kode QR, ki jo prikaže druga naprava, ko vam pošilja strežnike."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus använder kameran för att läsa QR-koden som en annan enhet visar när den skickar servrar till dig."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus використовує камеру, щоб зчитати QR-код, який показує інший пристрій під час надсилання серверів."
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gryonixNexus 使用摄像头读取另一台设备向你发送服务器时显示的二维码。"
+          }
+        }
+      }
+    },
     "NSFaceIDUsageDescription" : {
       "comment" : "Privacy - Face ID Usage Description",
       "extractionState" : "manual",

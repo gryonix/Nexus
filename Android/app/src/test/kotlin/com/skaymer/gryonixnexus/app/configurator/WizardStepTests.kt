@@ -42,6 +42,11 @@ class WizardStepTests {
     }
 
     @Test
+    fun `a tailscale-only deployment gets no records-to-paste step`() {
+        assertFalse(WizardStep.DNS in wizardSteps(form(scope = DeploymentScope.TAILSCALE_ONLY)))
+    }
+
+    @Test
     fun `a changing address still has records to create once`() {
         assertTrue(WizardStep.DNS in wizardSteps(form(scope = DeploymentScope.DYNAMIC_DNS)))
     }

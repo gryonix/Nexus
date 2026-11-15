@@ -29,12 +29,12 @@ struct MetricsDashboardView: View {
                                      reload: { servers.load() })
                 }
             }
-            .navigationTitle("Metrics")
+            .screenTitle("Metrics")
             .sectionToolbar(.metrics, actions: {
                 Button {
                     adding = true
                 } label: {
-                    Label("Add panel", systemImage: "plus")
+                    ToolbarIcon("Add panel", systemImage: "plus")
                 }
                 .toolbarGlassButtonStyle()
                 .disabled(servers.deployments.isEmpty)
@@ -189,7 +189,7 @@ private struct MetricsBoardList: View {
     }
 
     private var listBackground: Color {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
         Color(.systemGroupedBackground)
         #else
         Color.clear
@@ -232,6 +232,9 @@ struct MetricPanelCard: View, Equatable {
             }
             .contentShape(Rectangle())
             .onTapGesture(perform: openHistory)
+            #if os(tvOS)
+            TVPanelButtons(openHistory: openHistory, onEdit: onEdit, onDelete: onDelete)
+            #endif
         }
         .padding(14)
         .glassCardBackground(fallback: GlassPalette.cardBase, tint: deployment.displayTint)
@@ -255,11 +258,13 @@ struct MetricPanelCard: View, Equatable {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
+            #if !os(tvOS)
             if onEdit != nil || onDelete != nil {
                 PanelActionsButton(title: panel.metrics.map(\.plainTitle).joined(separator: " · "),
                                    subtitle: subtitleText,
                                    onEdit: onEdit, onDelete: onDelete)
             }
+            #endif
         }
     }
 
@@ -316,6 +321,37 @@ struct MetricPanelCard: View, Equatable {
 
     private static let chartHeight: CGFloat = 140
 }
+
+#if os(tvOS)
+/// Labelled buttons the remote can reach, instead of a "…" menu
+private struct TVPanelButtons: View {
+    let openHistory: () -> Void
+    let onEdit: (() -> Void)?
+    let onDelete: (() -> Void)?
+    /// One press of the remote must not remove a panel
+    @State private var confirmingDelete = false
+
+    var body: some View {
+        HStack(spacing: 24) {
+            Button(action: openHistory) { Label("History", systemImage: "chart.xyaxis.line") }
+            if let onEdit {
+                Button(action: onEdit) { Label("Edit panel", systemImage: "pencil") }
+            }
+            if let onDelete {
+                Button(role: .destructive) { confirmingDelete = true } label: { Label("Delete", systemImage: "trash") }
+                    .dangerTint()
+                    .confirmationDialog("Delete this panel?", isPresented: $confirmingDelete) {
+                        Button("Delete", role: .destructive, action: onDelete)
+                        .dangerTint()
+                        Button("Cancel", role: .cancel) {}
+                    }
+            }
+        }
+        .secondaryActionButtonStyle()
+        .padding(.top, 8)
+    }
+}
+#endif
 
 private struct PanelActionsButton: View {
     let title: String
@@ -387,6 +423,14 @@ private struct MetricBadge: View, Equatable {
 
     var body: some View {
         Group {
+            #if os(tvOS)
+            if onMetrics != nil {
+                label(chevron: nil)
+            } else {
+                Button(action: openHistory) { label(chevron: "chevron.right") }
+                    .buttonStyle(.plain)
+            }
+            #else
             if onMetrics != nil {
                 Button { choosing = true } label: { label(chevron: "chevron.up.chevron.down") }
                     .buttonStyle(.plain)
@@ -394,6 +438,7 @@ private struct MetricBadge: View, Equatable {
                 Button(action: openHistory) { label(chevron: "chevron.right") }
                     .buttonStyle(.plain)
             }
+            #endif
         }
         .sheet(isPresented: $choosing) {
             MetricChoiceSheet(offered: offeredMetrics, selected: metrics) { chosen in
@@ -411,7 +456,8 @@ private struct MetricBadge: View, Equatable {
         #endif
     }
 
-    private func label(chevron: String) -> some View {
+    /// On the TV the metrics change in the panel's editor
+    private func label(chevron: String?) -> some View {
         HStack(spacing: 5) {
             Image(systemName: metrics[0].systemImage)
                 .foregroundStyle(metrics[0].tint)
@@ -424,9 +470,11 @@ private struct MetricBadge: View, Equatable {
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
-            Image(systemName: chevron)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
+            if let chevron {
+                Image(systemName: chevron)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
         }
         .contentShape(Rectangle())
     }

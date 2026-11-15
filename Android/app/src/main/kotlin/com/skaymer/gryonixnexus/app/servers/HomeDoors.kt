@@ -1,7 +1,10 @@
 package com.skaymer.gryonixnexus.app.servers
 
 import com.skaymer.gryonixnexus.agentclient.AgentClient
+import com.skaymer.gryonixnexus.catalog.ServiceID
+import com.skaymer.gryonixnexus.servercontrol.AgentServiceMapping
 import com.skaymer.gryonixnexus.servercontrol.Deployment
+import gryonixnexusd.v1.AgentHealth
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -9,10 +12,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** Plain HTTP app ports at home, per server */
+/** Home app ports and installed services, per server */
 class HomeDoors(
     private val scope: CoroutineScope,
     private val client: suspend (Deployment) -> AgentClient,
+    private val addServices: (String, Set<ServiceID>) -> Unit = { _, _ -> },
 ) {
     private val _doors = MutableStateFlow<Map<String, Map<String, Int>>>(emptyMap())
     val doors: StateFlow<Map<String, Map<String, Int>>> = _doors.asStateFlow()
@@ -20,6 +24,10 @@ class HomeDoors(
     private val _mesh = MutableStateFlow<Map<String, String>>(emptyMap())
     /** Each server's address in the Tailscale mesh */
     val mesh: StateFlow<Map<String, String>> = _mesh.asStateFlow()
+
+    private val _health = MutableStateFlow<Map<String, AgentHealth>>(emptyMap())
+    /** Each agent's own footprint; absent for an older agent */
+    val health: StateFlow<Map<String, AgentHealth>> = _health.asStateFlow()
 
     fun load(deployment: Deployment) {
         if (!deployment.usesAgent) return
@@ -34,6 +42,9 @@ class HomeDoors(
             val key = deployment.id.toString()
             _doors.value = _doors.value + (key to state.home_doors.associate { it.service_id to it.port })
             _mesh.value = if (state.mesh_address.isEmpty()) _mesh.value - key else _mesh.value + (key to state.mesh_address)
+            _health.value = state.agent_health?.let { _health.value + (key to it) } ?: (_health.value - key)
+            val found = AgentServiceMapping.installedByApp(state.services.map { it.id to it.installed_outside })
+            if (found.isNotEmpty()) addServices(key, found)
         }
     }
 

@@ -53,6 +53,10 @@ struct ConfiguratorDraft: Codable, Identifiable, Hashable {
     var minecraftBedrockAcceptsEULA: Bool?
     var machineAtHome: Bool?
     var homeAssistantUSBDevice: String?
+    var shairportMode: String?
+    var shairportName: String?
+    var shairportOutput: String?
+    var uxplayName: String?
     var openWebUIAllowSignups: Bool?
     var ollamaUsesGPU: Bool?
     var ollamaInstallsGPUDriver: Bool?
@@ -161,6 +165,10 @@ extension ConfiguratorDraft {
         autheliaProtectedServices = settings.autheliaProtectedServices
         machineAtHome = settings.machineAtHome
         homeAssistantUSBDevice = settings.homeAssistantUSBDevice
+        shairportMode = settings.shairportMode
+        shairportName = settings.shairportName
+        shairportOutput = settings.shairportOutput
+        uxplayName = settings.uxplayName
         openWebUIAllowSignups = settings.openWebUIAllowSignups
         ollamaUsesGPU = settings.ollamaUsesGPU
         ollamaInstallsGPUDriver = settings.ollamaInstallsGPUDriver
@@ -229,9 +237,7 @@ final class ConfiguratorStore: @unchecked Sendable {
         if let directory {
             self.directory = directory
         } else {
-            let support = FileManager.default.urls(for: .applicationSupportDirectory,
-                                                   in: .userDomainMask).first!
-            let root = support.appendingPathComponent("gryonixNexus", isDirectory: true)
+            let root = AppSupportDirectory.base.appendingPathComponent("gryonixNexus", isDirectory: true)
             AppSupportDirectory.adoptLegacyName(at: root, legacyName: "GryonixNexus")
             self.directory = root.appendingPathComponent("Configurator", isDirectory: true)
         }

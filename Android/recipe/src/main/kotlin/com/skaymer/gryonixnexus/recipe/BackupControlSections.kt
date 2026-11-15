@@ -3,6 +3,7 @@ package com.skaymer.gryonixnexus.recipe
 import com.skaymer.gryonixnexus.catalog.AppLanguage
 import com.skaymer.gryonixnexus.catalog.ArchiveBackupPlan
 import com.skaymer.gryonixnexus.catalog.BackupDatabase
+import com.skaymer.gryonixnexus.catalog.BackupPart
 import com.skaymer.gryonixnexus.catalog.BackupPlan
 import com.skaymer.gryonixnexus.catalog.BackupSpec
 import com.skaymer.gryonixnexus.catalog.ManagedService
@@ -37,6 +38,8 @@ internal object BackupControlSections {
 
     /** What the last shipment did */
     const val DESTINATION_STATUS_PATH = "$CONFIG_DIRECTORY/autobackup-dest.status"
+    /** Which parts regular and pre-update backups copy */
+    const val PARTS_PATH = "$CONFIG_DIRECTORY/backup-parts.conf"
 
     /** Where the far side's host key is pinned */
     const val DESTINATION_KNOWN_HOSTS_PATH = "$CONFIG_DIRECTORY/autobackup-dest.known_hosts"
@@ -107,7 +110,8 @@ internal object BackupControlSections {
                             backupDir = spec.backupDir,
                             encryptsByDefault = false,
                             sizePaths = plan.sizePaths,
-                            body = "  '${plan.path}'\n  gd_drive_copy_newest '${spec.backupDir}' '${spec.wrapperTarget}'"
+                            body = skipUnless(listOf(BackupPart.FILES), spec.wrapperTarget) +
+                                "\n  '${plan.path}'\n  gd_drive_copy_newest '${spec.backupDir}' '${spec.wrapperTarget}'"
                         ))
 
                         is BackupPlan.Archive -> result.add(AutoBackupTarget(
@@ -125,7 +129,7 @@ internal object BackupControlSections {
                     backupDir = backup.backupDir,
                     encryptsByDefault = true,
                     sizePaths = listOf(backup.dataPath),
-                    body = """
+                    body = skipUnless(listOf(BackupPart.DATABASES), service.id.rawValue) + "\n" + """
                       local stamp plain
                       stamp="${SH}(date +%Y%m%d-%H%M%S)"
                       plain='${backup.backupDir}/vaultwarden-backup.tar.gz'
@@ -166,51 +170,56 @@ internal object BackupControlSections {
         return result
     }
 
+    /** Ends a body early when its parts are off */
+    private fun skipUnless(parts: List<BackupPart>, id: String): String {
+        val test = parts.joinToString(" && ") { "! gd_part '${it.rawValue}'" }
+        return listOf(
+            "  if $test; then",
+            "    echo \"nothing chosen to back up for $id\"",
+            "    return 0",
+            "  fi"
+        ).joinToString("\n")
+    }
+
     /** The body of one generated `backup_<service>` function */
     private fun archiveBody(id: String, backupDir: String, plan: ArchiveBackupPlan): String {
-        val project = plan.composeProject
         val quiesce = plan.quiesceServices.joinToString(" ") { "'$it'" }
         val dumps = ArchiveBackupPlan.DUMP_DIRECTORY_NAME
+        val skipParts = if (plan.databases.isEmpty()) listOf(plan.dataPart) else listOf(plan.dataPart, BackupPart.DATABASES)
         val lines = mutableListOf(
             "  local stamp work plain rc=0",
+            "  local -a pack=()",
+            skipUnless(skipParts, id),
             "  install -d -m 750 '$backupDir'",
             "  stamp=\"${SH}(date +%Y%m%d-%H%M%S)\"",
             "  work=\"${SH}(mktemp -d '$backupDir/.work-XXXXXX')\"",
             "  plain=\"${SH}work/$id-${SH}stamp.tar.gz\"",
             "  install -d -m 700 \"${SH}work/$dumps\"",
-            "  if [ ! -d '${plan.dataPath}' ]; then",
-            "    rm -rf \"${SH}work\"",
-            "    echo \"$id has no data at ${plan.dataPath}\" >&2",
-            "    return 1",
+            "  if gd_part '${plan.dataPart.rawValue}'; then",
+            "    if [ ! -d '${plan.dataPath}' ]; then",
+            "      rm -rf \"${SH}work\"",
+            "      echo \"$id has no data at ${plan.dataPath}\" >&2",
+            "      return 1",
+            "    fi",
+            "    pack+=(-C '${plan.dataParent}' '${plan.dataSlot}')",
             "  fi"
         )
         if (plan.quiesceServices.isNotEmpty()) {
             lines += listOf(
                 "  # Stopped for the archive only, and started again on EVERY path",
                 "  # below — a backup that leaves the service down is an outage.",
-                "  gd_compose_stop '$project' $quiesce"
+                "  gd_compose_stop '${plan.composeProject}' $quiesce"
             )
         }
-        for (database in plan.databases) {
-            val helper = if (database.engine == BackupDatabase.Engine.POSTGRES) {
-                "gd_dump_postgres"
-            } else {
-                "gd_dump_mysql"
-            }
-            val named = database.databaseName?.let { " '$it'" } ?: ""
-            lines += "  $helper '$project' '${database.service}' " +
-                "\"${SH}work/$dumps/${database.fileName}\"$named || rc=1"
-        }
+        lines += databaseDumpLines(plan)
         val excludes = plan.excludes.joinToString("") { " --exclude '$it'" }
         lines += listOf(
             "  if [ \"${SH}rc\" -eq 0 ]; then",
-            "    tar --numeric-owner -czf \"${SH}plain\"$excludes \\",
-            "        -C '${plan.dataParent}' '${plan.dataSlot}' \\",
-            "        -C \"${SH}work\" '$dumps' || rc=1",
+            "    tar --numeric-owner -czf \"${SH}plain\"$excludes \"${SH}{pack[@]}\" || rc=1",
             "  fi"
         )
         if (plan.quiesceServices.isNotEmpty()) {
-            lines += "  gd_compose_start '$project' $quiesce"
+            lines += "  gd_compose_start '${plan.composeProject}' $quiesce"
         }
         lines += listOf(
             "  if [ \"${SH}rc\" -ne 0 ]; then",
@@ -221,6 +230,21 @@ internal object BackupControlSections {
             "  gd_finish '$id' '$backupDir' \"${SH}plain\" \"${SH}work\""
         )
         return lines.joinToString("\n")
+    }
+
+    /** Dumps each database when the databases part is on */
+    private fun databaseDumpLines(plan: ArchiveBackupPlan): List<String> {
+        if (plan.databases.isEmpty()) return emptyList()
+        val dumps = ArchiveBackupPlan.DUMP_DIRECTORY_NAME
+        val lines = mutableListOf("  if gd_part 'databases'; then")
+        for (database in plan.databases) {
+            val helper = if (database.engine == BackupDatabase.Engine.POSTGRES) "gd_dump_postgres" else "gd_dump_mysql"
+            val named = database.databaseName?.let { " '$it'" } ?: ""
+            lines += "    $helper '${plan.composeProject}' '${database.service}' " +
+                "\"${SH}work/$dumps/${database.fileName}\"$named || rc=1"
+        }
+        lines += listOf("    pack+=(-C \"${SH}work\" '$dumps')", "  fi")
+        return lines
     }
 
     const val SCHEDULE_GRAMMAR = ScheduleSections.GRAMMAR
@@ -257,7 +281,7 @@ internal object BackupControlSections {
         #        gryonixnexus-backup-ctl.sh set-schedule $SCHEDULE_GRAMMAR <retention> [services...]
         #        gryonixnexus-backup-ctl.sh set-passphrase   (passphrase on stdin)
         #        gryonixnexus-backup-ctl.sh run
-        #        gryonixnexus-backup-ctl.sh backup <service> [--encrypt|--no-encrypt]
+        #        gryonixnexus-backup-ctl.sh backup <service> [--encrypt|--no-encrypt] [--before-update]
         #                                       (GPG passphrase on stdin when encrypting)
         #        gryonixnexus-backup-ctl.sh estimate <service>
         #        gryonixnexus-backup-ctl.sh set-destination <kind> <host> <port> <user> <path> <bucket> <keep>
@@ -266,6 +290,8 @@ internal object BackupControlSections {
         #        gryonixnexus-backup-ctl.sh test-destination
         #        gryonixnexus-backup-ctl.sh set-drives <both|local|drive> <1|0> [uuids...]
         #        gryonixnexus-backup-ctl.sh show-drives
+        #        gryonixnexus-backup-ctl.sh set-parts <backup|update> [files] [settings] [databases]
+        #        gryonixnexus-backup-ctl.sh show-parts
         set -euo pipefail
 
         ACTION="${SH}{1:-}"
@@ -287,6 +313,28 @@ internal object BackupControlSections {
         # world-readable through /proc.
         GD_ENCRYPT=0
         GD_PASS=""
+
+        # Which parts a run copies: regular runs and pre-update runs apart.
+        PARTSCONF='$PARTS_PATH'
+        BACKUP_PARTS='files settings databases'
+        UPDATE_PARTS='settings databases'
+        GD_PARTS="${SH}BACKUP_PARTS"
+        load_parts() {
+          # shellcheck disable=SC1090
+          if [ -f "${SH}PARTSCONF" ]; then . "${SH}PARTSCONF"; fi
+          local key=BACKUP_PARTS
+          if [ "${SH}{1:-}" = update ]; then key=UPDATE_PARTS; fi
+          GD_PARTS="${SH}{!key}"
+          # A service's own choice wins over the shared one.
+          if [ -n "${SH}{2:-}" ]; then
+            key="${SH}{key}_${SH}{2//-/_}"
+            if [ -n "${SH}{!key+x}" ]; then GD_PARTS="${SH}{!key}"; fi
+          fi
+        }
+        gd_part() {
+          case " ${SH}GD_PARTS " in *" ${SH}1 "*) return 0 ;; esac
+          return 1
+        }
 
         load_config() {
           # shellcheck disable=SC1090
@@ -845,7 +893,7 @@ internal object BackupControlSections {
             if ! printf '%s' "${SH}GD_PASS" | gpg --batch --quiet --yes --symmetric \
                  --cipher-algo AES256 --passphrase-fd 0 --pinentry-mode loopback \
                  --output "${SH}out" "${SH}plain"; then
-              rm -rf "${SH}work"
+              rm -rf "${SH}work" "${SH}out"
               echo "could not encrypt the ${SH}name backup" >&2
               return 1
             fi
@@ -912,6 +960,7 @@ internal object BackupControlSections {
 
         do_run() {
           load_config
+          load_parts
           local failed=""
           for svc in ${SH}SERVICES; do
             # Each service runs in its own subshell, and the `||` keeps errexit
@@ -930,6 +979,7 @@ internal object BackupControlSections {
                 fi
                 GD_PASS="${SH}(cat "${SH}PASSFILE")"
               fi
+              load_parts backup "${SH}svc"
               gd_run_service "${SH}svc"
             ) || failed="${SH}failed ${SH}svc"
           done
@@ -944,15 +994,18 @@ internal object BackupControlSections {
         do_backup() {
           local svc="${SH}{1:-}"
           shift || true
+          local scope=backup
           load_config
           GD_ENCRYPT="${SH}(gd_default_encrypt "${SH}svc")"
           for arg in "${SH}@"; do
             case "${SH}arg" in
               --encrypt) GD_ENCRYPT=1 ;;
               --no-encrypt) GD_ENCRYPT=0 ;;
+              --before-update) scope=update ;;
               *) echo "unsupported option: ${SH}{arg}" >&2; exit 2 ;;
             esac
           done
+          load_parts "${SH}scope" "${SH}svc"
           if [ "${SH}GD_ENCRYPT" -eq 1 ]; then
             # On stdin, never argv. A terminal means nobody piped anything in,
             # and reading would hang forever.
@@ -1018,6 +1071,46 @@ internal object BackupControlSections {
         @TIMER_ACTIVATION@
         }
 
+        do_set_parts() {
+          local scope="${SH}{1:-}" svc="" part checked="" key
+          shift || true
+          case "${SH}scope" in
+            backup|update) ;;
+            *) echo "unsupported parts scope: ${SH}{scope}" >&2; exit 2 ;;
+          esac
+          if [ "${SH}{1:-}" = --service ]; then
+            svc="${SH}{2:-}"
+            shift 2 || true
+            case "${SH}svc" in
+              ''|*[!a-z0-9-]*) echo "unsupported service: ${SH}{svc}" >&2; exit 2 ;;
+            esac
+          fi
+          for part in "${SH}@"; do
+            case "${SH}part" in
+              files|settings|databases) checked="${SH}checked ${SH}part" ;;
+              *) echo "unsupported part: ${SH}{part}" >&2; exit 2 ;;
+            esac
+          done
+          key=BACKUP_PARTS
+          if [ "${SH}scope" = update ]; then key=UPDATE_PARTS; fi
+          if [ -n "${SH}svc" ]; then key="${SH}{key}_${SH}{svc//-/_}"; fi
+          install -d -m 755 "${SH}(dirname "${SH}PARTSCONF")"
+          {
+            grep -v "^${SH}{key}=" "${SH}PARTSCONF" 2>/dev/null || true
+            printf "%s='%s'\n" "${SH}key" "${SH}{checked# }"
+          } > "${SH}PARTSCONF.new"
+          mv -f "${SH}PARTSCONF.new" "${SH}PARTSCONF"
+          chmod 644 "${SH}PARTSCONF"
+        }
+
+        do_show_parts() {
+          load_parts
+          printf "BACKUP_PARTS='%s'\nUPDATE_PARTS='%s'\n" "${SH}BACKUP_PARTS" "${SH}UPDATE_PARTS"
+          if [ -f "${SH}PARTSCONF" ]; then
+            grep -E '^(BACKUP|UPDATE)_PARTS_[a-z0-9_]+=' "${SH}PARTSCONF" || true
+          fi
+        }
+
         do_set_passphrase() {
           install -d -m 755 "${SH}(dirname '$PASSPHRASE_PATH')"
           # From stdin, never argv: argv is world-readable in /proc.
@@ -1040,6 +1133,8 @@ internal object BackupControlSections {
           test-destination) do_test_destination ;;
           set-drives) shift; do_set_drives "${SH}@" ;;
           show-drives) do_show_drives ;;
+          set-parts) shift; do_set_parts "${SH}@" ;;
+          show-parts) do_show_parts ;;
           *) echo "unsupported action: ${SH}{ACTION}" >&2; exit 2 ;;
         esac
         echo '$DONE_MARKER'

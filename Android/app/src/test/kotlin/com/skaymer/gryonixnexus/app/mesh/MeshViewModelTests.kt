@@ -136,6 +136,14 @@ class MeshViewModelTests {
         )
     }
 
+    @Test
+    fun `a node without our control server sends the user to the tailscale account`() {
+        val alone = server(services = setOf(ServiceID.TAILSCALE_NODE))
+        assertTrue(MeshViewModel.usesTailscaleAccount(alone))
+        assertFalse(MeshViewModel.managesMesh(alone, agentTransportAvailable = true))
+        assertFalse(MeshViewModel.usesTailscaleAccount(server()), "a headscale server lists its own devices")
+    }
+
     // ------------------------------------------------------------- The list
 
     @Test

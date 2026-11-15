@@ -17,6 +17,8 @@ final class ServiceConfigViewModel: ObservableObject {
     /// Further domains the same server answers on
     @Published var additionalDomains: [String] = []
     @Published var scope: DeploymentScope = .publicInternet
+    /// Whether a Tailscale join key is saved
+    @Published var hasTailscaleKey = false
     var localOnly: Bool { scope == .localOnly }
     @Published var publicIP = ""                 // A: server IP; B: VPS IP
     @Published var vpsVPNIP = "10.8.0.1"
@@ -63,6 +65,10 @@ final class ServiceConfigViewModel: ObservableObject {
     @Published var minecraftBedrockAcceptsEULA = false
     @Published var machineAtHome = false
     @Published var homeAssistantUSBDevice = ""
+    @Published var shairportMode = ServiceSettings().shairportMode
+    @Published var shairportName = ServiceSettings().shairportName
+    @Published var shairportOutput = ServiceSettings().shairportOutput
+    @Published var uxplayName = ServiceSettings().uxplayName
     /// The server this run is re-configuring, when there is one
     let existingServer: Deployment?
     @Published var serialListing: SerialListing = .idle
@@ -309,7 +315,7 @@ final class ServiceConfigViewModel: ObservableObject {
         case .minecraftBedrockEULA:
             return Binding(get: { self.minecraftBedrockAcceptsEULA },
                            set: { self.minecraftBedrockAcceptsEULA = $0 })
-        case .machineAtHome:
+        case .machineAtHome, .speakerAtHome, .screenAtHome, .hubAtHome:
             return Binding(get: { self.machineAtHome }, set: { self.machineAtHome = $0 })
         }
     }
@@ -424,6 +430,10 @@ final class ServiceConfigViewModel: ObservableObject {
         draft.minecraftBedrockAcceptsEULA = minecraftBedrockAcceptsEULA
         draft.machineAtHome = machineAtHome
         draft.homeAssistantUSBDevice = homeAssistantUSBDevice
+        draft.shairportMode = shairportMode
+        draft.shairportName = shairportName
+        draft.shairportOutput = shairportOutput
+        draft.uxplayName = uxplayName
         draft.minecraftBedrockVersion = minecraftBedrockVersion
         draft.minecraftBedrockPort = minecraftBedrockPort
         draft.autheliaProtectedServices = autheliaProtectedServices
@@ -480,6 +490,10 @@ final class ServiceConfigViewModel: ObservableObject {
         minecraftBedrockAcceptsEULA = draft.minecraftBedrockAcceptsEULA ?? minecraftBedrockAcceptsEULA
         machineAtHome = draft.machineAtHome ?? machineAtHome
         homeAssistantUSBDevice = draft.homeAssistantUSBDevice ?? homeAssistantUSBDevice
+        shairportMode = draft.shairportMode ?? shairportMode
+        shairportName = draft.shairportName ?? shairportName
+        shairportOutput = draft.shairportOutput ?? shairportOutput
+        uxplayName = draft.uxplayName ?? uxplayName
         minecraftBedrockVersion = draft.minecraftBedrockVersion ?? minecraftBedrockVersion
         minecraftBedrockPort = draft.minecraftBedrockPort ?? minecraftBedrockPort
         autheliaProtectedServices = draft.autheliaProtectedServices ?? autheliaProtectedServices
@@ -542,9 +556,38 @@ final class ServiceConfigViewModel: ObservableObject {
         "vpn.\(domain.isEmpty ? "example.com" : domain)"
     }
 
-    var publicIPTitle: LocalizedStringKey {
-        localOnly ? "Local address of the server"
-            : (topology == .singleHost ? "Public IP of the server" : "Public IP of the VPS")
+    /// Server reached on the local network, no public IP
+    var addressIsOnNetwork: Bool {
+        topology == .singleHost && [.localOnly, .cloudflareTunnel, .meshOnly, .tailscaleOnly].contains(scope)
+    }
+
+    var addressTitle: LocalizedStringKey {
+        if localOnly { return "Local address" }
+        if addressIsOnNetwork { return "Address on your network" }
+        return topology == .singleHost ? "Server address" : "VPS address"
+    }
+
+    var addressPrompt: String {
+        addressIsOnNetwork ? "192.168.1.50" : "203.0.113.10"
+    }
+
+    var addressFooter: LocalizedStringKey {
+        switch scope {
+        case .localOnly:
+            return "A LAN IP address or a .local hostname your devices can already reach — not a domain you'd register (like example.com). This is both the server's address and its Caddy site name, self-signed."
+        case .cloudflareTunnel:
+            return "No public IP needed: the server dials out to Cloudflare. This is where this device reaches the server to install it — a LAN IP or a .local name."
+        case .meshOnly:
+            return "No public IP needed. This is where this device reaches the server to install it — a LAN IP, a .local name or its mesh address."
+        case .tailscaleOnly:
+            return "No public IP needed. This is where this device reaches the server to install it — a LAN IP, a .local name or its Tailscale address."
+        case .dynamicDNS:
+            return "The server's current public IP. When the provider changes it, the server updates its own DNS records."
+        case .publicInternet:
+            return topology == .singleHost
+                ? "The public IP address of your server."
+                : "The public IP address of your VPS, and the local server's address on your network — an IP or a .local name. Keep this device on that network while installing."
+        }
     }
 
     func serviceDisplayName(_ id: ServiceID) -> String {

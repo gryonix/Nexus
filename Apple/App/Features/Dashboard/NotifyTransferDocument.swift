@@ -2,6 +2,11 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /// The file a server's gryonixPush settings are saved to
+#if os(tvOS)
+struct NotifyTransferDocument {
+    var data: Data
+}
+#else
 struct NotifyTransferDocument: FileDocument {
     static var readableContentTypes: [UTType] { [.json] }
 
@@ -17,3 +22,4 @@ struct NotifyTransferDocument: FileDocument {
         FileWrapper(regularFileWithContents: data)
     }
 }
+#endif

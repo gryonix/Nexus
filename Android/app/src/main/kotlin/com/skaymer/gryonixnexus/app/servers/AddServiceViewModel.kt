@@ -243,7 +243,8 @@ class AddServiceViewModel(
         fun forwardedPorts(deployment: Deployment): List<Int> {
             val services = deployment.servicesBehindRelay
             val context = deployment.serviceContext
-            return ForwardedPorts.tcp(services, context) + ForwardedPorts.udp(services, context).map { -it }
+            val homeOnly = deployment.homeOnlyIDs
+            return ForwardedPorts.tcp(services, context, homeOnly) + ForwardedPorts.udp(services, context, homeOnly).map { -it }
         }
 
         /** What a single pick actually installs */

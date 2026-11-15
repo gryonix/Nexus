@@ -8,11 +8,11 @@ struct ServiceAdvancedFields: View {
 
     /// Whether this service puts anything under the disclosure at all
     static func hasFields(for id: ServiceID) -> Bool {
-        if ServiceSettings.hostnameSettings[id] != nil { return true }
+        if ServiceSettings.asksHostname(id) { return true }
         switch id {
         case .mailcow, .mailu, .dockerMailserver, .vaultwarden, .forgejo,
              .authelia, .pihole, .minecraftJava, .minecraftBedrock, .gitlab,
-             .homeAssistant:
+             .homeAssistant, .shairportSync, .uxplay:
             return true
         default:
             return false
@@ -20,7 +20,7 @@ struct ServiceAdvancedFields: View {
     }
 
     var body: some View {
-        if ServiceSettings.hostnameSettings[id] != nil {
+        if ServiceSettings.asksHostname(id) {
             TechnicalField(title: "\(viewModel.serviceDisplayName(id)) domain",
                            prompt: viewModel.serviceHostnamePlaceholder(id),
                            text: viewModel.hostnameBinding(id), ownAddress: true)
@@ -47,6 +47,10 @@ struct ServiceAdvancedFields: View {
                 .foregroundStyle(.secondary)
         case .homeAssistant:
             homeAssistantFields
+        case .shairportSync:
+            AirPlaySpeakerFields(mode: $viewModel.shairportMode, name: $viewModel.shairportName)
+        case .uxplay:
+            AirPlayScreenFields(name: $viewModel.uxplayName)
         case .minecraftJava:
             minecraftJavaFields
         case .minecraftBedrock:

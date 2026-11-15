@@ -86,6 +86,7 @@ fun parseConnectError(body: ByteArray, status: Int): AgentError {
     return if (code.isNullOrEmpty()) {
         AgentError.Rpc("http_$status", text)
     } else {
+        AgentRefusals.note(text)
         AgentError.Rpc(code, jsonField(text, "message").orEmpty())
     }
 }

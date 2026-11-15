@@ -46,7 +46,7 @@ fun ColumnScope.ServiceAdvancedFields(
     fun edit(change: (ServiceSettings) -> ServiceSettings) =
         model.update { it.copy(serviceSettings = change(it.serviceSettings)) }
 
-    if (ServiceHostnames.settings[id] != null) {
+    if (ServiceHostnames.asksHostname(id)) {
         OwnAddressRow(
             label = stringResource(R.string.wizard_service_domain, displayName(id)),
             value = ServiceHostnames.settings[id]?.get?.invoke(settings).orEmpty(),
@@ -216,6 +216,10 @@ fun ColumnScope.ServiceAdvancedFields(
             InfoRow(stringResource(R.string.wizard_ha_stick_note), showDivider)
         }
 
+        ServiceID.SHAIRPORT_SYNC -> AirPlaySpeakerFields(settings, showDivider) { change -> edit(change) }
+
+        ServiceID.UXPLAY -> AirPlayScreenFields(settings, showDivider) { change -> edit(change) }
+
         else -> Unit
     }
 }
@@ -368,7 +372,7 @@ private fun serialFailure(message: String): String = when (message) {
 }
 
 @Composable
-private fun ColumnScope.InfoRow(text: String, showDivider: Boolean) {
+internal fun ColumnScope.InfoRow(text: String, showDivider: Boolean) {
     GroupedRow(showDivider = showDivider) {
         Text(
             text,
@@ -379,7 +383,7 @@ private fun ColumnScope.InfoRow(text: String, showDivider: Boolean) {
 }
 
 /** The service's own name, from the catalog */
-private fun displayName(id: ServiceID): String =
+internal fun displayName(id: ServiceID): String =
     ServiceRegistry.service(id)?.displayName ?: id.rawValue
 
 private fun defaultHostname(id: ServiceID, domain: String, selected: Set<ServiceID>): String {

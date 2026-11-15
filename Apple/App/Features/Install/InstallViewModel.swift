@@ -828,6 +828,7 @@ final class InstallViewModel: ObservableObject {
                                                                installed: deployment.services) {
             context.settings[AgentInstallSettings.vpnProtocolsKey] = protocols
         }
+        await TailscaleKeyStore.apply(to: &context, service: service.id, installed: deployment.services)
         guard service.id == .cloudflared else { return context }
         stage = UIL10n.string("Preparing the tunnel at Cloudflare…")
         do {

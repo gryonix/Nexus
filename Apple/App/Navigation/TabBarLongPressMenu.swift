@@ -202,6 +202,8 @@ final class TabBarMenuPresenter: NSObject, UIGestureRecognizerDelegate {
             ])]
         case .metrics:
             return [servers(fleet) { AppNavigator.shared.showServer($0.id, in: .metrics) }]
+        case .ai:
+            return []
         case .configurator:
             return [UIMenu(title: "", options: .displayInline,
                            children: ScenarioOption.all.map { option in

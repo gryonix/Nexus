@@ -64,6 +64,20 @@ public struct AgentSecurityOperations {
         return Self.users(from: proto)
     }
 
+    /// Puts the app's key on one account
+    @discardableResult
+    public func authorizeAppKey(user: String, loginUser: String, appPublicKey: String) async throws -> SSHUsers {
+        let proto: Gryonixnexusd_V1_SshUsers
+        if let gate {
+            proto = try await gate.withSlot {
+                try await client.authorizeAppKey(user: user, loginUser: loginUser, appPublicKey: appPublicKey)
+            }
+        } else {
+            proto = try await client.authorizeAppKey(user: user, loginUser: loginUser, appPublicKey: appPublicKey)
+        }
+        return Self.users(from: proto)
+    }
+
     /// Key login only: everyone, some accounts, or none
     @discardableResult
     public func setKeyOnlyUsers(everyone: Bool, users: [String], loginUser: String,

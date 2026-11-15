@@ -33,9 +33,14 @@ class GryonixMessagingService : FirebaseMessagingService() {
             ServerJobNotices.received(server, card)
             return
         }
+        if (kind == com.skaymer.gryonixnexus.app.widgets.WidgetPush.KIND) {
+            val app = application as? com.skaymer.gryonixnexus.app.GryonixApplication ?: return
+            data?.let { com.skaymer.gryonixnexus.app.widgets.WidgetPush.received(app, it) }
+            return
+        }
         val title = message.data["title"] ?: return
         val body = message.data["body"].orEmpty()
-        show(this, title, body, (title + body).hashCode(), AlertAction.verbs(kind), gnx)
+        show(this, title, body, (title + body).hashCode(), AlertAction.verbs(kind), gnx, kind)
     }
 
     override fun onNewToken(token: String) {
@@ -56,6 +61,7 @@ class GryonixMessagingService : FirebaseMessagingService() {
             id: Int,
             verbs: List<AlertAction.Verb> = emptyList(),
             gnx: String? = null,
+            kind: String = "",
         ) {
             val allowed = Build.VERSION.SDK_INT < 33 ||
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
@@ -65,13 +71,14 @@ class GryonixMessagingService : FirebaseMessagingService() {
             manager.createNotificationChannel(
                 NotificationChannel(CHANNEL, context.getString(R.string.push_channel), NotificationManager.IMPORTANCE_HIGH),
             )
-            val builder = NotificationCompat.Builder(context, CHANNEL)
+            val store = (context.applicationContext as? com.skaymer.gryonixnexus.app.GryonixApplication)?.store
+            val builder = NotificationCompat.Builder(context, NotifySounds.channel(context, store, kind, CHANNEL))
                 .setSmallIcon(R.drawable.tab_icon_logo)
                 .setContentTitle(title)
                 .setContentText(body)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(body))
                 .setAutoCancel(true)
-                .setContentIntent(openApp(context))
+                .setContentIntent(openApp(context, id, gnx, title, body))
             verbs.forEach { builder.addAction(button(context, it, id, gnx.orEmpty())) }
             NotificationManagerCompat.from(context).notify(id, builder.build())
         }
@@ -94,11 +101,23 @@ class GryonixMessagingService : FirebaseMessagingService() {
                 .build()
         }
 
-        private fun openApp(context: Context): PendingIntent? {
+        /** Intent extra: the alert's data, to open its server */
+        const val EXTRA_ALERT = "gnx.alert"
+
+        /** Intent extras: the words the alert showed */
+        const val EXTRA_ALERT_TITLE = "gnx.alert.title"
+        const val EXTRA_ALERT_BODY = "gnx.alert.body"
+
+        private fun openApp(context: Context, id: Int, gnx: String?, title: String, body: String): PendingIntent? {
             val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
                 ?.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                ?.putExtra(EXTRA_ALERT, gnx)
+                ?.putExtra(EXTRA_ALERT_TITLE, title)
+                ?.putExtra(EXTRA_ALERT_BODY, body)
                 ?: return null
-            return PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+            return PendingIntent.getActivity(
+                context, id, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
         }
     }
 }

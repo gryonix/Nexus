@@ -42,6 +42,8 @@ class AgentMetricsHistory(
             temperatureCelsius = point.temperature_celsius,
             powerWatts = point.power_watts,
             powerSource = point.power_source.ifEmpty { null },
+            swapUsedBytes = point.swap_used_bytes,
+            swapTotalBytes = point.swap_total_bytes,
         )
     }
 }
